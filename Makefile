@@ -13,7 +13,8 @@ clean:
 .PHONY: modules modules_install clean
 
 else
+# EXTRA_CFLAGS="-masm=intel"
         # called from kernel build system: just declare what our modules are
-		obj-m := hypervisor.o
+obj-m := hypervisor.o
 endif
 

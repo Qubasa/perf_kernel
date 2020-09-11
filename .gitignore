@@ -13,3 +13,5 @@ modules.order
 .hypervisor.o.cmd
 Module.symvers
 .tmp_versions/
+.hypervisor.mod.cmd
+hypervisor.mod
