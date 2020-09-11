@@ -2,3 +2,14 @@
 .direnv
 .history
 .__pycache__
+hypervisor.ko
+hypervisor.mod.c
+hypervisor.mod.o
+hypervisor.o
+modules.order
+.ccls-cache/
+.hypervisor.ko.cmd
+.hypervisor.mod.o.cmd
+.hypervisor.o.cmd
+Module.symvers
+.tmp_versions/
