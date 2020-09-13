@@ -5,8 +5,14 @@
 MODULE_AUTHOR("Qubasa Corp.");
 MODULE_LICENSE("GPL v2");
 
+// MASKS
+const uint64_t LOW_64  = 0x00000000ffffffff;
+const uint64_t HIGH_64 = ~LOW_64;
+
+// MSR ADDRESSES
 const unsigned int EFER_ADDR = 0xC0000080;
 const unsigned int VM_CR_ADDR = 0xC0010114;
+const unsigned int VM_HSAVE_PA_ADDR = 0xC0010117;
 
 enum SVM_SUPPORT {
   SVM_ALLOWED,
@@ -110,11 +116,15 @@ void inline enableSVM_EFER(void) {
   printk(KERN_INFO "Write EFER_ADDR content: 0x%x\n", efer);
 }
 
+static void *vmcb = NULL;
+static void *hsave = NULL;
 bool vmrun(void) {
-  void *vmcb;
+  uint32_t hsave_high;
+  uint32_t hsave_low;
 
   // TODO: Check if memory is write back
   vmcb = (void *)kzalloc(4096, GFP_KERNEL);
+  printk("vmcb pointer: 0x%p\n", vmcb);
 
   if (vmcb == NULL) {
     printk(KERN_INFO "Could not allocate memory for vmcb\n");
@@ -127,17 +137,40 @@ bool vmrun(void) {
     return false;
   }
 
+  hsave = (void *)kzalloc(4096, GFP_KERNEL);
+  printk("hsave pointer: 0x%p\n", hsave);
+
+  if (hsave == NULL) {
+    printk(KERN_INFO "Could not allocate memory for HSAVE\n");
+    return false;
+  }
+
+  // Check if vcmb is 4k aligned in memory
+  if ((uint64_t)hsave % 4096 != 0) {
+    printk(KERN_INFO "HSAVE is not 4k aligned!\n");
+    return false;
+  }
+
   enableSVM_EFER();
 
-  kfree(vmcb);
+  hsave_high = (uint32_t) ((uint64_t)hsave >> 32);
+  hsave_low = (uint32_t) ((uint64_t)hsave & LOW_64);
+
+  // Write buffer address to HSAVE msr
+  writeMSR(VM_HSAVE_PA_ADDR, hsave_high, hsave_low);
+
   // Execute VMRUN instruction
-  /* __asm__("mov rax, %0":"=r"(vmcb)); */
-  /* __asm__("vmrun"); */
+  __asm__("mov rax, %0"::"r"(vmcb):"rax");
+  __asm__("mov %0, rax":"=r"(vmcb));
+  printk(KERN_INFO "Executing VMRUN vmcb: 0x%p\n", vmcb);
+  __asm__("vmrun");
+  printk("Done executing vmrun\n");
 
   return true;
 }
 
 static int my_init(void) {
+  int ret = 0;
   enum SVM_SUPPORT svm;
   printk(KERN_INFO "==== LOADED HYPERVISOR DRIVER ====\n");
 
@@ -154,21 +187,29 @@ static int my_init(void) {
     break;
   case SVM_NOT_AVAIL:
     printk(KERN_INFO "Has SVM support: false\n");
-    return 1;
+    ret = 1;
+    goto end;
   case SVM_DISABLED_WITH_KEY:
     printk(KERN_INFO "SVM is bios disabled with key\n");
-    return 1;
+    ret = 1;
+    goto end;
   case SVM_DISABLED_AT_BIOS_NOT_UNLOCKABLE:
     printk(KERN_INFO "SVM is bios disabled not unlockable\n");
-    return 1;
+    ret = 1;
+    goto end;
   }
 
   if (!vmrun()) {
     printk(KERN_INFO "vmrun failed\n");
-    return 1;
+    ret = 1;
+    goto end;
   }
 
-  return 0;
+end:
+  printk(KERN_INFO "Freeing and returning vmcb 0x%p hsave 0x%p\n", vmcb, hsave);
+  kfree(vmcb);
+  kfree(hsave);
+  return ret;
 }
 
 static void my_exit(void) {

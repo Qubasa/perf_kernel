@@ -14,4 +14,6 @@ modules.order
 Module.symvers
 .tmp_versions/
 .hypervisor.mod.cmd
+a.out
+test.c
 hypervisor.mod
