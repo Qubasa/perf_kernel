@@ -1,3 +1,6 @@
+## Description
+A simple / minimalistic hypervisor for learning purposes, working with AMD-V.
+
 ## Get started
 Compile with
 ```bash
