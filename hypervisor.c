@@ -98,22 +98,21 @@ void inline enableSVM_EFER(void) {
 
   // Read VM_CR MSR
   readMSR(EFER_ADDR, &high, &efer);
-  printk("Read EFER_ADDR content: 0x%x\n", efer);
+  printk(KERN_INFO "Is EFER.SVM enabled: %s\n",
+         efer & (1 << 12) ? "true" : "false");
 
+  // Check if processor in protected mode
   __asm__("mov %0, cr0" : "=r"(cr0));
   printk(KERN_INFO "Is protected mode enabled: %s\n",
          cr0 & 1 ? "true" : "false");
 
+  // Read the current CPL level
   __asm__("mov %0, cs" : "=r"(cs));
   printk(KERN_INFO "DPL is: %lld\n", cs & ((1 << 13) | (1 << 14)));
 
-  printk(KERN_INFO "Is EFER.SVM enabled: %s\n",
-         efer & (1 << 12) ? "true" : "false");
-
-  efer |= 1 << 12; // BUG: This creates the GP exception
+  // Enable EFER.SVM
+  efer |= 1 << 12;
   writeMSR(EFER_ADDR, high, efer);
-  // If enabled should look like this 0x1d01
-  printk(KERN_INFO "Write EFER_ADDR content: 0x%x\n", efer);
 }
 
 static void *vmcb = NULL;
@@ -161,8 +160,6 @@ bool vmrun(void) {
 
   // Execute VMRUN instruction
   __asm__("mov rax, %0"::"r"(vmcb):"rax");
-  __asm__("mov %0, rax":"=r"(vmcb));
-  printk(KERN_INFO "Executing VMRUN vmcb: 0x%p\n", vmcb);
   __asm__("vmrun");
   printk("Done executing vmrun\n");
 
