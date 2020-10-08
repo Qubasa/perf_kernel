@@ -1,4 +1,5 @@
 .envrc
+svm_kernel/target/
 .direnv
 .history
 .__pycache__
