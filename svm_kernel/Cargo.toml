@@ -12,5 +12,10 @@ panic = "abort"
 panic = "abort"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+bootloader = "0.9.11"
+uart_16550 = "0.2.10"
+
+# cargo run command options
+[package.metadata.bootimage]
+run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-nographic"]

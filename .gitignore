@@ -1,5 +1,7 @@
 .envrc
 svm_kernel/target/
 .direnv
+.ccls-cache
+cpuid.c
 .history
 .__pycache__
