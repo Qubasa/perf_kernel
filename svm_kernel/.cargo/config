@@ -3,10 +3,15 @@
 target = "x86_64-os.json"
 jobs = 8
 
+# Use inbuilt memcpy & memset
 [unstable]
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins"]
 
-
+# Make cargo run automatically start qemu
 [target.'cfg(target_os = "none")']
 runner = "bootimage runner"
+
+[alias]
+asm = ["rustc","--release","--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
+
