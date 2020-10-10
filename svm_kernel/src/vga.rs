@@ -88,7 +88,11 @@ impl Writer {
             }
         }
     }
-
+    pub fn flush(&mut self){
+        for row in 0..BUFFER_HEIGHT {
+            self.clear_row(row);
+        }
+    }
     pub fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {

@@ -13,7 +13,6 @@ lazy_static::lazy_static! {
 }
 
 use core::fmt;
-
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
