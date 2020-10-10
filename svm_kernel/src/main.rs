@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::test_runner)]
 /*
  * Followed the tutorial here: https://os.phil-opp.com
  * TODO: Replace builtin memcpy, memset with optimized one
@@ -9,7 +11,7 @@
 /* TODO:
  * Write bootloader myself to be able to enable
  * mmx,sse & float features!
- * Should also solve the lto linktime error
+ * Should also solve the lto linktime warning
  */
 
 /*
@@ -22,7 +24,7 @@ mod serial;
 mod vga;
 mod mylog;
 
-use log::{LevelFilter, info, Log};
+use log::{LevelFilter, info, Log, error};
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -36,12 +38,11 @@ pub extern "C" fn _start() -> ! {
         info!("Hello World {}", i);
     }
 
-    mylog::LOGGER.flush();
-
     loop {}
 }
 
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    error!("{}", info);
     loop {}
 }
