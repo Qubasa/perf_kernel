@@ -43,11 +43,17 @@ You can find the asm file in `target/x86_64-os/release/deps/svm_kernel-*.s`
 
 ## Debug with gdb
 ```bash
-$ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x86_64-os/debug/bootimage-svm_kernel.bin  -s -S
+$ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x86_64-os/debug/bootimage-svm_kernel.bin -nographic -s -S
 ```
 In another shell execute:
 ```bash
-$ gdb target/x86_64-os/debug/bootimage-svm_kernel.bin -ex "target remote:1234"
+$ gdb target/x86_64-os/debug/svm_kernel -ex "target remote:1234"
+```
+
+## Run tests
+To execute tests run:
+```
+$ cargo test
 ```
 
 

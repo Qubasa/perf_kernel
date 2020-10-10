@@ -63,6 +63,7 @@ dependencies = [
  "log",
  "spin 0.6.0",
  "uart_16550",
+ "x86_64",
 ]
 
 [[package]]

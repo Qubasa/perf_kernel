@@ -24,3 +24,14 @@ impl log::Log for HWLogger {
     }
 }
 
+#[test_case]
+fn test_log() {
+    use log::{error, warn, info, debug, trace};
+    println!("LOG LEVEL: {}", log::max_level());
+    error!("error log");
+    warn!("warn log");
+    info!("info log");
+    debug!("debug log");
+    trace!("trace log");
+}
+
