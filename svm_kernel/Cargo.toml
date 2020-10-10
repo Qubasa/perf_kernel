@@ -10,7 +10,7 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
-# lto = "fat"
+lto = "fat"
 opt-level = 3
 debug=true
 codegen-units=1
@@ -28,3 +28,4 @@ features = ["spin_no_std"]
 # cargo run command options
 [package.metadata.bootimage]
 run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-nographic"]
+build-command = ["build", "--release"]

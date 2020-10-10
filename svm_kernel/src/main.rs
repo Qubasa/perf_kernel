@@ -7,6 +7,12 @@
  */
 
 /*
+ * Write bootloader myself to be able to enable
+ * mmx,sse & float features!
+ * Should also solve the lto linktime error
+ */
+
+/*
  * This kernel has been tested on an AMD x64 processor
  * family: 0x17h, model: 0x18h
  */
