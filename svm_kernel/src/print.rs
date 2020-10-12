@@ -13,9 +13,3 @@ macro_rules! print {
     };
 }
 
-#[test_case]
-fn test_println_many() {
-    for i in 0..60 {
-        println!("test_println_many output: {}", i);
-    }
-}

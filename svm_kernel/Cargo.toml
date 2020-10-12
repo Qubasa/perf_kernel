@@ -27,7 +27,7 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-nographic"]
+run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none"]
 # build-command = ["build", "--release"]
 build-command = ["build"]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
