@@ -6,12 +6,12 @@
 
 use core::panic::PanicInfo;
 use svm_kernel::{println, mylog::LOGGER};
+use log::{error, warn, info, debug, trace};
 
-use log::{LevelFilter, info, error};
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
     log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(LevelFilter::Trace);
+    log::set_max_level(log::LevelFilter::Trace);
     test_main();
 
     loop {}
@@ -29,7 +29,6 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[test_case]
 fn test_log() {
-    use log::{error, warn, info, debug, trace};
     trace!("trace log");
     println!("LOG LEVEL: {}", log::max_level());
     error!("error log");

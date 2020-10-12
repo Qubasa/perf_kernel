@@ -9,8 +9,10 @@ pub struct HWLogger;
 pub static LOGGER: HWLogger = HWLogger;
 
 impl log::Log for HWLogger {
+
+    // Enable logging at level Trace if cond is met
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
+        metadata.level() <= Level::Trace
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
