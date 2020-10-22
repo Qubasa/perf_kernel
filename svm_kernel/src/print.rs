@@ -8,8 +8,10 @@ macro_rules! println {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {
+        {
         $crate::vga::_print(format_args!($($arg)*));
-        $crate::serial::_print(format_args!($($arg)*))
+        $crate::serial::_print(format_args!($($arg)*));
+        }
     };
 }
 

@@ -1,4 +1,5 @@
 use crate::gdt;
+use crate::print;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 // Offset the PICs to avoid index collision with
@@ -7,7 +8,6 @@ pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
 use pic8259_simple::ChainedPics;
-use crate::{println, print};
 
 // Initialize the Process Interrupt Controller
 pub static PICS: spin::Mutex<ChainedPics> =
@@ -17,7 +17,7 @@ pub static PICS: spin::Mutex<ChainedPics> =
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = PIC_1_OFFSET,
-    Keyboard // 33
+    Keyboard, // 33
 }
 
 impl InterruptIndex {
@@ -48,25 +48,45 @@ lazy_static::lazy_static! {
     };
 }
 
-
 pub fn init_idt() {
     IDT.load();
 }
 
 // Keyboard handler
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
-
+    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
+    // Initialize pc_keyboard crate
+    lazy_static::lazy_static! {
+        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(
+            Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
+        );
+    }
+
+    // Lock keyboard parser
+    let mut keyboard = KEYBOARD.lock();
+    // Create port on mem addr 0x60 to read keycode
     let mut port = Port::new(0x60);
-    let scancode: u8 = unsafe { port.read()  };
-    print!("{}", scancode);
+    // Read keycode from mem
+    let scancode: u8 = unsafe { port.read() };
+
+    print!(".");
+    // Parse keycode with pc_keyboard crate
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(character) => print!("{}", character),
+                DecodedKey::RawKey(key) => print!("{:#?}", key),
+            }
+        }
+    }
 
     // Renable interrupts again
     unsafe {
-        PICS.lock().notify_end_of_interrupt(
-            InterruptIndex::Keyboard.as_u8()
-        );
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
 }
 
@@ -83,18 +103,14 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame);
 }
 
-
 // timer interrupt handler
-extern "x86-interrupt" fn timer_interrupt_handler(
-    _stack_frame: &mut InterruptStackFrame)
-{
+extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     print!(".");
 
     // Renable interrupts again
     unsafe {
-        PICS.lock().notify_end_of_interrupt(
-            InterruptIndex::Timer.as_u8()
-        );
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
     }
 }
 
