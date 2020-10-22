@@ -17,6 +17,7 @@ codegen-units=1
 [dependencies]
 bootloader = "0.9.11"
 log = "0.4.11"
+pic8259_simple = "0.2.0"
 uart_16550 = "0.2.10"
 spin = "0.6.0"
 x86_64 = "0.12.2"
@@ -27,7 +28,8 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none"]
+# run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none"]
+run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}",]
 # build-command = ["build", "--release"]
 build-command = ["build"]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]

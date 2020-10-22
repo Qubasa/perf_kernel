@@ -11,6 +11,7 @@ pub mod vga;
 pub mod print;
 pub mod mylog;
 pub mod interrupts;
+pub mod gdt;
 
 /*
  * Use an exit code different from 0 and 1 to
@@ -36,6 +37,12 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 // All kernel inits summed up
 pub fn init(){
     interrupts::init_idt();
+    gdt::init();
+    unsafe {
+        interrupts::PICS.lock().initialize();
+    };
+    log::info!("Enabling interrupts");
+    x86_64::instructions::interrupts::enable();
 }
 
 /*
@@ -78,6 +85,12 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
     loop {}
+}
+
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 /* Creates the `Testable` trait

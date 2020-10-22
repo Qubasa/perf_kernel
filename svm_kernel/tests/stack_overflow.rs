@@ -4,26 +4,25 @@
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-
 use core::panic::PanicInfo;
-use svm_kernel::{QemuExitCode, exit_qemu, println, init};
+use svm_kernel::{exit_qemu, init, println, QemuExitCode};
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    println!("[ok]");
+    println!("{}", _info);
     exit_qemu(QemuExitCode::Success);
-    svm_kernel::hlt_loop();
+    loop {}
 }
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
 
-    svm_kernel::hlt_loop();
+    loop {}
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running should_panic test");
+    println!("Running stack overflow test");
     for test in tests {
         test();
         println!("[test did not panic]");
@@ -32,8 +31,18 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
     exit_qemu(QemuExitCode::Success);
 }
 
+#[allow(unconditional_recursion)]
+fn stack_overflow() {
+    let x = 0;
+    stack_overflow();
+    unsafe {
+        core::ptr::read_volatile(&x);
+    }
+}
+
 #[test_case]
-fn should_fail() {
-    println!("should_panic::should_fail...\t");
-    assert_eq!(0, 1);
+fn stack_overflow_test() {
+    stack_overflow();
+    log::error!("Execution continued after double fault!");
+    exit_qemu(QemuExitCode::Failed);
 }
