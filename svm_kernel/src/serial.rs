@@ -1,5 +1,8 @@
 use uart_16550::SerialPort;
 
+// Serial programming resource:
+// https://en.wikibooks.org/wiki/Serial_Programming/8250_UART_Programming
+
 lazy_static::lazy_static! {
     // Rust ref keyword explained
     // http://xion.io/post/code/rust-patterns-ref.html
@@ -7,6 +10,7 @@ lazy_static::lazy_static! {
         unsafe {
             let mut serial_port = SerialPort::new(0x3F8);
             serial_port.init();
+
             serial_port
          }
     );

@@ -12,6 +12,7 @@ pub mod print;
 pub mod mylog;
 pub mod interrupts;
 pub mod gdt;
+pub mod memory;
 
 /*
  * Use an exit code different from 0 and 1 to
@@ -49,11 +50,13 @@ pub fn init(){
  * TESTING CODE
  */
 use core::panic::PanicInfo;
-
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
 // Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_test_main);
+#[cfg(test)]
+fn kernel_test_main(_boot_info: &'static BootInfo) -> ! {
 
     init();
 
