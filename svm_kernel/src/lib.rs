@@ -7,6 +7,7 @@
 #![feature(alloc_error_handler)]
 #![feature(const_in_array_repeat_expressions)]
 #![feature(const_mut_refs)]
+#![feature(asm)]
 #![no_std]
 
 pub mod serial;
@@ -17,6 +18,7 @@ pub mod interrupts;
 pub mod gdt;
 pub mod memory;
 pub mod allocator;
+pub mod bench;
 
 extern crate alloc;
 

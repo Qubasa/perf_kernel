@@ -15,7 +15,6 @@ codegen-units=1
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-linked_list_allocator = "0.8.6"
 pc-keyboard = "0.5.1"
 bootloader = { version = "0.9.11", features=["map_physical_memory"] }
 log = "0.4.11"
@@ -32,7 +31,7 @@ features = ["spin_no_std"]
 # cargo run command options
 [package.metadata.bootimage]
 # run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none", "-s", "-S"]
-run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none"]
+run-command = ["qemu-kvm","-cpu", "host", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none"]
 # run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}", "-serial", "pty"]
 # run-command = ["qemu-kvm","-cpu", "qemu64,+svm,vendor=AuthenticAMD", "-drive", "format=raw,file={}",]
 # build-command = ["build", "--release"]

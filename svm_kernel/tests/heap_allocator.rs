@@ -8,7 +8,7 @@ extern crate alloc;
 
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use svm_kernel::{println, mylog::LOGGER, print, allocator::HEAP_START};
+use svm_kernel::{println, mylog::LOGGER, print, allocator::HEAP_START, bench::Bench};
 
 
 entry_point!(main);
@@ -58,10 +58,12 @@ use core::intrinsics::{copy};
 
 #[test_case]
 fn simple_allocation() {
+    let mut bench = Bench::start();
     let heap_value_1 = Box::new(41);
     let heap_value_2 = Box::new(13);
     assert_eq!(*heap_value_1, 41);
     assert_eq!(*heap_value_2, 13);
+    bench.end();
 }
 
 #[test_case]
@@ -80,6 +82,7 @@ fn zero_alloc() {
 #[test_case]
 fn realloc_grow_forward() {
     unsafe {
+        let mut bench = Bench::start();
         let layout = Layout::array::<u16>(4).unwrap();
         let old_ptr = alloc(layout);
 
@@ -93,12 +96,14 @@ fn realloc_grow_forward() {
         assert_eq!(*(new_ptr as *mut u16).offset(1), 0xdead);
 
         dealloc(new_ptr, layout);
+        bench.end();
     }
 }
 
 #[test_case]
 fn realloc_copy_grow() {
     unsafe {
+        let mut bench = Bench::start();
         let layout = Layout::array::<u16>(4).unwrap();
         let old_ptr = alloc(layout);
         let obstacle_ptr = alloc(layout);
@@ -114,12 +119,14 @@ fn realloc_copy_grow() {
 
         dealloc(new_ptr, layout);
         dealloc(obstacle_ptr, layout);
+        bench.end();
     }
 }
 
 #[test_case]
 fn realloc_copy_shrink() {
     unsafe {
+        let mut bench = Bench::start();
         let layout = Layout::array::<u16>(4).unwrap();
         let old_ptr = alloc(layout);
         let obstacle_ptr = alloc(layout);
@@ -135,24 +142,28 @@ fn realloc_copy_shrink() {
 
         dealloc(new_ptr, layout);
         dealloc(obstacle_ptr, layout);
+        bench.end();
     }
 }
 
 #[test_case]
 fn heap_full_alloc() {
     unsafe {
+        let mut bench = Bench::start();
         let layout = Layout::array::<u8>(HEAP_SIZE).unwrap();
         let ptr = alloc(layout);
 
         let failed_layout = Layout::array::<u8>(1).unwrap();
-        let failed_ptr = alloc(layout);
+        let failed_ptr = alloc(failed_layout);
         assert_eq!(failed_ptr, core::ptr::null_mut());
         dealloc(ptr, layout);
+        bench.end();
     }
 }
 
 #[test_case]
 fn mult_alloc() {
+    let mut bench = Bench::start();
     {
         let heap_value_1 = Box::new(41);
         let heap_value_2 = Box::new(13);
@@ -161,26 +172,31 @@ fn mult_alloc() {
     }
     let heap_value_1 = Box::<u64>::new(0xdeadbeef);
     assert_eq!(*heap_value_1, 0xdeadbeef);
+    bench.end();
 }
 
 use alloc::vec::Vec;
 
 #[test_case]
 fn large_vec() {
+    let mut bench = Bench::start();
     let n = 1000;
     let mut vec = Vec::new();
     for i in 0..n {
         vec.push(i);
     }
     assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
+    bench.end();
 }
 
 use svm_kernel::allocator::HEAP_SIZE;
 
 #[test_case]
 fn many_boxes() {
+    let mut bench = Bench::start();
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
+    bench.end();
 }

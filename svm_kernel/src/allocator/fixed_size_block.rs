@@ -1,6 +1,6 @@
 use super::{HEAP_SIZE, HEAP_START};
 use alloc::alloc::Layout;
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 use core::ptr;
 
 const ALLOC_STEPS: usize = 16;
@@ -13,6 +13,7 @@ const ALLOC_STEPS: usize = 16;
  * an Option<u32>. Doubles the size of the memory overhead
  */
 /* In this case:
+ * alloc buffer: 100K
  * max alloc: 1Mb
  * mem overhead: 13Kb
  * dealloc: O(1)
@@ -84,8 +85,8 @@ impl FixedSizeBlockAllocator {
             } else {
                 accumulator += ALLOC_STEPS;
                 if needed_size == accumulator {
-
-                    let arr_data = match u16::try_from(needed_size / ALLOC_STEPS).expect("alloc size is too big");
+                    let arr_data =
+                        u16::try_from(needed_size / ALLOC_STEPS).expect("alloc size is too big");
                     self.arr[spot] = Some(arr_data);
                     let mem_ptr = spot * ALLOC_STEPS + HEAP_START;
                     log::trace!(
@@ -123,6 +124,17 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
         alloc.dealloc(ptr, &layout);
     }
 
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        let mut alloc = self.lock();
+        let ptr = alloc.alloc(&layout);
+        core::intrinsics::write_bytes::<u8>(
+            ptr,
+            0,
+            layout.align_to(ALLOC_STEPS).unwrap().pad_to_align().size(),
+        );
+        return ptr;
+    }
+
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
         let mut alloc = self.lock();
         let index = (ptr as usize - HEAP_START) / ALLOC_STEPS;
@@ -143,7 +155,8 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 
         // Make buffer smaller
         if old_size > new_size {
-            let arr_data = match u16::try_from(new_size as usize / ALLOC_STEPS).expect("alloc size is too big");
+            let arr_data =
+                u16::try_from(new_size as usize / ALLOC_STEPS).expect("alloc size is too big");
             alloc.arr[index] = Some(arr_data);
             return ptr;
 

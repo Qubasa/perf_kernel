@@ -2,6 +2,11 @@
 HPC kernel written in Rust.
 
 ## Setup & Debug Build
+Clone the repo with submodules:
+```
+$ git clone --recursive <url>
+```
+
 Install the rust nightly toolchain:
 ```
 nightly-x86_64-unknown-linux-gnu (default)
