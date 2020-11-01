@@ -1,17 +1,20 @@
 use super::{HEAP_SIZE, HEAP_START};
 use alloc::alloc::Layout;
+use std::convert::TryFrom;
 use core::ptr;
 
 const ALLOC_STEPS: usize = 16;
 
-/* This allocator needs HEAP_SIZE / (ALLOC_STEPS / 4) of memory
+/* This allocator needs HEAP_SIZE / (ALLOC_STEPS / sizeof(typeof(arr))) of memory
  * as overhead but it uses a fixed size array
  * which is cache coherent
- * Max alloc size is (2^32-1)*ALLOC_STEPS
+ * Max alloc size is (2^16-1)*ALLOC_STEPS
+ * Max alloc can be increased to 64Gb by changing the Option<u16> to
+ * an Option<u32>. Doubles the size of the memory overhead
  */
 /* In this case:
- * max alloc: 64G
- * mem overhead: 25Kb
+ * max alloc: 1Mb
+ * mem overhead: 13Kb
  * dealloc: O(1)
  * alloc worst: O(HEAP_SIZE / ALLOC_STEPS)
  * realloc best: O(1)
@@ -20,7 +23,7 @@ const ALLOC_STEPS: usize = 16;
 
 // TODO: Use a generic here?
 pub struct FixedSizeBlockAllocator {
-    arr: [Option<u32>; HEAP_SIZE / ALLOC_STEPS],
+    arr: [Option<u16>; HEAP_SIZE / ALLOC_STEPS],
 }
 
 impl FixedSizeBlockAllocator {
@@ -81,7 +84,9 @@ impl FixedSizeBlockAllocator {
             } else {
                 accumulator += ALLOC_STEPS;
                 if needed_size == accumulator {
-                    self.arr[spot] = Some((needed_size / ALLOC_STEPS) as u32);
+
+                    let arr_data = match u16::try_from(needed_size / ALLOC_STEPS).expect("alloc size is too big");
+                    self.arr[spot] = Some(arr_data);
                     let mem_ptr = spot * ALLOC_STEPS + HEAP_START;
                     log::trace!(
                         "alloc_ptr: {:#x}, size: {:#x}, spot: {}",
@@ -138,7 +143,8 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 
         // Make buffer smaller
         if old_size > new_size {
-            alloc.arr[index] = Some((new_size as usize / ALLOC_STEPS) as u32);
+            let arr_data = match u16::try_from(new_size as usize / ALLOC_STEPS).expect("alloc size is too big");
+            alloc.arr[index] = Some(arr_data);
             return ptr;
 
         // Make buffer bigger
