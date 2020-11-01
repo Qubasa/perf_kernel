@@ -4,6 +4,9 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
+#![feature(const_in_array_repeat_expressions)]
+#![feature(const_mut_refs)]
 #![no_std]
 
 pub mod serial;
@@ -13,6 +16,9 @@ pub mod mylog;
 pub mod interrupts;
 pub mod gdt;
 pub mod memory;
+pub mod allocator;
+
+extern crate alloc;
 
 /*
  * Use an exit code different from 0 and 1 to
@@ -87,7 +93,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     println!("[failed]\n");
     println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
 }
 
 pub fn hlt_loop() -> ! {

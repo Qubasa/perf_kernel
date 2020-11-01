@@ -47,8 +47,11 @@ $ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x8
 ```
 In another shell execute:
 ```bash
-$ gdb target/x86_64-os/debug/svm_kernel -ex "target remote:1234"
+$ rust-gdb target/x86_64-os/debug/svm_kernel -ex "target remote:1234"
 ```
+
+You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
+
 
 ## Run tests
 To execute tests run:

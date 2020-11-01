@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-ls src/*.rs .cargo/* Cargo.toml | entr sh -c "cargo bootimage"
+ls src/*.rs .cargo/* src/allocator/*.rs Cargo.toml | entr sh -c "cargo bootimage"

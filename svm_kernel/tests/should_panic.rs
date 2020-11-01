@@ -23,7 +23,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running should_panic test");
+    println!("===== should_panic test =====");
     for test in tests {
         test();
         println!("[test did not panic]");
@@ -34,6 +34,5 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 
 #[test_case]
 fn should_fail() {
-    println!("should_panic::should_fail...\t");
     assert_eq!(0, 1);
 }

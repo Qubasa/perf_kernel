@@ -12,14 +12,10 @@ use log::{error, warn, info, debug, trace};
 pub extern "C" fn _start() -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
+    println!("==== test_logging ====");
     test_main();
 
     loop {}
-}
-
-#[test_case]
-fn test_println() {
-    println!("test_println output");
 }
 
 #[panic_handler]

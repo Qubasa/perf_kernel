@@ -1,6 +1,7 @@
 lazy_static::lazy_static! {
     // Rust ref keyword explained
     // http://xion.io/post/code/rust-patterns-ref.html
+    // TODO: Write your own spin lock or locking mechanism
     pub static ref VGA_WRITER: spin::Mutex<Writer> = spin::Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Black, Color::Yellow),

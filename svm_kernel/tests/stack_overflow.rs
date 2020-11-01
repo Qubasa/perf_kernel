@@ -8,8 +8,8 @@ use core::panic::PanicInfo;
 use svm_kernel::{exit_qemu, init, println, QemuExitCode};
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("{}", _info);
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     exit_qemu(QemuExitCode::Success);
     loop {}
 }
@@ -22,7 +22,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running stack overflow test");
+    println!("==== stack overflow test ====");
     for test in tests {
         test();
         println!("[test did not panic]");

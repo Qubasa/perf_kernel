@@ -51,8 +51,7 @@ pub fn create_example_mapping(
 }
 
 
-//TODO: Change usable_frames from returning an iterator
-// and instead return and save an array
+//TODO: If rust allows it in the future save the iterator in struct
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames().nth(self.next);
