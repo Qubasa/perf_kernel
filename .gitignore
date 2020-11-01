@@ -4,4 +4,7 @@ svm_kernel/target/
 .ccls-cache
 cpuid.c
 .history
+test
+test.rs
+test.c
 .__pycache__
