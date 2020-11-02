@@ -89,7 +89,7 @@ fn realloc_grow_forward() {
         let n: u32 = 0xdeadbeef;
         copy::<u32>(&n as *const u32, old_ptr as *mut u32, 1);
 
-        let new_ptr = realloc(old_ptr, layout, 64);
+        let new_ptr = realloc(old_ptr, layout, 640);
 
         // assert_eq!(new_ptr, old_ptr);
         assert_eq!(*(new_ptr as *mut u16), 0xbeef);
@@ -112,7 +112,7 @@ fn realloc_copy_grow() {
         let n: u32 = 0xdeadbeef;
         copy::<u32>(&n as *const u32, old_ptr as *mut u32, 1);
 
-        let new_ptr = realloc(old_ptr, layout, 64);
+        let new_ptr = realloc(old_ptr, layout, 640);
 
         assert_ne!(new_ptr, old_ptr);
         assert_eq!(*(new_ptr as *mut u16), 0xbeef);

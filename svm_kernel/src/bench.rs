@@ -55,3 +55,11 @@ pub fn init() {
         log::warn!("rtdsc does not increment at a fixed rate");
     }
 }
+
+// TODO: When threading is implemented add a counter where execution time is spent most of the time
+// TODO: use ibs execution sampling
+// Use the core performance counters using rdpmc to measure:
+// L2 cache misses
+// Make debug information perf compatible!
+// https://perf.wiki.kernel.org/index.php/Main_Page
+// https://github.com/torvalds/linux/tree/master/tools/perf

@@ -76,6 +76,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
  * KERNEL PANIC HANDLER
  * Not used in cargo test
  */
+//TODO: Implement a bare metal debugger
+// https://lib.rs/crates/gdbstub
+// https://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     error!("{}", info);
