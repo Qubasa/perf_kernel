@@ -14,5 +14,8 @@ build-std = ["core", "compiler_builtins", "alloc"]
 runner = "bootimage runner"
 
 [alias]
+# release asm
 asm = ["rustc","--bin","svm_kernel", "--release","--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
+
+# debug asm
 # asm = ["rustc","--bin","svm_kernel", "--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]

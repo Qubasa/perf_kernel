@@ -2,11 +2,11 @@
 from subprocess import Popen, PIPE
 import sys
 
-cmd = f"cargo test --test {sys.argv[1]}"
+cmd = f"cargo test --release --test {sys.argv[1]}"
 print(cmd)
 
 res = {}
-for _ in range(5):
+for _ in range(20):
     p = Popen(cmd, shell=True, stdout=PIPE)
     output = p.stdout.read().decode()
     output = filter(lambda s: s.startswith("Cycles needed:"), output.split("\n"))
@@ -17,5 +17,4 @@ for _ in range(5):
         res[i].sort()
 
 for i in res.values():
-    print(i)
     print(i[int(len(i)/2)])

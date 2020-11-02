@@ -29,6 +29,17 @@ impl Bench {
     }
 }
 
+/// A function that is opaque to the optimizer, to allow benchmarks to
+/// pretend to use outputs to assist in avoiding dead-code
+/// elimination.
+///
+/// This function is a no-op, and does not even read from `dummy`.
+pub fn black_box<T>(dummy: T) -> T {
+    // we need to "use" the argument in some way LLVM can't
+    // introspect.
+    unsafe {asm!("/* {0} */" , in(reg) &dummy)}
+    dummy
+}
 
 #[inline]
 pub fn rdtsc() -> u64 {

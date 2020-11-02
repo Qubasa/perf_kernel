@@ -4,6 +4,7 @@
 #![test_runner(svm_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(asm)]
+
 /*
  * Followed the tutorial here: https://os.phil-opp.com
  * TODO: Replace builtin memcpy, memset with optimized one
