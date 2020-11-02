@@ -83,7 +83,7 @@ fn zero_alloc() {
 fn realloc_grow_forward() {
     unsafe {
         let mut bench = Bench::start();
-        let layout = Layout::array::<u16>(4).unwrap();
+        let layout = Layout::from_size_align(32, 16).unwrap();
         let old_ptr = alloc(layout);
 
         let n: u32 = 0xdeadbeef;
@@ -104,7 +104,7 @@ fn realloc_grow_forward() {
 fn realloc_copy_grow() {
     unsafe {
         let mut bench = Bench::start();
-        let layout = Layout::array::<u16>(4).unwrap();
+        let layout = Layout::from_size_align(32, 16).unwrap();
         let old_ptr = alloc(layout);
         let obstacle_ptr = alloc(layout);
         black_box(obstacle_ptr);
@@ -124,29 +124,28 @@ fn realloc_copy_grow() {
     }
 }
 
-//TODO
-// #[test_case]
-// fn realloc_copy_shrink() {
-//     unsafe {
-//         let mut bench = Bench::start();
-//         let layout = Layout::array::<u16>(4).unwrap();
-//         let old_ptr = alloc(layout);
-//         let obstacle_ptr = alloc(layout);
+#[test_case]
+fn realloc_copy_shrink() {
+    unsafe {
+        let mut bench = Bench::start();
+        let layout = Layout::from_size_align(32, 16).unwrap();
+        let old_ptr = alloc(layout);
+        let obstacle_ptr = alloc(layout);
+        black_box(obstacle_ptr);
 
-//         let n: u32 = 0xdeadbeef;
-//         copy::<u32>(&n as *const u32, old_ptr as *mut u32, 1);
+        let n: u32 = 0xdeadbeef;
+        copy::<u32>(&n as *const u32, old_ptr as *mut u32, 1);
 
-//         let new_ptr = realloc(old_ptr, layout, 64);
+        let new_ptr = realloc(old_ptr, layout, 16);
 
-//         assert_ne!(new_ptr, old_ptr);
-//         assert_eq!(*(new_ptr as *mut u16), 0xbeef);
-//         assert_eq!(*(new_ptr as *mut u16).offset(1), 0xdead);
+        assert_eq!(new_ptr, old_ptr);
+        assert_eq!(*(new_ptr as *mut u16), 0xbeef);
 
-//         dealloc(new_ptr, layout);
-//         dealloc(obstacle_ptr, layout);
-//         bench.end();
-//     }
-// }
+        dealloc(new_ptr, layout);
+        dealloc(obstacle_ptr, layout);
+        bench.end();
+    }
+}
 
 #[test_case]
 fn heap_full_alloc() {

@@ -110,9 +110,8 @@ impl FixedSizeBlockAllocator {
 use super::Locked;
 use alloc::alloc::GlobalAlloc;
 
-//TODO: Benchmark your implementation
 //TODO: Use sse instructions to make it faster
-//TODO: Use bitarray instead of u32 array
+//TODO: Use bitarray instead of u16 array
 unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let mut alloc = self.lock();

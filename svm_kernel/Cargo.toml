@@ -17,7 +17,7 @@ edition = "2018"
 linked_list_allocator = "0.8.6"
 pc-keyboard = "0.5.1"
 bootloader = { version = "0.9.11", features=["map_physical_memory"] }
-log = {version = "0.4.11", features = ["release_max_level_warn"] }
+log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = "0.2.0"
 uart_16550 = { path = "external/uart_16550"  }
 spin = "0.6.0"
