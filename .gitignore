@@ -7,4 +7,5 @@ cpuid.c
 test
 test.rs
 test.c
+.~lock*
 .__pycache__
