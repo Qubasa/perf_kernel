@@ -22,9 +22,9 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
 /// Align the given address `addr` upwards to alignment `align`.
 ///
 /// Requires that `align` is a power of two.
-fn align_up(addr: usize, align: usize) -> usize {
-    (addr + align - 1) & !(align - 1)
-}
+// fn align_up(addr: usize, align: usize) -> usize {
+//     (addr + align - 1) & !(align - 1)
+// }
 
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,

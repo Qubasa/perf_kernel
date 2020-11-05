@@ -19,6 +19,7 @@ pub mod gdt;
 pub mod memory;
 pub mod allocator;
 pub mod bench;
+pub mod apic;
 
 extern crate alloc;
 
@@ -44,12 +45,36 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 
 // All kernel inits summed up
-pub fn init(){
+pub fn init(boot_info: &'static bootloader::BootInfo){
+    use x86_64::VirtAddr;
+
+    // Initialize interrupt handlers
     interrupts::init_idt();
     gdt::init();
-    unsafe {
-        interrupts::PICS.lock().initialize();
+
+    // Get pagetable offset from bootloader
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+
+    // Initialize the memory module
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+
+    // Initialize the frame allocator
+    let mut frame_allocator =  unsafe {
+        memory::BootInfoFrameAllocator::init(&boot_info.memory_map)
     };
+
+    // Initialize the heap allocator
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
+
+    // Initialize benchmarking subsystem
+    bench::init();
+
+    // Initialize apic controller
+    unsafe {
+        interrupts::APIC.lock().initialize(&mut mapper, &mut frame_allocator);
+    }
+
+    // Enable interrupts
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 }

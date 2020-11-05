@@ -1,23 +1,17 @@
+use crate::apic;
 use crate::gdt;
 use crate::print;
+
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
-// Offset the PICs to avoid index collision with
-// exceptions in the IDT
-pub const PIC_1_OFFSET: u8 = 32;
-pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
-use pic8259_simple::ChainedPics;
-
-// Initialize the Process Interrupt Controller
-pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 
 // IDT index numbers
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
-    Timer = PIC_1_OFFSET,
+    Timer = apic::PIC_1_OFFSET,
     Keyboard, // 33
     Reserved0,
     COM2,
@@ -41,6 +35,8 @@ lazy_static::lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
         idt.invalid_opcode.set_handler_fn(invalid_op_handler);
+        idt.general_protection_fault.set_handler_fn(general_prot_handler);
+        idt.alignment_check.set_handler_fn(alignment_handler);
 
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
@@ -63,9 +59,8 @@ pub fn init_idt() {
     IDT.load();
 }
 
-
-use x86_64::structures::idt::PageFaultErrorCode;
 use crate::hlt_loop;
+use x86_64::structures::idt::PageFaultErrorCode;
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
     error_code: PageFaultErrorCode,
@@ -74,6 +69,22 @@ extern "x86-interrupt" fn page_fault_handler(
 
     log::error!("EXCEPTION: PAGE FAULT");
     log::error!("Accessed Address: {:?}", Cr2::read());
+    log::error!("Error Code: {:?}", error_code);
+    log::error!("{:#?}", stack_frame);
+    hlt_loop();
+}
+
+extern "x86-interrupt" fn general_prot_handler(stack_frame: &mut InterruptStackFrame, error_code: u64 ) {
+    log::error!("EXCEPTION: General Protection Exception");
+    log::error!("Error Code: {:?}", error_code);
+    log::error!("{:#?}", stack_frame);
+    hlt_loop();
+}
+
+
+// TODO: Enable alignment checking
+extern "x86-interrupt" fn alignment_handler(stack_frame: &mut InterruptStackFrame, error_code: u64) {
+    log::error!("EXCEPTION: Alignment Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
     hlt_loop();
@@ -114,10 +125,10 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Interrup
     }
 
     // Renable interrupts again
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
-    }
+    // unsafe {
+    //     PICS.lock()
+    //         .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    // }
 }
 
 // Breakpoint handler
@@ -142,10 +153,10 @@ extern "x86-interrupt" fn serial_handler(_stack_frame: &mut InterruptStackFrame)
     log::info!("SERIAL HANDLER\n");
 
     // Renable interrupts again
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-    }
+    // unsafe {
+    //     PICS.lock()
+    //         .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    // }
 }
 
 // timer interrupt handler
@@ -153,10 +164,10 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
     print!(".");
 
     // Renable interrupts again
-    unsafe {
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-    }
+    // unsafe {
+    //     PICS.lock()
+    //         .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
+    // }
 }
 
 // Executed on cargo test
