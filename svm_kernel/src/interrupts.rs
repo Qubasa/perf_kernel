@@ -11,11 +11,13 @@ pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
-    Timer = apic::PIC_1_OFFSET,
+    Timer1 = apic::PIC_1_OFFSET,
     Keyboard, // 33
     Reserved0,
     COM2,
     COM1,
+    Timer = 0xe0,
+    Spurious = 0xff,
 }
 
 impl InterruptIndex {
@@ -50,6 +52,8 @@ lazy_static::lazy_static! {
                 .set_handler_fn(serial_handler);
             idt[InterruptIndex::COM1.as_usize()]
                 .set_handler_fn(serial_handler);
+            idt[InterruptIndex::Spurious.as_usize()]
+                .set_handler_fn(spurious_handler);
         }
         idt
     };
@@ -162,12 +166,17 @@ extern "x86-interrupt" fn serial_handler(_stack_frame: &mut InterruptStackFrame)
 // timer interrupt handler
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     print!(".");
+    log::info!("TIMER INTERRUPT");
 
     // Renable interrupts again
     // unsafe {
     //     PICS.lock()
     //         .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
     // }
+}
+
+extern "x86-interrupt" fn spurious_handler(_stack_frame: &mut InterruptStackFrame) {
+    log::info!("SPURIOUS HANDLER");
 }
 
 // Executed on cargo test
