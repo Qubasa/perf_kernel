@@ -3,32 +3,9 @@ use crate::gdt;
 use crate::print;
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-
+use crate::apic::InterruptIndex;
 
 pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
-
-// IDT index numbers
-#[derive(Debug, Clone, Copy)]
-#[repr(u8)]
-pub enum InterruptIndex {
-    Timer1 = apic::PIC_1_OFFSET,
-    Keyboard, // 33
-    Reserved0,
-    COM2,
-    COM1,
-    Timer = 0xe0,
-    Spurious = 0xff,
-}
-
-impl InterruptIndex {
-    fn as_u8(self) -> u8 {
-        self as u8
-    }
-
-    fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
-}
 
 // Global static IDT
 lazy_static::lazy_static! {
@@ -166,13 +143,11 @@ extern "x86-interrupt" fn serial_handler(_stack_frame: &mut InterruptStackFrame)
 // timer interrupt handler
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptStackFrame) {
     print!(".");
-    log::info!("TIMER INTERRUPT");
 
     // Renable interrupts again
-    // unsafe {
-    //     PICS.lock()
-    //         .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-    // }
+    unsafe {
+        APIC.lock().end_of_interrupt();
+    }
 }
 
 extern "x86-interrupt" fn spurious_handler(_stack_frame: &mut InterruptStackFrame) {
