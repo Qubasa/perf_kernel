@@ -66,6 +66,10 @@ impl BootInfoFrameAllocator {
         }
     }
 
+    pub fn test(&self){
+        log::info!("TEST!!");
+    }
+
     /// Returns an iterator over the usable frames specified in the memory map.
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map

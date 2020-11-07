@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use acpi::{AcpiHandler, AcpiTables, PhysicalMapping};
 use core::ptr::{read_volatile, write_volatile};
 use modular_bitfield::prelude::*;
 use pic8259_simple::ChainedPics;
@@ -14,6 +13,7 @@ use x86_64::{PhysAddr, VirtAddr};
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
 // https://stackoverflow.com/questions/24828186/about-the-io-apic-82093aa
 const IO_APIC_BASE: u64 = 0xFEC00000;
+
 
 // Offset the PICs to avoid index collision with
 // exceptions in the IDT
@@ -152,65 +152,6 @@ pub struct Apic {
     version: Option<ApicVersion>,
 }
 
-use alloc::rc::Rc;
-use core::cell::RefCell;
-#[derive(Clone)]
-pub struct MyAcpiHandler<'a> {
-    mapper: Rc<RefCell<&'a mut OffsetPageTable<'a>>>,
-    frame_allocator: Rc<RefCell<&'a mut dyn FrameAllocator<Size4KiB>>>,
-}
-
-impl<'a> MyAcpiHandler<'a> {
-    pub fn new(
-        mapper: &'a mut OffsetPageTable<'a>,
-        frame_allocator: &'a mut impl FrameAllocator<Size4KiB>,
-    ) -> Self {
-        MyAcpiHandler {
-            mapper: Rc::new(RefCell::new(mapper)),
-            frame_allocator: Rc::new(RefCell::new(frame_allocator)),
-        }
-    }
-}
-
-impl AcpiHandler for MyAcpiHandler<'_> {
-    unsafe fn map_physical_region<T>(
-        &self,
-        physical_address: usize,
-        size: usize,
-    ) -> PhysicalMapping<Self, T> {
-        let page =
-            Page::<Size4KiB>::from_start_address(VirtAddr::new(physical_address as u64)).unwrap();
-        use x86_64::structures::paging::PageSize;
-        if size > Size4KiB::SIZE as usize {
-            panic!("Size is bigger then a 4k Page");
-        }
-
-        // Map page for apic base address
-        use x86_64::structures::paging::PageTableFlags as Flags;
-        let frame = PhysFrame::containing_address(PhysAddr::new(physical_address as u64));
-        let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
-        let map_to_result = self
-            .mapper
-            .get_mut()
-            .map_to(page, frame, flags, self.frame_allocator.get_mut().clone())
-            .unwrap();
-
-        // Flush TLB
-        map_to_result.flush();
-
-        PhysicalMapping {
-            physical_start: frame.start_address().as_u64() as usize,
-            virtual_start: core::ptr::NonNull::new(page.start_address().as_mut_ptr()).unwrap(),
-            region_length: size,
-            mapped_length: page.size() as usize,
-            handler: self.clone(),
-        }
-    }
-    fn unmap_physical_region<T>(&self, region: &PhysicalMapping<Self, T>) {
-        todo!();
-    }
-}
-
 impl Apic {
     pub const fn new() -> Self {
         let chained = unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) };
@@ -236,6 +177,16 @@ impl Apic {
 
         // Flush TLB
         map_to_result.flush();
+
+        let page = Page::<Size4KiB>::from_start_address(VirtAddr::new(IO_APIC_BASE)).unwrap();
+
+        // Map page for apic base address
+        let frame = PhysFrame::containing_address(PhysAddr::new(IO_APIC_BASE));
+        let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
+        let map_to_result = mapper.map_to(page, frame, flags, frame_allocator).unwrap();
+
+        // Flush TLB
+        map_to_result.flush();
     }
 
     fn is_supported(&self) -> bool {
@@ -249,9 +200,9 @@ impl Apic {
         let x = APIC_BASE & 0xf << 2;
         let y = APIC_BASE & 3;
 
-        log::info!("x: {:x}, y: {:x}", x, y);
-        log::info!("IO BASE: 0xFEC0{:x}{:x}10", x, y);
-        let apic_start = (IO_APIC_BASE + 10) as *const u8;
+        log::info!("x: {:x}, y: {:x}", x,y);
+        log::info!("IO BASE: 0xFEC0{:x}{:x}10", x,y);
+        let apic_start = (IO_APIC_BASE+10) as *const u8;
 
         // let magic = core::slice::from_raw_parts(apic_start, 4);
         let f = read_volatile(apic_start);
@@ -264,18 +215,10 @@ impl Apic {
         log::info!("MADT magic: {:#x}", f);
     }
 
-    fn parse_apic<'a>(
-        &self,
-        mapper: &'a mut OffsetPageTable<'a>,
-        frame_allocator: &'a mut impl FrameAllocator<Size4KiB>,
-    ) {
-        let apic = MyAcpiHandler::new(mapper, frame_allocator);
-    }
-
-    pub unsafe fn initialize<'a>(
+    pub unsafe fn initialize(
         &mut self,
-        mapper: &'a mut OffsetPageTable<'a>,
-        frame_allocator: &'a mut impl FrameAllocator<Size4KiB>,
+        mapper: &mut OffsetPageTable,
+        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     ) {
         if !self.is_supported() {
             panic!("Apic is not available");
@@ -290,10 +233,6 @@ impl Apic {
 
         // Map page for apic base address
         self.map_apic_page(mapper, frame_allocator);
-
-        self.parse_apic(mapper, frame_allocator);
-
-        self.parse_madt();
 
         // Enable apic by writing MSR base reg
         let mut base_reg = ApicBaseReg::from_bytes(self.apic_base_reg.read().to_le_bytes());
