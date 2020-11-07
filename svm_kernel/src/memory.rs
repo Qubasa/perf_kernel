@@ -46,6 +46,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 
 use bootloader::bootinfo::MemoryMap;
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.
+#[derive(Debug)]
 pub struct BootInfoFrameAllocator {
     memory_map: &'static MemoryMap,
     next: usize,
