@@ -5,14 +5,11 @@ use modular_bitfield::prelude::*;
 use pic8259_simple::ChainedPics;
 use x86_64::registers::model_specific::Msr;
 use x86_64::structures::paging::{
-    FrameAllocator, Mapper, OffsetPageTable, Page, PhysFrame, Size4KiB,
+    FrameAllocator,  OffsetPageTable, Size4KiB,
 };
-use x86_64::{PhysAddr, VirtAddr};
 
 // Other constants
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
-// https://stackoverflow.com/questions/24828186/about-the-io-apic-82093aa
-const IO_APIC_BASE: u64 = 0xFEC00000;
 
 
 // Offset the PICs to avoid index collision with
@@ -162,57 +159,11 @@ impl Apic {
         }
     }
 
-    unsafe fn map_apic_page(
-        &self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    ) {
-        let page = Page::<Size4KiB>::from_start_address(VirtAddr::new(APIC_BASE)).unwrap();
-
-        // Map page for apic base address
-        use x86_64::structures::paging::PageTableFlags as Flags;
-        let frame = PhysFrame::containing_address(PhysAddr::new(APIC_BASE));
-        let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
-        let map_to_result = mapper.map_to(page, frame, flags, frame_allocator).unwrap();
-
-        // Flush TLB
-        map_to_result.flush();
-
-        let page = Page::<Size4KiB>::from_start_address(VirtAddr::new(IO_APIC_BASE)).unwrap();
-
-        // Map page for apic base address
-        let frame = PhysFrame::containing_address(PhysAddr::new(IO_APIC_BASE));
-        let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
-        let map_to_result = mapper.map_to(page, frame, flags, frame_allocator).unwrap();
-
-        // Flush TLB
-        map_to_result.flush();
-    }
-
     fn is_supported(&self) -> bool {
         use core::arch::x86_64::__cpuid;
         let feature = unsafe { __cpuid(0x0000_0001) };
         let feature = feature.edx & (1 << 9);
         return feature != 0;
-    }
-
-    unsafe fn parse_madt(&self) {
-        let x = APIC_BASE & 0xf << 2;
-        let y = APIC_BASE & 3;
-
-        log::info!("x: {:x}, y: {:x}", x,y);
-        log::info!("IO BASE: 0xFEC0{:x}{:x}10", x,y);
-        let apic_start = (IO_APIC_BASE+10) as *const u8;
-
-        // let magic = core::slice::from_raw_parts(apic_start, 4);
-        let f = read_volatile(apic_start);
-        log::info!("MADT magic: {:#x}", f);
-        let f = read_volatile(apic_start.offset(1));
-        log::info!("MADT magic: {:#x}", f);
-        let f = read_volatile(apic_start.offset(2));
-        log::info!("MADT magic: {:#x}", f);
-        let f = read_volatile(apic_start.offset(3));
-        log::info!("MADT magic: {:#x}", f);
     }
 
     pub unsafe fn initialize(
@@ -232,7 +183,7 @@ impl Apic {
         self.chained_pics.disable();
 
         // Map page for apic base address
-        self.map_apic_page(mapper, frame_allocator);
+        crate::memory::id_map_nocache(mapper, frame_allocator, APIC_BASE).unwrap();
 
         // Enable apic by writing MSR base reg
         let mut base_reg = ApicBaseReg::from_bytes(self.apic_base_reg.read().to_le_bytes());

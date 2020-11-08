@@ -15,7 +15,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 pc-keyboard = "0.5.1"
-acpi = "2.0.0"
 bootloader = { version = "0.9.11", features=["map_physical_memory"] }
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = { path="external/pic8259_simple"  }

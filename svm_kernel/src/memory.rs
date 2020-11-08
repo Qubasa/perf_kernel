@@ -1,4 +1,7 @@
 use x86_64::registers::control::Cr3;
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::Mapper;
+use x86_64::structures::paging::Page;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
 
@@ -44,6 +47,55 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     }
 }
 
+
+// Identity maps the phys address + type size and volatile reads the type from
+// memory. Does not unmap the page
+pub unsafe fn map_and_read_phys<T: Copy>(
+    mapper: &mut OffsetPageTable,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    addr: u64,
+) -> T
+{
+    // Map the start address
+    id_map_nocache(mapper, frame_allocator, addr).unwrap();
+
+    // Add type size and map if on new page
+    let size = core::mem::size_of::<T>() as u64;
+    id_map_nocache(mapper, frame_allocator, addr + size).unwrap();
+    core::ptr::read_volatile(addr as *const T)
+}
+
+// Identity map page and return page
+// if already identity mapped succeed and return page
+// if mapped but not as identity then return error
+pub unsafe fn id_map_nocache(
+    mapper: &mut OffsetPageTable,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    addr: u64,
+) -> Result<Page, MapToError<Size4KiB>> {
+    // Seek for page & phys frame containing address
+    let page = Page::<Size4KiB>::containing_address(VirtAddr::new(addr));
+    use x86_64::structures::paging::PageTableFlags as Flags;
+    let frame = PhysFrame::containing_address(PhysAddr::new(addr));
+    let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
+
+    // Identity map both and do not fail if they are already id mapped
+    let map_to_result = match mapper.map_to(page, frame, flags, frame_allocator) {
+        Ok(i) => i,
+        Err(MapToError::PageAlreadyMapped(mapped_frame)) => {
+            if mapped_frame != frame {
+                return Err(MapToError::PageAlreadyMapped(mapped_frame));
+            }
+            return Ok(page);
+        }
+        Err(e) => return Err(e),
+    };
+
+    // Flush TLB
+    map_to_result.flush();
+    Ok(page)
+}
+
 use bootloader::bootinfo::MemoryMap;
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.
 #[derive(Debug)]
@@ -66,7 +118,7 @@ impl BootInfoFrameAllocator {
         }
     }
 
-    pub fn test(&self){
+    pub fn test(&self) {
         log::info!("TEST!!");
     }
 
@@ -74,11 +126,9 @@ impl BootInfoFrameAllocator {
     fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
-        let usable_regions = regions
-            .filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
         // map each region to its address range
-        let addr_ranges = usable_regions
-            .map(|r| r.range.start_addr()..r.range.end_addr());
+        let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
         // transform to an iterator of frame start addresses
         let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
         // create `PhysFrame` types from the start addresses

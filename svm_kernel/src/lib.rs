@@ -1,4 +1,5 @@
 
+#![feature(result_contains_err)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
@@ -20,6 +21,8 @@ pub mod memory;
 pub mod allocator;
 pub mod bench;
 pub mod apic;
+pub mod acpi;
+
 
 extern crate alloc;
 
@@ -68,6 +71,11 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
 
     // Initialize benchmarking subsystem
     bench::init();
+
+    let mut acpi = acpi::Acpi::new();
+    unsafe {
+        acpi.init(&mut mapper, &mut frame_allocator);
+    };
 
     // Initialize apic controller
     unsafe {
