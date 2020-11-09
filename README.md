@@ -14,7 +14,7 @@ $ git clone --recursive <url>
 Install the rust nightly toolchain:
 ```
 nightly-x86_64-unknown-linux-gnu (default)
-rustc 1.49.0-nightly (91a79fb29 2020-10-07)
+rustc 1.49.0-nightly (ffa2e7ae8 2020-10-24)
 ```
 
 Install the dependencies listed in `shell.nix` or execute
