@@ -66,14 +66,22 @@ You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the break
 $ r2 -B 0x200000 target/x86_64-os/debug/svm_kernel
 ```
 
-
-
 ## Run tests
 To execute tests run:
 ```
 $ cargo test
 ```
+Run specific test:
+```
+$ cargo test --test heap_allocator
+```
 
+
+## Resources
+* https://os.phil-opp.com/
+* https://www.amd.com/system/files/TechDocs/24593.pdf
+* https://github.com/gamozolabs/chocolate_milk/
+* https://uefi.org/sites/default/files/resources/ACPI_6_3_final_Jan30.pdf
 
 
 
