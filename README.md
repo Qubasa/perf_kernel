@@ -32,7 +32,7 @@ $ cargo run
 Close the instance with CTRL+A,X
 or CTRL+C
 
-Built on filechange:
+Build on filechange:
 ```
 $ cd svm_kernel
 $ ./watch.sh
