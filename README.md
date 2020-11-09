@@ -1,5 +1,9 @@
+## WORK IN PROGRESS
+
 ## Description
-HPC kernel written in Rust.
+x86_64 HPC svm kernel written in Rust.
+Optimized for hypervisor usage.
+
 
 ## Setup & Debug Build
 Clone the repo with submodules:
