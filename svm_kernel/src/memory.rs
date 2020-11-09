@@ -53,7 +53,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 pub unsafe fn map_and_read_phys<T: Copy>(
     mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    addr: u64,
+    addr: PhysAddr,
 ) -> T
 {
     // Map the start address
@@ -62,7 +62,12 @@ pub unsafe fn map_and_read_phys<T: Copy>(
     // Add type size and map if on new page
     let size = core::mem::size_of::<T>() as u64;
     id_map_nocache(mapper, frame_allocator, addr + size).unwrap();
-    core::ptr::read_volatile(addr as *const T)
+
+    // NOTE: Can't use read_volatile because pointer is not necesseraly aligned
+    // like in acpi when searching for tables (as by spec)
+    // core::ptr::read_volatile(addr.as_u64() as *const T)
+    let ptr = addr.as_u64() as *const T;
+    *ptr
 }
 
 // Identity map page and return page
@@ -71,12 +76,12 @@ pub unsafe fn map_and_read_phys<T: Copy>(
 pub unsafe fn id_map_nocache(
     mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    addr: u64,
+    addr: PhysAddr,
 ) -> Result<Page, MapToError<Size4KiB>> {
     // Seek for page & phys frame containing address
-    let page = Page::<Size4KiB>::containing_address(VirtAddr::new(addr));
+    let page = Page::<Size4KiB>::containing_address(VirtAddr::new(addr.as_u64()));
     use x86_64::structures::paging::PageTableFlags as Flags;
-    let frame = PhysFrame::containing_address(PhysAddr::new(addr));
+    let frame = PhysFrame::containing_address(addr);
     let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
 
     // Identity map both and do not fail if they are already id mapped

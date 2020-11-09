@@ -59,7 +59,7 @@ impl Acpi {
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         addr: PhysAddr,
     ) -> (Header, PhysAddr, usize) {
-        let head: Header = map_and_read_phys(mapper, frame_allocator, addr.as_u64());
+        let head: Header = map_and_read_phys(mapper, frame_allocator, addr);
 
         let table_len = head
             .length
@@ -69,15 +69,15 @@ impl Acpi {
         // Checksum the table
         let mut sum: u8 = 0;
         for i in addr.as_u64()..addr.as_u64() + head.length as u64 {
-            let byte: u8 = map_and_read_phys(mapper, frame_allocator, i);
+            let byte: u8 = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(i));
             sum = sum.wrapping_add(byte);
         }
-
 
         if sum != 0 {
             panic!("Checksum invalid: {}", sum);
         }
 
+        log::info!("header addr: {:#x}", addr);
         (head, addr + size_of::<Header>() as u64, table_len as usize)
     }
 
@@ -87,7 +87,7 @@ impl Acpi {
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     ) {
         // Map 0x40e and read ebda
-        let ebda_ptr: u16 = map_and_read_phys(mapper, frame_allocator, 0x40e);
+        let ebda_ptr: u16 = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(0x40e));
 
         // Compute the regions we need to scan for the RSDP
         let regions = [
@@ -110,7 +110,7 @@ impl Acpi {
                     break;
                 }
 
-                let table: Rsdp = map_and_read_phys(mapper, frame_allocator, addr);
+                let table: Rsdp = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(addr));
                 if &table.signature != b"RSD PTR " {
                     continue;
                 }
@@ -132,7 +132,7 @@ impl Acpi {
                 if table.revision > 0 {
                     // Read the tables bytes so we can checksum it
                     let extended_rsdp: RsdpExtended =
-                        map_and_read_phys(mapper, frame_allocator, addr);
+                        map_and_read_phys(mapper, frame_allocator, PhysAddr::new(addr));
                     let extended_bytes: &[u8; core::mem::size_of::<RsdpExtended>()] =
                         core::intrinsics::transmute(&extended_rsdp);
 
@@ -167,5 +167,40 @@ impl Acpi {
             panic!("Invalid table size for RSDT");
         }
         let rsdt_entries = rsdt_size / size_of::<u32>();
+
+        // Set up the structures we're interested as parsing out as `None` as some
+        // of them may or may not be present.
+        let mut apics: Option<u32> = None;
+        // let mut apic_domains   = None;
+        // let mut memory_domains = None;
+
+        for entry in 0..rsdt_entries {
+            // Get the physical address of the RSDP table entry
+            let entry_paddr = rsdt_payload + entry * size_of::<u32>();
+
+            let table_ptr: u32 = map_and_read_phys(mapper, frame_allocator, entry_paddr);
+            let signature: [u8; 4] =
+                map_and_read_phys(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+
+            // Parse MADT
+            if &signature == b"APIC" {
+                if !apics.is_none() {
+                    panic!("Multiple SRAT ACPI table entrie");
+                }
+
+                log::info!("FOUND APIC STRUCTURE");
+                // let (ad, md) = self.parse_srat(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+                // apic_domains = Some(ad);
+                // memory_domains = Some(md);
+            }
+        }
+    } // end fn init
+
+    unsafe fn parse_srat(
+        &self,
+        mapper: &mut OffsetPageTable,
+        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+        addr: PhysAddr,
+    ) {
     }
-}
+} // end impl Apic

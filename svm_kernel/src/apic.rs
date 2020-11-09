@@ -183,7 +183,7 @@ impl Apic {
         self.chained_pics.disable();
 
         // Map page for apic base address
-        crate::memory::id_map_nocache(mapper, frame_allocator, APIC_BASE).unwrap();
+        crate::memory::id_map_nocache(mapper, frame_allocator, x86_64::PhysAddr::new(APIC_BASE)).unwrap();
 
         // Enable apic by writing MSR base reg
         let mut base_reg = ApicBaseReg::from_bytes(self.apic_base_reg.read().to_le_bytes());
