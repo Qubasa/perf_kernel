@@ -61,6 +61,12 @@ $ rust-gdb target/x86_64-os/debug/svm_kernel -ex "target remote:1234"
 
 You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
 
+## Debug with radare2
+```
+$ r2 -B 0x200000 target/x86_64-os/debug/svm_kernel
+```
+
+
 
 ## Run tests
 To execute tests run:

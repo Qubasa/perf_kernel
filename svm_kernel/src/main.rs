@@ -39,6 +39,8 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(LevelFilter::Info);
 
+    info!("kernel start at: {:?}", kernel_main as *const u64);
+
     // Initialize routine for kernel
     svm_kernel::init(boot_info);
 
