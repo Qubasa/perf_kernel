@@ -1,7 +1,7 @@
 ## WORK IN PROGRESS
 
 ## Description
-x86_64 HPC svm kernel written in Rust.
+x86_64 HPC amd kernel written in Rust.
 Optimized for hypervisor usage.
 
 
@@ -26,11 +26,11 @@ $ cargo install bootimage
 ```
 
 Run in qemu with:
-If you are on intel change the run flags in Cargo.toml and delete "+svm" etc.
 ```
 $ cargo run
 ```
 Close the instance with CTRL+A,X
+or CTRL+C
 
 Built on filechange:
 ```
