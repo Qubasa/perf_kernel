@@ -39,6 +39,17 @@ $ ./watch.sh
 ```
 
 ## Release build:
+Execute:
+```bash
+$ cargo run --release
+```
+The resulting file lies in: `target/x86_64-os/release/bootimage-svm_kernel.bin`
+Flash it with:
+```bash
+$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.bin of=/dev/MYDEVICE
+```
+
+
 Edit the file `Cargo.toml` and change `build-command` to `["build", "--release"]`
 Then execute `cargo bootimage`
 
@@ -75,6 +86,7 @@ Run specific test:
 ```
 $ cargo test --test heap_allocator
 ```
+
 
 
 ## Resources
