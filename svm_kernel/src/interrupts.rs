@@ -36,11 +36,7 @@ lazy_static::lazy_static! {
         idt.debug.set_handler_fn(debug_handler);
         idt.divide_error.set_handler_fn(divide_error_handler);
 
-
-        // Default initialization
-        for i in 21..=255 {
-            idt[i].set_handler_fn(default_handler);
-        }
+        crate::default_interrupt::init_default_handlers(&mut idt);
 
         // User defined
         idt[InterruptIndex::Timer.as_usize()]
@@ -77,9 +73,9 @@ extern "x86-interrupt" fn page_fault_handler(
     hlt_loop();
 }
 
-extern "x86-interrupt" fn default_handler(stack_frame: &mut InterruptStackFrame) {
+pub extern "x86-interrupt" fn default_handler<const N: usize>(stack_frame: &mut InterruptStackFrame) {
     log::error!("EXECPTION: Default Interrupt Handler");
-    log::error!("This interrupt has not been initialized");
+    log::error!("This interrupt has not been initialized: {}", N);
     panic!("{:?}", stack_frame);
 }
 

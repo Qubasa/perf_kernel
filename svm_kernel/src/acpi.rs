@@ -227,7 +227,6 @@ impl Acpi {
         // physical address of the ICS
         let mut ics = payload + 4u64 + 4u64;
         let end = payload + size as u64;
-        log::info!("ics: {:?}, size: {}, end: {:?}", ics, size, end);
 
         // Create a new structure to hold the APICs that are usable
         let mut apics = Vec::new();
@@ -242,7 +241,6 @@ impl Acpi {
 
             // Make sure there's room for the type and the length
             if ics + 2_u64 > end {
-                log::info!("ics + 2 > end!");
                 break;
             }
 
@@ -252,7 +250,6 @@ impl Acpi {
 
             // Make sure there's room for this structure
             if ics + len as u64 > end {
-                log::info!("ics + len > end!");
                 break;
             }
 
