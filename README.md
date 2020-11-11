@@ -1,4 +1,5 @@
-## WORK IN PROGRESS
+## ==== WORK IN PROGRESS ====
+Current status: Implementic acpi & srat support
 
 ## Description
 x86_64 HPC AMD kernel written in Rust.
