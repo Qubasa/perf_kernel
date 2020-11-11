@@ -1,7 +1,7 @@
 ## WORK IN PROGRESS
 
 ## Description
-x86_64 HPC amd kernel written in Rust.
+x86_64 HPC AMD kernel written in Rust.
 Optimized for hypervisor usage.
 
 
@@ -49,7 +49,7 @@ Flash it with:
 $ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.bin of=/dev/MYDEVICE
 ```
 
-
+OR
 Edit the file `Cargo.toml` and change `build-command` to `["build", "--release"]`
 Then execute `cargo bootimage`
 
