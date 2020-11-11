@@ -2,8 +2,8 @@ use crate::apic;
 use crate::gdt;
 use crate::print;
 
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use crate::apic::InterruptIndex;
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 
@@ -11,27 +11,49 @@ pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 lazy_static::lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt.page_fault.set_handler_fn(page_fault_handler);
-        idt.invalid_opcode.set_handler_fn(invalid_op_handler);
-        idt.general_protection_fault.set_handler_fn(general_prot_handler);
+        idt.simd_floating_point.set_handler_fn(simd_floatingpoint_handler);
+        idt.security_exception.set_handler_fn(security_handler);
+        idt.virtualization.set_handler_fn(virtualization_handler);
+        idt.machine_check.set_handler_fn(machine_check_handler);
         idt.alignment_check.set_handler_fn(alignment_handler);
-
+        idt.x87_floating_point.set_handler_fn(x87_floatingpoint_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
+        idt.general_protection_fault.set_handler_fn(general_prot_handler);
+        idt.stack_segment_fault.set_handler_fn(stack_segment_handler);
+        idt.segment_not_present.set_handler_fn(segment_not_present_handler);
+        idt.invalid_tss.set_handler_fn(invalid_tss_handler);
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
             // Use a different stack in case of kernel stack overflow
-            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
-            idt[InterruptIndex::Timer.as_usize()]
-                .set_handler_fn(timer_interrupt_handler);
-            idt[InterruptIndex::Keyboard.as_usize()]
-                .set_handler_fn(keyboard_interrupt_handler);
-            idt[InterruptIndex::COM2.as_usize()]
-                .set_handler_fn(serial_handler);
-            idt[InterruptIndex::COM1.as_usize()]
-                .set_handler_fn(serial_handler);
-            idt[InterruptIndex::Spurious.as_usize()]
-                .set_handler_fn(spurious_handler);
+            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX)
+        };
+        idt.device_not_available.set_handler_fn(device_not_available_handler);
+        idt.invalid_opcode.set_handler_fn(invalid_op_handler);
+        idt.bound_range_exceeded.set_handler_fn(bound_range_handler);
+        idt.overflow.set_handler_fn(overflow_handler);
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.non_maskable_interrupt.set_handler_fn(non_maskable_handler);
+        idt.debug.set_handler_fn(debug_handler);
+        idt.divide_error.set_handler_fn(divide_error_handler);
+
+
+        // Default initialization
+        for i in 21..=255 {
+            idt[i].set_handler_fn(default_handler);
         }
+
+        // User defined
+        idt[InterruptIndex::Timer.as_usize()]
+            .set_handler_fn(timer_interrupt_handler);
+        idt[InterruptIndex::Keyboard.as_usize()]
+            .set_handler_fn(keyboard_interrupt_handler);
+        idt[InterruptIndex::COM2.as_usize()]
+            .set_handler_fn(serial_handler);
+        idt[InterruptIndex::COM1.as_usize()]
+            .set_handler_fn(serial_handler);
+        idt[InterruptIndex::Spurious.as_usize()]
+            .set_handler_fn(spurious_handler);
+
         idt
     };
 }
@@ -55,16 +77,27 @@ extern "x86-interrupt" fn page_fault_handler(
     hlt_loop();
 }
 
-extern "x86-interrupt" fn general_prot_handler(stack_frame: &mut InterruptStackFrame, error_code: u64 ) {
+extern "x86-interrupt" fn default_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("EXECPTION: Default Interrupt Handler");
+    log::error!("This interrupt has not been initialized");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn general_prot_handler(
+    stack_frame: &mut InterruptStackFrame,
+    error_code: u64,
+) {
     log::error!("EXCEPTION: General Protection Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
     hlt_loop();
 }
 
-
 // TODO: Enable alignment checking
-extern "x86-interrupt" fn alignment_handler(stack_frame: &mut InterruptStackFrame, error_code: u64) {
+extern "x86-interrupt" fn alignment_handler(
+    stack_frame: &mut InterruptStackFrame,
+    error_code: u64,
+) {
     log::error!("EXCEPTION: Alignment Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
@@ -152,6 +185,93 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
 
 extern "x86-interrupt" fn spurious_handler(_stack_frame: &mut InterruptStackFrame) {
     log::info!("SPURIOUS HANDLER");
+}
+
+/*
+ *
+ * Non populated cpu exceptions
+ *
+ */
+extern "x86-interrupt" fn debug_handler(stack_frame: &mut InterruptStackFrame) {
+    log::info!("debug exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn divide_error_handler(stack_frame: &mut InterruptStackFrame) {
+    log::info!("divide error exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn non_maskable_handler(stack_frame: &mut InterruptStackFrame) {
+    log::info!("non maskable interrupt exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn overflow_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("overflow exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn bound_range_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("bound range exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn device_not_available_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("device not available exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn invalid_tss_handler(
+    stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    log::error!("invalid tss exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn segment_not_present_handler(
+    stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    log::error!("segment not present exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn stack_segment_handler(
+    stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    log::error!("stack segment fault exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn x87_floatingpoint_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("x87_floatingpoint exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn machine_check_handler(stack_frame: &mut InterruptStackFrame) -> ! {
+    log::error!("Machine check exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn simd_floatingpoint_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("Simd floatingpoint exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn virtualization_handler(stack_frame: &mut InterruptStackFrame) {
+    log::error!("virtualization exception");
+    panic!("{:?}", stack_frame);
+}
+
+extern "x86-interrupt" fn security_handler(
+    stack_frame: &mut InterruptStackFrame,
+    _error_code: u64,
+) {
+    log::error!("security exception");
+    panic!("{:?}", stack_frame);
 }
 
 // Executed on cargo test

@@ -99,7 +99,7 @@ impl SerialPort {
     /// Initializes the serial port.
     ///
     /// The default configuration of [38400/8-N-1](https://en.wikipedia.org/wiki/8-N-1) is used.
-    pub fn init(&mut self) {
+    pub fn interrupt_init(&mut self) {
         unsafe {
             // Disable interrupts
             self.int_en.write(0x00);
@@ -124,6 +124,34 @@ impl SerialPort {
 
             // Enable interrupts
             self.int_en.write(0x03);
+        }
+    }
+
+   pub fn init(&mut self) {
+        unsafe {
+            // Disable interrupts
+            self.int_en.write(0x00);
+
+            // Enable DLAB
+            self.line_ctrl.write(0x80);
+
+            // Set maximum speed to 38400 bps by configuring DLL and DLM
+            self.data.write(0x03);
+            self.int_en.write(0x00);
+
+            // Disable DLAB and set data word length to 8 bits
+            self.line_ctrl.write(0x03);
+
+            // Enable FIFO, clear TX/RX queues and
+            // set interrupt watermark at 14 bytes
+            self.fifo_ctrl.write(0xC7);
+
+            // Mark data terminal ready, signal request to send
+            // and enable auxilliary output #2 (used as interrupt line for CPU)
+            self.modem_ctrl.write(0x0B);
+
+            // Enable interrupts
+            self.int_en.write(0x01);
         }
     }
 

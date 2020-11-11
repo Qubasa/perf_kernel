@@ -19,6 +19,7 @@ bootloader = { version = "0.9.11", features=["map_physical_memory"] }
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = { path="external/pic8259_simple"  }
 uart_16550 = { path = "external/uart_16550"  }
+rangeset = {path = "external/rangeset"}
 spin = "0.6.0"
 x86_64 = "0.12.2"
 modular-bitfield = "0.10.0"
