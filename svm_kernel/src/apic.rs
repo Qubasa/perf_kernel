@@ -2,54 +2,15 @@
 
 use core::ptr::{read_volatile, write_volatile};
 use modular_bitfield::prelude::*;
-use pic8259_simple::ChainedPics;
 use x86_64::registers::model_specific::Msr;
 use x86_64::structures::paging::{
     FrameAllocator,  OffsetPageTable, Size4KiB,
 };
+use crate::interrupts::InterruptIndex;
 
 // Other constants
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
 
-
-// Offset the PICs to avoid index collision with
-// exceptions in the IDT
-pub const PIC_1_OFFSET: u8 = 32;
-pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
-
-// IDT index numbers
-#[derive(Debug, Clone, Copy)]
-#[repr(u8)]
-pub enum InterruptIndex {
-    LegacyTimer = PIC_1_OFFSET,
-    Keyboard, // 33
-    Reserved0,
-    COM2,
-    COM1,
-    IRQ5,
-    FloppyController,
-    ParallelPort1,
-    RtcTimer,
-    ACPI,
-    ScsiNic1,
-    ScsiNic2,
-    Mouse,
-    MathCoProcessor,
-    AtaChannel1,
-    AtaChannel2,
-    Timer = 0xe0,
-    Spurious = 0xff,
-}
-
-impl InterruptIndex {
-    pub fn as_u8(self) -> u8 {
-        self as u8
-    }
-
-    pub fn as_usize(self) -> usize {
-        usize::from(self.as_u8())
-    }
-}
 
 /// APIC registers (offsets into MMIO space)
 #[derive(Clone, Copy)]
@@ -145,16 +106,13 @@ struct SpuriousInterReg {
 // make a soft reboot possible
 pub struct Apic {
     apic_base_reg: Msr,
-    chained_pics: ChainedPics,
     version: Option<ApicVersion>,
 }
 
 impl Apic {
     pub const fn new() -> Self {
-        let chained = unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) };
         Apic {
             apic_base_reg: Msr::new(0x0000_001B),
-            chained_pics: chained,
             version: None,
         }
     }
@@ -175,12 +133,6 @@ impl Apic {
             panic!("Apic is not available");
         }
 
-        // Initialize pic to set interrupt offsets
-        // Needed because osdev.org said so
-        self.chained_pics.initialize();
-
-        // Disable old chained pics controller
-        self.chained_pics.disable();
 
         // Map page for apic base address
         crate::memory::id_map_nocache(mapper, frame_allocator, x86_64::PhysAddr::new(APIC_BASE)).unwrap();

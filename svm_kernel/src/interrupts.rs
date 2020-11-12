@@ -2,9 +2,51 @@ use crate::apic;
 use crate::gdt;
 use crate::print;
 
-use crate::apic::InterruptIndex;
+use pic8259_simple::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
+// Offset the PICs to avoid index collision with
+// exceptions in the IDT
+pub const PIC_1_OFFSET: u8 = 32;
+pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
+
+// IDT index numbers
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    LegacyTimer = PIC_1_OFFSET,
+    Keyboard, // 33
+    Reserved0,
+    COM2,
+    COM1,
+    IRQ5, // 37
+    FloppyController,
+    MasterPicSpurious, // or parallel port interrupt
+    RtcTimer,
+    ACPI,
+    ScsiNic1,
+    ScsiNic2,
+    Mouse,
+    MathCoProcessor,
+    AtaChannel1,
+    AtaChannel2,
+    IRQ16,
+    SlavePicSpurious,
+    Timer = 0xe0,
+    Spurious = 0xff,
+}
+
+impl InterruptIndex {
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    pub fn as_usize(self) -> usize {
+        usize::from(self.as_u8())
+    }
+}
+pub static PICS: spin::Mutex<ChainedPics> =
+    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 
 // Global static IDT
@@ -49,17 +91,31 @@ lazy_static::lazy_static! {
             .set_handler_fn(serial_handler);
         idt[InterruptIndex::Spurious.as_usize()]
             .set_handler_fn(spurious_handler);
-
+        idt[InterruptIndex::SlavePicSpurious.as_usize()]
+            .set_handler_fn(spurious_handler);
+        idt[InterruptIndex::MasterPicSpurious.as_usize()]
+            .set_handler_fn(spurious_handler);
         idt
     };
 }
 
-pub fn init_idt() {
+pub fn init() {
     IDT.load();
+
+    unsafe {
+        // Initialize pic to set interrupt offsets
+        // Needed to offset the spurious interrupts
+        // which trigger even if chained pics are disabled
+        PICS.lock().initialize();
+
+        // Disable old chained pics controller
+        PICS.lock().disable();
+    }
 }
 
 use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
+
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,
     error_code: PageFaultErrorCode,
@@ -73,7 +129,9 @@ extern "x86-interrupt" fn page_fault_handler(
     hlt_loop();
 }
 
-pub extern "x86-interrupt" fn default_handler<const N: usize>(stack_frame: &mut InterruptStackFrame) {
+pub extern "x86-interrupt" fn default_handler<const N: usize>(
+    stack_frame: &mut InterruptStackFrame,
+) {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {}", N);
     panic!("{:?}", stack_frame);
@@ -181,6 +239,17 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
 
 extern "x86-interrupt" fn spurious_handler(_stack_frame: &mut InterruptStackFrame) {
     log::info!("SPURIOUS HANDLER");
+
+    // Check if this is a pic8259_simple spurious interrupt or a legitimate interrupt
+    unsafe {
+        if PICS.lock().is_spurious_interrupt(|| {
+            log::info!("This is a pic8259_simple spurious interrupt");
+        }) {
+            return;
+        } else {
+            panic!("Not a spurious interrupt, that's bad :o");
+        }
+    }
 }
 
 /*

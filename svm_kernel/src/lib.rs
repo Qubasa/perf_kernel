@@ -52,9 +52,9 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 pub fn init(boot_info: &'static bootloader::BootInfo){
     use x86_64::VirtAddr;
 
-    // Initialize interrupt handlers
-    interrupts::init_idt();
     gdt::init();
+    // Initialize interrupt handlers
+    interrupts::init();
 
     // Get pagetable offset from bootloader
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);

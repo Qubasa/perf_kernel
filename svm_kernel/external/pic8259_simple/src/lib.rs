@@ -33,6 +33,9 @@ const CMD_END_OF_INTERRUPT: u8 = 0x20;
 // The mode in which we want to run our PICs.
 const MODE_8086: u8 = 0x01;
 
+// In-Service Register
+const CMD_READ_ISR: u8 = 0x0b;
+
 /// An individual PIC chip.  This is not exported, because we always access
 /// it through `Pics` below.
 struct Pic {
@@ -82,9 +85,9 @@ impl ChainedPics {
                     offset: offset2,
                     command: cpuio::UnsafePort::new(0xA0),
                     data: cpuio::UnsafePort::new(0xA1),
-                    orig_mask: None
+                    orig_mask: None,
                 },
-            ]
+            ],
         }
     }
 
@@ -100,7 +103,7 @@ impl ChainedPics {
         // allegedly takes long enough to make everything work on most
         // hardware.  Here, `wait` is a closure.
         let mut wait_port: cpuio::Port<u8> = cpuio::Port::new(0x80);
-        let mut wait = || { wait_port.write(0) };
+        let mut wait = || wait_port.write(0);
 
         // Save our original interrupt masks, because I'm too lazy to
         // figure out reasonable values.  We'll restore these when we're
@@ -146,6 +149,38 @@ impl ChainedPics {
         let pic1 = &mut self.pics[1];
         pic1.orig_mask = Some(pic1.data.read());
         pic1.data.write(0xff);
+    }
+
+    /* PIC2 is chained, and
+     * represents IRQs 8-15.  PIC1 is IRQs 0-7, with 2 being the chain */
+    // Execute closure f if this is a spurious interrupt afterwards
+    // send end of interrupt (eio) if irq > 7
+    pub unsafe fn is_spurious_interrupt<F: FnOnce()>(&mut self, f: F) -> bool {
+        let pic1 = &mut self.pics[0];
+        pic1.command.write(CMD_READ_ISR);
+        let irq = pic1.command.read();
+        // If IRQ2 is set then check slave controller
+        if irq & (1 << 2) == 1 {
+            let pic2 = &mut self.pics[0];
+            pic2.command.write(CMD_READ_ISR);
+            let irq = pic2.command.read();
+
+            if irq == 0 {
+                f();
+                // Send eio to pic1 because it does not know
+                // that this is only a spurious interrupt
+                self.pics[0].end_of_interrupt();
+                return true;
+            }
+        } else {
+            // if IRQ2 (bit 2) is not set then irq should equal to 0 if
+            // it is a spurious interrupt.
+            if irq == 0 {
+                f();
+                return true;
+            }
+        }
+        return false;
     }
 
     /// Do we handle this interrupt?
