@@ -68,16 +68,16 @@ impl FixedSizeBlockAllocator {
         // Iterate over arr
         let mut i = 0;
         while i < self.arr.len() {
-            log::trace!("i = {}", i);
+            log::trace!("i = {}, spot = {}", i, spot);
 
             // Check if mem used at this index
             // if so reset accumulator and skip next
             // values
             if let Some(offset) = self.arr[i] {
                 accumulator = 0;
-                spot = i + 1;
                 log::trace!("offset by: {}", offset);
                 i += offset as usize;
+                spot = i;
                 continue;
 
             // If not increase accumulator

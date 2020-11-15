@@ -3,8 +3,10 @@
 use crate::memory::{id_map_nocache, map_and_read_phys};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
+use core::fmt;
 use core::mem::size_of;
 use core::ptr::{read_volatile, write_volatile};
+use core::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use modular_bitfield::prelude::*;
 use rangeset::{Range, RangeSet};
 use x86_64::structures::paging::mapper::MapToError;
@@ -50,7 +52,98 @@ struct Header {
     creator_revision: u32,
 }
 
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct IoApic {
+    typ: u8,
+    length: u8,
+    id: u8,
+    res0: u8,
+    address: u32,
+    interrupt_base: u32,
+}
+
+impl fmt::Debug for IoApic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe { write!(f, "IoApic address: {:#x}", self.address) }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct LocalApic {
+    typ: u8,
+    length: u8,
+    processor_uid: u8,
+    id: u8,
+    flags: u32,
+}
+
+impl fmt::Debug for LocalApic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "LApic id: {}", self.id)
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct IntOverride {
+    typ: u8,
+    length: u8,
+    bus: u8, // always 0
+    source: u8,
+    mapped_to: u32,
+    flags: u16,
+}
+// TODO: Misaligned reads from packed struct in Debug could cause problems?
+impl fmt::Debug for IntOverride {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            write!(
+                f,
+                "IntOverride src: {} mapped to: {}",
+                self.source, self.mapped_to
+            )
+        }
+    }
+}
+
+/// Different states for APICs to be in
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub enum ApicState {
+    /// The core has checked in with the kernel and is actively running
+    Online = 1,
+    /// The core has been launched by the kernel, but has not yet registered
+    /// with the kernel
+    Launched = 2,
+    /// The core is present but has not yet been launched
+    Offline = 3,
+    /// This APIC ID does not exist
+    None = 4,
+    /// This APIC ID has disabled interrupts and halted forever
+    Halted = 5,
+}
+
+impl From<u8> for ApicState {
+    /// Convert a raw `u8` into an `ApicState`
+    fn from(val: u8) -> ApicState {
+        match val {
+            1 => ApicState::Online,
+            2 => ApicState::Launched,
+            3 => ApicState::Offline,
+            4 => ApicState::None,
+            5 => ApicState::Halted,
+            _ => panic!("Invalid ApicState from `u8`"),
+        }
+    }
+}
+
+/// Maximum number of cores allowed on the system
+pub const MAX_CORES: usize = 1024;
+
 pub struct Acpi {}
+
 impl Acpi {
     pub fn new() -> Self {
         Acpi {}
@@ -80,15 +173,14 @@ impl Acpi {
             panic!("Checksum invalid: {}", sum);
         }
 
-        log::info!("header addr: {:#x}", addr);
         (head, addr + size_of::<Header>() as u64, table_len as usize)
     }
 
-    pub unsafe fn init(
-        &mut self,
+    unsafe fn search_rsdp(
+        &self,
         mapper: &mut OffsetPageTable,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    ) {
+    ) -> Option<Rsdp> {
         // Map 0x40e and read ebda
         let ebda_ptr: u16 = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(0x40e));
 
@@ -101,8 +193,7 @@ impl Acpi {
         ];
 
         // Holds the RSDP structure if found
-        let mut rsdp: Option<Rsdp> = None;
-        'rsdp_search: for &(start, end) in &regions {
+        for &(start, end) in &regions {
             let start = x86_64::addr::align_up(start, 16);
             for addr in (start..=end).step_by(16) {
                 // Compute the end address of RSDP structure
@@ -119,8 +210,7 @@ impl Acpi {
                 }
 
                 // Checksum table
-                let table_bytes: &[u8; core::mem::size_of::<Rsdp>()] =
-                    core::intrinsics::transmute(&table);
+                let table_bytes: &[u8; size_of::<Rsdp>()] = core::intrinsics::transmute(&table);
                 let sum = table_bytes
                     .iter()
                     .fold(0_u8, |acc, &elem| acc.wrapping_add(elem));
@@ -128,8 +218,6 @@ impl Acpi {
                     log::warn!("Checksum is incorrect: {}", sum);
                     continue;
                 }
-
-                log::info!("ACPI revision: {}", table.revision + 1);
 
                 // Checksum the extended RSDP if needed
                 if table.revision > 0 {
@@ -148,12 +236,21 @@ impl Acpi {
                     }
                 }
 
-                rsdp = Some(table);
-                break 'rsdp_search;
+                return Some(table);
             }
         }
+        return None;
+    }
 
-        let rsdp = rsdp.expect("Failed to find RSDP for ACPI");
+    pub unsafe fn init(
+        &mut self,
+        mapper: &mut OffsetPageTable,
+        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    ) {
+        // Search for RSDP pointer
+        let rsdp = self
+            .search_rsdp(mapper, frame_allocator)
+            .expect("Failed to find RSDP for ACPI");
 
         // Parse out the RSDT
         let (rsdt, rsdt_payload, rsdt_size) = self.parse_header(
@@ -174,6 +271,8 @@ impl Acpi {
         // Set up the structures we're interested as parsing out as `None` as some
         // of them may or may not be present.
         let mut apics = None;
+        let mut ioapics = None;
+        let mut int_overrides = None;
         let mut apic_domains = None;
         let mut memory_domains = None;
 
@@ -191,9 +290,12 @@ impl Acpi {
                     panic!("Multiple SRAT ACPI table entrie");
                 }
 
-                log::info!("FOUND APIC STRUCTURE");
-                apics =
-                    Some(self.parse_madt(mapper, frame_allocator, PhysAddr::new(table_ptr as u64)));
+                let result =
+                    self.parse_madt(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+                apics = Some(result.0);
+                ioapics = Some(result.1);
+                int_overrides = Some(result.2);
+                // log::set_max_level(LevelFilter::Info);
 
             // Parse SRAT
             } else if &signature == b"SRAT" {
@@ -209,6 +311,8 @@ impl Acpi {
         } // enf for rsdt_entries
 
         log::info!("apics: {:?}", apics);
+        log::info!("ioapcis: {:?}", ioapics);
+        log::info!("int_overrides: {:?}", int_overrides);
         log::info!("apic domains: {:?}", apic_domains);
         log::info!("memory domains: {:?}", memory_domains);
     } // end fn init
@@ -220,7 +324,7 @@ impl Acpi {
         mapper: &mut OffsetPageTable,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         ptr: PhysAddr,
-    ) -> Vec<u32> {
+    ) -> (Vec<LocalApic>, Vec<IoApic>, Vec<IntOverride>) {
         let (_header, payload, size) = self.parse_header(mapper, frame_allocator, ptr);
 
         // Skip the local interrupt controller address and the flags to get the
@@ -229,7 +333,9 @@ impl Acpi {
         let end = payload + size as u64;
 
         // Create a new structure to hold the APICs that are usable
-        let mut apics = Vec::new();
+        let mut lapics = Vec::new();
+        let mut ioapcis = Vec::new();
+        let mut int_overrides = Vec::new();
 
         loop {
             /// Processor is ready for use
@@ -258,36 +364,57 @@ impl Acpi {
             }
 
             match typ {
+                // LAPIC entry
                 0 => {
-                    // LAPIC entry
                     if len != 8 {
                         panic!("Invalid LAPIC ICS entry");
                     }
-
-                    // Read the APIC ID
-                    let apic_id: u8 = map_and_read_phys(mapper, frame_allocator, ics + 3_u64);
-                    let flags: u32 = map_and_read_phys(mapper, frame_allocator, ics + 4_u64);
+                    // Read the struct
+                    let lapic: LocalApic = map_and_read_phys(mapper, frame_allocator, ics);
 
                     // If the processor is enabled, or can be enabled, log it as
                     // a valid APIC
-                    if (flags & APIC_ENABLED) != 0 || (flags & APIC_ONLINE_CAPABLE) != 0 {
-                        apics.push(apic_id as u32);
+                    if (lapic.flags & APIC_ENABLED) != 0 || (lapic.flags & APIC_ONLINE_CAPABLE) != 0
+                    {
+                        lapics.push(lapic);
                     }
                 }
+                // I/O APIC
+                1 => {
+                    if len != 12 {
+                        panic!("Invalid I/O apic entry");
+                    }
+
+                    let ioapic: IoApic = map_and_read_phys(mapper, frame_allocator, ics);
+                    ioapcis.push(ioapic);
+                }
+                // Interrupt overrides
+                2 => {
+                    if len != 10 {
+                        panic!("Invalid interrupt override entry");
+                    }
+
+                    let int_override: IntOverride = map_and_read_phys(mapper, frame_allocator, ics);
+
+                    // Filter out identity mappings
+                    if int_override.source as u32 != int_override.mapped_to {
+                        int_overrides.push(int_override);
+                    }
+                }
+                // x2apic entry
                 9 => {
-                    // x2apic entry
                     if len != 16 {
                         panic!("Invalid x2apic ICS entry");
                     }
 
-                    // Read the APIC ID
-                    let apic_id: u32 = map_and_read_phys(mapper, frame_allocator, ics + 4u64);
-                    let flags: u32 = map_and_read_phys(mapper, frame_allocator, ics + 8u64);
+                    // Read the struct
+                    let lapic: LocalApic = map_and_read_phys(mapper, frame_allocator, ics);
 
                     // If the processor is enabled, or can be enabled, log it as
                     // a valid APIC
-                    if (flags & APIC_ENABLED) != 0 || (flags & APIC_ONLINE_CAPABLE) != 0 {
-                        apics.push(apic_id);
+                    if (lapic.flags & APIC_ENABLED) != 0 || (lapic.flags & APIC_ONLINE_CAPABLE) != 0
+                    {
+                        lapics.push(lapic);
                     }
                 }
                 _ => {
@@ -298,7 +425,7 @@ impl Acpi {
             ics = ics + len as u64;
         } // end loop
 
-        return apics;
+        return (lapics, ioapcis, int_overrides);
     } // end function
 
     unsafe fn parse_srat(

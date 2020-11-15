@@ -23,6 +23,7 @@ pub mod allocator;
 pub mod bench;
 pub mod apic;
 pub mod acpi;
+pub mod smp;
 pub mod default_interrupt;
 
 extern crate alloc;
@@ -81,6 +82,11 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
     // Initialize apic controller
     unsafe {
         interrupts::APIC.lock().initialize(&mut mapper, &mut frame_allocator);
+    }
+
+    let mut smp = smp::Smp::new();
+    unsafe {
+        smp.init(&mut mapper, &mut frame_allocator);
     }
 
     // Enable interrupts

@@ -21,12 +21,8 @@ fn main(boot_info: &'static BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
 
-    svm_kernel::init();
+    svm_kernel::init(boot_info);
     println!("===== heap_allocator test =====");
-    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();
     loop {}
@@ -205,3 +201,76 @@ fn many_boxes() {
     }
     bench.end();
 }
+
+#[derive(Clone, Copy)]
+struct Test0 {
+    typ: u8,
+    length: u8,
+    processor_uid: u8,
+    id: u8,
+    flags: u32,
+}
+
+#[derive(Clone, Copy)]
+struct Test1 {
+    typ: u8,
+    length: u8,
+    bus: u8, // always 0
+    source: u8,
+    mapped_to: u32,
+    flags: u16,
+}
+
+#[derive(Clone, Copy)]
+struct Test2 {
+    typ: u8,
+    length: u8,
+    id: u8,
+    res0: u8,
+    address: u32,
+    interrupt_base: u32,
+}
+
+#[test_case]
+fn multiple_vecs() {
+
+    let mut bench = Bench::start();
+    let mut vec0 = Vec::new();
+    let mut vec1 = Vec::new();
+    let mut vec2 = Vec::new();
+
+    let test0 = Test0 {
+        typ: 0,
+        length: 32,
+        processor_uid: 0,
+        id: 0,
+        flags: 0xff,
+    };
+    let test1 = Test1 {
+        typ: 1,
+        length: 10,
+        bus: 0,
+        source: 0,
+        mapped_to: 2,
+        flags: 0xff
+    };
+    let test2 = Test2 {
+        typ: 2,
+        length: 12,
+        id: 1,
+        res0: 0,
+        address: 0xbaab,
+        interrupt_base: 0xc
+    };
+
+    vec0.push(test0);
+    vec1.push(test1);
+    vec2.push(test2);
+
+    black_box(&vec1);
+    black_box(&vec2);
+    black_box(&vec0);
+
+    bench.end();
+}
+
