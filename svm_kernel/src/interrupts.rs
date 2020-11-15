@@ -44,6 +44,11 @@ impl InterruptIndex {
     pub fn as_usize(self) -> usize {
         usize::from(self.as_u8())
     }
+    pub fn as_pic_enable_mask(self) -> u8 {
+        let diff = self.as_usize() - InterruptIndex::LegacyTimer.as_usize();
+        let mask = 0xff & !(1 << diff);
+        mask as u8
+    }
 }
 pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
@@ -101,16 +106,6 @@ lazy_static::lazy_static! {
 
 pub fn init() {
     IDT.load();
-
-    unsafe {
-        // Initialize pic to set interrupt offsets
-        // Needed to offset the spurious interrupts
-        // which trigger even if chained pics are disabled
-        PICS.lock().initialize();
-
-        // Disable old chained pics controller
-        PICS.lock().disable();
-    }
 }
 
 use crate::hlt_loop;
@@ -193,10 +188,10 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: &mut Interrup
     }
 
     // Renable interrupts again
-    // unsafe {
-    //     PICS.lock()
-    //         .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
-    // }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
+    }
 }
 
 // Breakpoint handler
@@ -218,13 +213,18 @@ extern "x86-interrupt" fn invalid_op_handler(stack_frame: &mut InterruptStackFra
 
 // Serial handler
 extern "x86-interrupt" fn serial_handler(_stack_frame: &mut InterruptStackFrame) {
-    log::info!("SERIAL HANDLER\n");
+
+    // Disable interrupts because we lock the SERIAL_WRITER here
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let data = [crate::serial::SERIAL_WRITER.lock().read(); 1];
+        print!("{}", alloc::str::from_utf8(&data).unwrap());
+    });
 
     // Renable interrupts again
-    // unsafe {
-    //     PICS.lock()
-    //         .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
-    // }
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::COM2.as_u8());
+    }
 }
 
 // timer interrupt handler

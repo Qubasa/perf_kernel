@@ -141,7 +141,7 @@ impl ChainedPics {
         self.pics[1].data.write(saved_mask2);
     }
 
-    pub unsafe fn disable(&mut self) {
+    pub unsafe fn mask_all(&mut self) {
         let pic0 = &mut self.pics[0];
         pic0.orig_mask = Some(pic0.data.read());
         pic0.data.write(0xff);
@@ -149,6 +149,15 @@ impl ChainedPics {
         let pic1 = &mut self.pics[1];
         pic1.orig_mask = Some(pic1.data.read());
         pic1.data.write(0xff);
+    }
+
+    // 0 means interrupt enabled, 1 means masked
+    pub unsafe fn mask(&mut self, pic1_mask:u8, pic2_mask:u8){
+        let pic0 = &mut self.pics[0];
+        pic0.data.write(pic1_mask);
+
+        let pic1 = &mut self.pics[1];
+        pic1.data.write(pic2_mask);
     }
 
     /* PIC2 is chained, and

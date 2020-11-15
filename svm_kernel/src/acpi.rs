@@ -108,6 +108,21 @@ impl fmt::Debug for IntOverride {
     }
 }
 
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct NonMaskableInts {
+    typ: u8,
+    length: u8,
+    flags: u16,
+    int_num: u32,
+}
+
+impl fmt::Debug for NonMaskableInts {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe { write!(f, "Non Maskable Interrupt: {}", self.int_num) }
+    }
+}
+
 /// Different states for APICs to be in
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -274,6 +289,7 @@ impl Acpi {
         let mut ioapics = None;
         let mut int_overrides = None;
         let mut apic_domains = None;
+        let mut nmis = None;
         let mut memory_domains = None;
 
         for entry in 0..rsdt_entries {
@@ -292,10 +308,20 @@ impl Acpi {
 
                 let result =
                     self.parse_madt(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
-                apics = Some(result.0);
-                ioapics = Some(result.1);
-                int_overrides = Some(result.2);
-                // log::set_max_level(LevelFilter::Info);
+                if result.0.len() != 0 {
+                    apics = Some(result.0);
+                }
+                if result.1.len() != 0 {
+                    ioapics = Some(result.1);
+                }
+
+                if result.2.len() != 0 {
+                    int_overrides = Some(result.2);
+                }
+
+                if result.3.len() != 0 {
+                    nmis = Some(result.3);
+                }
 
             // Parse SRAT
             } else if &signature == b"SRAT" {
@@ -311,6 +337,7 @@ impl Acpi {
         } // enf for rsdt_entries
 
         log::info!("apics: {:?}", apics);
+        log::info!("nmis: {:?}", nmis);
         log::info!("ioapcis: {:?}", ioapics);
         log::info!("int_overrides: {:?}", int_overrides);
         log::info!("apic domains: {:?}", apic_domains);
@@ -324,7 +351,12 @@ impl Acpi {
         mapper: &mut OffsetPageTable,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         ptr: PhysAddr,
-    ) -> (Vec<LocalApic>, Vec<IoApic>, Vec<IntOverride>) {
+    ) -> (
+        Vec<LocalApic>,
+        Vec<IoApic>,
+        Vec<IntOverride>,
+        Vec<NonMaskableInts>,
+    ) {
         let (_header, payload, size) = self.parse_header(mapper, frame_allocator, ptr);
 
         // Skip the local interrupt controller address and the flags to get the
@@ -336,6 +368,7 @@ impl Acpi {
         let mut lapics = Vec::new();
         let mut ioapcis = Vec::new();
         let mut int_overrides = Vec::new();
+        let mut nmis = Vec::new();
 
         loop {
             /// Processor is ready for use
@@ -388,6 +421,14 @@ impl Acpi {
                     let ioapic: IoApic = map_and_read_phys(mapper, frame_allocator, ics);
                     ioapcis.push(ioapic);
                 }
+                // NonMaskableInts
+                3 => {
+                    if len != 8 {
+                        panic!("Invalid NonMaskableInts entry");
+                    }
+                    let nmi: NonMaskableInts = map_and_read_phys(mapper, frame_allocator, ics);
+                    nmis.push(nmi);
+                }
                 // Interrupt overrides
                 2 => {
                     if len != 10 {
@@ -425,7 +466,7 @@ impl Acpi {
             ics = ics + len as u64;
         } // end loop
 
-        return (lapics, ioapcis, int_overrides);
+        return (lapics, ioapcis, int_overrides, nmis);
     } // end function
 
     unsafe fn parse_srat(

@@ -209,5 +209,24 @@ impl Smp {
         for io in &ioapics {
             log::info!("IO Apic addr: {:#x}, enabled: {}", io.address, io.enabled);
         }
+
+        //TODO: The imcrp flag should also be available in the acpi table but where?
+        use crate::interrupts::{InterruptIndex, PICS};
+        PICS.lock().initialize();
+        if mp_float.imcrp & (1 << 7) == 0 {
+            log::info!("Virtual wire mode is active");
+            let keyboard_enable = InterruptIndex::Keyboard.as_pic_enable_mask();
+            let serial_enable = InterruptIndex::COM1.as_pic_enable_mask()
+                & InterruptIndex::COM2.as_pic_enable_mask();
+            PICS.lock().mask(keyboard_enable & serial_enable, 0xff);
+        } else {
+            use x86_64::instructions::port::Port;
+            let mut imcr_low: Port<u8> = Port::new(0x22);
+            let mut imcr_high: Port<u8> = Port::new(0x23);
+            imcr_low.write(0x70); // Select imcr register
+            imcr_high.write(0x01); // go through apic
+            PICS.lock().mask_all();
+            log::warn!("Redirecting PIC to io acpi this has not been tested");
+        }
     }
 }

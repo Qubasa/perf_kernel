@@ -179,6 +179,12 @@ impl SerialPort {
         }
     }
 
+    pub fn read(&mut self) -> u8 {
+        unsafe {
+        return self.data.read();
+        };
+    }
+
     /// Receives a byte on the serial port.
     pub fn receive(&mut self) -> u8 {
         unsafe {
