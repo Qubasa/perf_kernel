@@ -96,7 +96,7 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
 
     log::info!("Booting other cores");
     unsafe {
-        interrupts::APIC.lock().mp_init(1);
+        interrupts::APIC.lock().mp_init(1, boot_info.smp_trampoline);
     }
 }
 

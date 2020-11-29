@@ -140,7 +140,7 @@ impl Apic {
         }
     }
 
-    pub unsafe fn mp_init(&self, apic_id: u8) {
+    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: unsafe extern "C" fn() -> !) {
 
         // Send INIT ipi
         let low = InterCmdRegLow::new()
@@ -152,16 +152,19 @@ impl Apic {
         let high = InterCmdRegHigh::new().with_dest(apic_id);
         self.send_ipi(&low, &high);
 
+        log::info!("trampoline addr: {:?}", trampoline);
+        let to_vec = trampoline as u64 >> 12;
+        log::info!("vec addr: {}", to_vec);
         // // Send STARTUP ipi
-        // let low = InterCmdRegLow::new()
-        //     .with_vec(0xff) // Core execute code at 0x000VV000
-        //     .with_trigger_mode(0) // level-sensitive
-        //     .with_msg_type(0b110) // STARTUP type
-        //     .with_level(1) // 1 for everything else
-        //     ;
-        // let high = InterCmdRegHigh::new().with_dest(apic_id);
-        // self.send_ipi(&low, &high);
-        // self.send_ipi(&low, &high);
+        let low = InterCmdRegLow::new()
+            .with_vec(to_vec as u8) // Core execute code at 0x000VV000
+            .with_trigger_mode(0) // level-sensitive
+            .with_msg_type(0b110) // STARTUP type
+            .with_level(1) // 1 for everything else
+            ;
+        let high = InterCmdRegHigh::new().with_dest(apic_id);
+        self.send_ipi(&low, &high);
+        self.send_ipi(&low, &high);
     }
 
     fn ipi_pending(&self) -> bool {
