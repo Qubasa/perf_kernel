@@ -19,7 +19,7 @@ use x86_64::{PhysAddr, VirtAddr};
 /// In-memory representation of an RSDP ACPI structure
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct Rsdp {
+pub struct Rsdp {
     signature: [u8; 8],
     checksum: u8,
     oem_id: [u8; 6],
@@ -29,7 +29,7 @@ struct Rsdp {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct RsdpExtended {
+pub struct RsdpExtended {
     descriptor: Rsdp,
     length: u32,
     xsdt_addr: u64,
@@ -40,7 +40,7 @@ struct RsdpExtended {
 /// In-memory representation of an ACPI table header
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct Header {
+pub struct Header {
     signature: [u8; 4],
     length: u32,
     revision: u8,
@@ -54,7 +54,7 @@ struct Header {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct IoApic {
+pub struct IoApic {
     typ: u8,
     length: u8,
     id: u8,
@@ -71,7 +71,7 @@ impl fmt::Debug for IoApic {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct LocalApic {
+pub struct LocalApic {
     typ: u8,
     length: u8,
     processor_uid: u8,
@@ -87,7 +87,7 @@ impl fmt::Debug for LocalApic {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct IntOverride {
+pub struct IntOverride {
     typ: u8,
     length: u8,
     bus: u8, // always 0
@@ -110,7 +110,7 @@ impl fmt::Debug for IntOverride {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-struct NonMaskableInts {
+pub struct NonMaskableInts {
     typ: u8,
     length: u8,
     flags: u16,
@@ -157,11 +157,40 @@ impl From<u8> for ApicState {
 /// Maximum number of cores allowed on the system
 pub const MAX_CORES: usize = 1024;
 
-pub struct Acpi {}
+pub struct Acpi {
+    pub apics: Option<Vec<LocalApic>>,
+    pub ioapics: Option<Vec<IoApic>>,
+    pub int_overrides: Option<Vec<IntOverride>>,
+    pub nmis: Option<Vec<NonMaskableInts>>,
+    pub apic_domains: Option<BTreeMap<u32, u32>>,
+    pub memory_domains: Option<BTreeMap<u32, RangeSet>>,
+    pub mask_pics: bool,
+}
+
+impl fmt::Debug for Acpi {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Acpi tables:\n").unwrap();
+        write!(f, "apics: {:?}\n", self.apics).unwrap();
+        write!(f, "ioapics: {:?}\n", self.ioapics).unwrap();
+        write!(f, "int overrides: {:?}\n", self.int_overrides).unwrap();
+        write!(f, "non maskable ints: {:?}\n", self.nmis).unwrap();
+        write!(f, "apic domains: {:?}\n", self.apic_domains).unwrap();
+        write!(f, "memory domains: {:?}\n", self.memory_domains).unwrap();
+        write!(f, "mask pics: {:?}\n", self.mask_pics)
+    }
+}
 
 impl Acpi {
     pub fn new() -> Self {
-        Acpi {}
+        Acpi {
+            mask_pics: false,
+            apics: None,
+            ioapics: None,
+            int_overrides: None,
+            apic_domains: None,
+            nmis: None,
+            memory_domains: None,
+        }
     }
 
     unsafe fn parse_header(
@@ -230,7 +259,7 @@ impl Acpi {
                     .iter()
                     .fold(0_u8, |acc, &elem| acc.wrapping_add(elem));
                 if sum != 0 {
-                    log::warn!("Checksum is incorrect: {}", sum);
+                    log::warn!("Rsdp checksum is incorrect: {}", sum);
                     continue;
                 }
 
@@ -283,15 +312,6 @@ impl Acpi {
         }
         let rsdt_entries = rsdt_size / size_of::<u32>();
 
-        // Set up the structures we're interested as parsing out as `None` as some
-        // of them may or may not be present.
-        let mut apics = None;
-        let mut ioapics = None;
-        let mut int_overrides = None;
-        let mut apic_domains = None;
-        let mut nmis = None;
-        let mut memory_domains = None;
-
         for entry in 0..rsdt_entries {
             // Get the physical address of the RSDP table entry
             let entry_paddr = rsdt_payload + entry * size_of::<u32>();
@@ -302,46 +322,44 @@ impl Acpi {
 
             // Parse MADT
             if &signature == b"APIC" {
-                if !apics.is_none() {
+                if !self.apics.is_none() {
                     panic!("Multiple SRAT ACPI table entrie");
                 }
 
                 let result =
                     self.parse_madt(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+
                 if result.0.len() != 0 {
-                    apics = Some(result.0);
+                    self.apics = Some(result.0);
                 }
                 if result.1.len() != 0 {
-                    ioapics = Some(result.1);
+                    self.ioapics = Some(result.1);
                 }
 
                 if result.2.len() != 0 {
-                    int_overrides = Some(result.2);
+                    self.int_overrides = Some(result.2);
                 }
 
                 if result.3.len() != 0 {
-                    nmis = Some(result.3);
+                    self.nmis = Some(result.3);
                 }
+
+                self.mask_pics = result.4;
 
             // Parse SRAT
             } else if &signature == b"SRAT" {
                 log::info!("FOUND SRAT STRUCTURE");
-                if !apic_domains.is_none() || !memory_domains.is_none() {
+                if !self.apic_domains.is_none() || !self.memory_domains.is_none() {
                     panic!("Multiple SRAT entries");
                 }
                 let (ad, md) =
                     self.parse_srat(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
-                apic_domains = Some(ad);
-                memory_domains = Some(md);
+                self.apic_domains = Some(ad);
+                self.memory_domains = Some(md);
             }
         } // enf for rsdt_entries
 
-        log::info!("apics: {:?}", apics);
-        log::info!("nmis: {:?}", nmis);
-        log::info!("ioapcis: {:?}", ioapics);
-        log::info!("int_overrides: {:?}", int_overrides);
-        log::info!("apic domains: {:?}", apic_domains);
-        log::info!("memory domains: {:?}", memory_domains);
+        log::info!("{:?}", self);
     } // end fn init
 
     /// Parse the MADT out of the ACPI tables
@@ -356,8 +374,14 @@ impl Acpi {
         Vec<IoApic>,
         Vec<IntOverride>,
         Vec<NonMaskableInts>,
+        bool,
     ) {
         let (_header, payload, size) = self.parse_header(mapper, frame_allocator, ptr);
+
+        let flags: u32 = map_and_read_phys(mapper, frame_allocator, ptr + 4_u64);
+
+        // If the first bit is set the spec says we have to mask the pic interrupts
+        let mask_pics: bool = flags & 1 == 1;
 
         // Skip the local interrupt controller address and the flags to get the
         // physical address of the ICS
@@ -466,7 +490,7 @@ impl Acpi {
             ics = ics + len as u64;
         } // end loop
 
-        return (lapics, ioapcis, int_overrides, nmis);
+        return (lapics, ioapcis, int_overrides, nmis, mask_pics);
     } // end function
 
     unsafe fn parse_srat(

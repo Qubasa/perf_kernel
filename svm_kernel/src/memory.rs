@@ -33,6 +33,24 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
     OffsetPageTable::new(level_4_table, physical_memory_offset)
 }
 
+pub fn print_pagetable(mapper: &OffsetPageTable) {
+    use x86_64::structures::paging::mapper::TranslateError;
+
+    for page_addr in (0..core::u64::MAX).step_by(4096) {
+        let addr = Page::<Size4KiB>::from_start_address(VirtAddr::new(page_addr)).unwrap();
+        let res = mapper.translate_page(addr);
+
+        match res {
+            Ok(r) => log::info!("{:?} -> {:?}", addr.start_address(), r.start_address()),
+            Err(TranslateError::InvalidFrameAddress(e)) => {
+                panic!("Invalid frame address: {:?}", e)
+            }
+            _ => (),
+        }
+    }
+    log::info!("Done");
+}
+
 use x86_64::{
     structures::paging::{FrameAllocator, PhysFrame, Size4KiB},
     PhysAddr,
@@ -47,15 +65,13 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     }
 }
 
-
 // Identity maps the phys address + type size and volatile reads the type from
 // memory. Does not unmap the page
 pub unsafe fn map_and_read_phys<T: Copy>(
     mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     addr: PhysAddr,
-) -> T
-{
+) -> T {
     // Map the start address
     id_map_nocache(mapper, frame_allocator, addr).unwrap();
 
@@ -121,10 +137,6 @@ impl BootInfoFrameAllocator {
             memory_map,
             next: 0,
         }
-    }
-
-    pub fn test(&self) {
-        log::info!("TEST!!");
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.

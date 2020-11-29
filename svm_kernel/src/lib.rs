@@ -23,8 +23,8 @@ pub mod allocator;
 pub mod bench;
 pub mod apic;
 pub mod acpi;
-pub mod smp;
 pub mod default_interrupt;
+pub mod time;
 
 extern crate alloc;
 
@@ -59,9 +59,9 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
 
     // Get pagetable offset from bootloader
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-
+    use x86_64::structures::paging::{OffsetPageTable};
     // Initialize the memory module
-    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut mapper: OffsetPageTable = unsafe { memory::init(phys_mem_offset) };
 
     // Initialize the frame allocator
     let mut frame_allocator =  unsafe {
@@ -74,24 +74,30 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
     // Initialize benchmarking subsystem
     bench::init();
 
+    // Parse acpi tables
     let mut acpi = acpi::Acpi::new();
     unsafe {
         acpi.init(&mut mapper, &mut frame_allocator);
     };
 
-    // Initialize apic controller
+    // Measure speed of rtsc
     unsafe {
-        interrupts::APIC.lock().initialize(&mut mapper, &mut frame_allocator);
+        time::calibrate();
     }
 
-    let mut smp = smp::Smp::new();
+    // Initialize apic controller
     unsafe {
-        smp.init(&mut mapper, &mut frame_allocator);
+        interrupts::APIC.lock().initialize(&mut mapper, &mut frame_allocator, &acpi);
     }
 
     // Enable interrupts
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
+
+    log::info!("Booting other cores");
+    unsafe {
+        interrupts::APIC.lock().mp_init(1);
+    }
 }
 
 /*

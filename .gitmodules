@@ -1,0 +1,3 @@
+[submodule "svm_kernel/external/bootloader"]
+	path = svm_kernel/external/bootloader
+	url = git@github.com:Luis-Hebendanz/bootloader.git
