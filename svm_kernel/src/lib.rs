@@ -24,10 +24,14 @@ pub mod bench;
 pub mod apic;
 pub mod acpi;
 pub mod default_interrupt;
+pub mod smp;
+pub mod apic_regs;
 pub mod time;
+pub mod acpi_regs;
 
 extern crate alloc;
 
+use x86_64::structures::paging::{OffsetPageTable};
 /*
  * Use an exit code different from 0 and 1 to
  * differentiate between qemu error or kernel quit
@@ -53,52 +57,67 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 pub fn init(boot_info: &'static bootloader::BootInfo){
     use x86_64::VirtAddr;
 
+    // Load gdt into current cpu with lgdt
+    // Also set code and tss segment selector registers
     gdt::init();
-    // Initialize interrupt handlers
-    interrupts::init();
 
-    // Get pagetable offset from bootloader
-    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    use x86_64::structures::paging::{OffsetPageTable};
-    // Initialize the memory module
-    let mut mapper: OffsetPageTable = unsafe { memory::init(phys_mem_offset) };
+    // Load idt into the current cpu with lidt
+    interrupts::load_idt();
 
-    // Initialize the frame allocator
-    let mut frame_allocator =  unsafe {
-        memory::BootInfoFrameAllocator::init(&boot_info.memory_map)
-    };
+    // Check support of hardware features needed for benchmarking
+    bench::check_support();
 
-    // Initialize the heap allocator
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
-
-    // Initialize benchmarking subsystem
-    bench::init();
-
-    // Parse acpi tables
-    let mut acpi = acpi::Acpi::new();
-    unsafe {
-        acpi.init(&mut mapper, &mut frame_allocator);
-    };
-
-    // Measure speed of rtsc
+    // Measure speed of rtsc once
     unsafe {
         time::calibrate();
     }
 
+    // Create OffsetPageTable instance by
+    // calculating address with: Cr3::read() + offset from bootloader
+    let mut mapper: OffsetPageTable = unsafe {
+        memory::init(VirtAddr::new(boot_info.physical_memory_offset))
+    };
+
+    // Create FrameAllocator instance
+    let mut frame_allocator =  unsafe {
+        memory::BootInfoFrameAllocator::new(&boot_info.memory_map)
+    };
+
+    // Initialize the heap allocator
+    // by mapping the heap pages
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
+
+    // Parse acpi tables once
+    unsafe {
+        acpi::init_acpi_table(&mut mapper,&mut frame_allocator);
+    }
+    let acpi = acpi::get_acpi_table();
+
+    // TODO: Map in bootloader the apic page
+    // TODO: Read the apic id as soon as possible
+    // TODO: Make core local storage globally available
+
     // Initialize apic controller
     unsafe {
-        interrupts::APIC.lock().initialize(&mut mapper, &mut frame_allocator, &acpi);
+        interrupts::APIC.lock().init(&mut mapper, &mut frame_allocator, &acpi);
     }
 
     // Enable interrupts
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
-    log::info!("Booting other cores");
     unsafe {
-        interrupts::APIC.lock().mp_init(1, boot_info.smp_trampoline);
+        let apic = interrupts::APIC.lock();
+        smp::init(&apic, &acpi);
+        if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
+            apic.mp_init(apic.id.unwrap()+1, boot_info.smp_trampoline);
+        }
+
+        log::info!("OffsetPageTable: {:#x}", boot_info.physical_memory_offset);
     }
 }
+
+
 
 /*
  * TESTING CODE

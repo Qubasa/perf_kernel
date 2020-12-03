@@ -132,7 +132,7 @@ impl BootInfoFrameAllocator {
     /// This function is unsafe because the caller must guarantee that the passed
     /// memory map is valid. The main requirement is that all frames that are marked
     /// as `USABLE` in it are really unused.
-    pub unsafe fn init(memory_map: &'static MemoryMap) -> Self {
+    pub unsafe fn new(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
             next: 0,

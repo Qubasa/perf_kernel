@@ -15,147 +15,28 @@ use x86_64::structures::paging::{
     FrameAllocator, Mapper, OffsetPageTable, Page, PhysFrame, Size4KiB,
 };
 use x86_64::{PhysAddr, VirtAddr};
+use crate::acpi_regs::*;
 
-/// In-memory representation of an RSDP ACPI structure
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct Rsdp {
-    signature: [u8; 8],
-    checksum: u8,
-    oem_id: [u8; 6],
-    revision: u8,
-    rsdt_addr: u32,
+static mut ACPI_TABLES: Option<Acpi> = None;
+
+pub unsafe fn init_acpi_table(
+        mapper: &mut OffsetPageTable,
+        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    ) {
+       if let None = ACPI_TABLES {
+           let mut acpi = Acpi::new();
+           acpi.init(mapper, frame_allocator);
+           ACPI_TABLES = Some(acpi);
+       } else {
+        panic!("Tried to init acpi table twice");
+       }
 }
 
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct RsdpExtended {
-    descriptor: Rsdp,
-    length: u32,
-    xsdt_addr: u64,
-    extended_checksum: u8,
-    reserved: [u8; 3],
-}
-
-/// In-memory representation of an ACPI table header
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct Header {
-    signature: [u8; 4],
-    length: u32,
-    revision: u8,
-    checksum: u8,
-    oemid: [u8; 6],
-    oem_table_id: u64,
-    oem_revision: u32,
-    creator_id: u32,
-    creator_revision: u32,
-}
-
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct IoApic {
-    typ: u8,
-    length: u8,
-    id: u8,
-    res0: u8,
-    address: u32,
-    interrupt_base: u32,
-}
-
-impl fmt::Debug for IoApic {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe { write!(f, "IoApic address: {:#x}", self.address) }
+pub fn get_acpi_table() -> &'static Acpi {
+    unsafe {
+        ACPI_TABLES.as_ref().unwrap()
     }
 }
-
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct LocalApic {
-    typ: u8,
-    length: u8,
-    processor_uid: u8,
-    id: u8,
-    flags: u32,
-}
-
-impl fmt::Debug for LocalApic {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "LApic id: {}", self.id)
-    }
-}
-
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct IntOverride {
-    typ: u8,
-    length: u8,
-    bus: u8, // always 0
-    source: u8,
-    mapped_to: u32,
-    flags: u16,
-}
-// TODO: Misaligned reads from packed struct in Debug could cause problems?
-impl fmt::Debug for IntOverride {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe {
-            write!(
-                f,
-                "IntOverride src: {} mapped to: {}",
-                self.source, self.mapped_to
-            )
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct NonMaskableInts {
-    typ: u8,
-    length: u8,
-    flags: u16,
-    int_num: u32,
-}
-
-impl fmt::Debug for NonMaskableInts {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe { write!(f, "Non Maskable Interrupt: {}", self.int_num) }
-    }
-}
-
-/// Different states for APICs to be in
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u8)]
-pub enum ApicState {
-    /// The core has checked in with the kernel and is actively running
-    Online = 1,
-    /// The core has been launched by the kernel, but has not yet registered
-    /// with the kernel
-    Launched = 2,
-    /// The core is present but has not yet been launched
-    Offline = 3,
-    /// This APIC ID does not exist
-    None = 4,
-    /// This APIC ID has disabled interrupts and halted forever
-    Halted = 5,
-}
-
-impl From<u8> for ApicState {
-    /// Convert a raw `u8` into an `ApicState`
-    fn from(val: u8) -> ApicState {
-        match val {
-            1 => ApicState::Online,
-            2 => ApicState::Launched,
-            3 => ApicState::Offline,
-            4 => ApicState::None,
-            5 => ApicState::Halted,
-            _ => panic!("Invalid ApicState from `u8`"),
-        }
-    }
-}
-
-/// Maximum number of cores allowed on the system
-pub const MAX_CORES: usize = 1024;
 
 pub struct Acpi {
     pub apics: Option<Vec<LocalApic>>,
@@ -181,7 +62,7 @@ impl fmt::Debug for Acpi {
 }
 
 impl Acpi {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Acpi {
             mask_pics: false,
             apics: None,

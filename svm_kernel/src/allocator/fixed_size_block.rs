@@ -1,4 +1,4 @@
-use super::{HEAP_SIZE, HEAP_START};
+use super::{HEAP_SIZE};
 use alloc::alloc::Layout;
 use core::convert::TryFrom;
 use core::ptr;
@@ -25,12 +25,14 @@ const ALLOC_STEPS: usize = 16;
 // TODO: Use a generic here?
 pub struct FixedSizeBlockAllocator {
     arr: [Option<u16>; HEAP_SIZE / ALLOC_STEPS],
+    heap_start: usize
 }
 
 impl FixedSizeBlockAllocator {
-    pub const fn new() -> Self {
+    pub const fn new(heap_start: usize) -> Self {
         FixedSizeBlockAllocator {
             arr: [None; HEAP_SIZE / ALLOC_STEPS],
+            heap_start: heap_start,
         }
     }
 
@@ -42,7 +44,7 @@ impl FixedSizeBlockAllocator {
     }
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, _layout: &Layout) {
-        let index = (ptr as usize - HEAP_START) / ALLOC_STEPS;
+        let index = (ptr as usize - self.heap_start) / ALLOC_STEPS;
 
         match self.arr[index].take() {
             None => {
@@ -88,7 +90,7 @@ impl FixedSizeBlockAllocator {
                     let arr_data =
                         u16::try_from(needed_size / ALLOC_STEPS).expect("alloc size is too big");
                     self.arr[spot] = Some(arr_data);
-                    let mem_ptr = spot * ALLOC_STEPS + HEAP_START;
+                    let mem_ptr = spot * ALLOC_STEPS + self.heap_start;
                     log::trace!(
                         "alloc_ptr: {:#x}, size: {:#x}, spot: {}",
                         mem_ptr,
@@ -136,7 +138,7 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
         let mut alloc = self.lock();
-        let index = (ptr as usize - HEAP_START) / ALLOC_STEPS;
+        let index = (ptr as usize - alloc.heap_start) / ALLOC_STEPS;
         let new_layout = Layout::from_size_align(new_size, ALLOC_STEPS)
             .unwrap()
             .pad_to_align();

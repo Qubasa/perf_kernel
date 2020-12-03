@@ -57,10 +57,11 @@ pub unsafe fn calibrate() {
     // Store off the current rdtsc value
     let start = rdtsc();
 
-    RDTSC_START.store(start, Ordering::Relaxed);
+    if RDTSC_START.load(Ordering::SeqCst) != 0 {
+      return;
+    }
 
-    // Check if we already calibrated
-    // TODO
+    RDTSC_START.store(start, Ordering::Relaxed);
 
     // Start a timer
     let mut c0_data: Port<u8> = Port::new(0x40);

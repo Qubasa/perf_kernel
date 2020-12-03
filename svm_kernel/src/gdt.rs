@@ -4,6 +4,7 @@ use x86_64::structures::tss::TaskStateSegment;
 use lazy_static::lazy_static;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
+pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 
 
 /*
@@ -14,6 +15,18 @@ lazy_static! {
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+             // We need the space because else println can
+             // overflow the stack. If you enable sse and run
+             // into triple faults try increasing this number
+            const STACK_SIZE: usize = 4096 * 5;
+            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_end = stack_start + STACK_SIZE;
+            // Stacks grow downard thats why the end has to be returned
+            stack_end
+        };
+        tss.interrupt_stack_table[PAGE_FAULT_IST_INDEX as usize] = {
              // We need the space because else println can
              // overflow the stack. If you enable sse and run
              // into triple faults try increasing this number

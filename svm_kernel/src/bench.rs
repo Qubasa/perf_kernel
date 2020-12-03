@@ -2,7 +2,7 @@ use crate::println;
 use core::arch::x86_64::{__cpuid};
 use crate::time::{rdtsc, elapsed};
 
-enum CpuidIndex {
+pub enum CpuidIndex {
     TscInvariant = 0x8000_0007,
 }
 
@@ -28,6 +28,17 @@ impl Bench {
     }
 }
 
+pub fn overflow() {
+    let a: [u8; 0x1000] = [0; 0x1000];
+    let mut x: u64 = 0;
+    unsafe {
+        asm!("mov {}, rsp", out(reg) x);
+    }
+    log::info!("Stack ptr: {:#x}", x);
+    black_box(a);
+    overflow();
+}
+
 /// A function that is opaque to the optimizer, to allow benchmarks to
 /// pretend to use outputs to assist in avoiding dead-code
 /// elimination.
@@ -42,7 +53,7 @@ pub fn black_box<T>(dummy: T) -> T {
 
 
 
-pub fn init() {
+pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
 
     let tsc_invariant = res.edx & (1 << 8);

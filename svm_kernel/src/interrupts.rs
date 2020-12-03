@@ -64,7 +64,11 @@ lazy_static::lazy_static! {
         idt.machine_check.set_handler_fn(machine_check_handler);
         idt.alignment_check.set_handler_fn(alignment_handler);
         idt.x87_floating_point.set_handler_fn(x87_floatingpoint_handler);
-        idt.page_fault.set_handler_fn(page_fault_handler);
+        unsafe {
+            idt.page_fault.set_handler_fn(page_fault_handler)
+            // Use a different stack in case of kernel stack overflow
+            .set_stack_index(gdt::PAGE_FAULT_IST_INDEX)
+        };
         idt.general_protection_fault.set_handler_fn(general_prot_handler);
         idt.stack_segment_fault.set_handler_fn(stack_segment_handler);
         idt.segment_not_present.set_handler_fn(segment_not_present_handler);
@@ -104,7 +108,7 @@ lazy_static::lazy_static! {
     };
 }
 
-pub fn init() {
+pub fn load_idt() {
     IDT.load();
 }
 
@@ -233,7 +237,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
 
     // Renable interrupts again
     unsafe {
-        APIC.lock().end_of_interrupt();
+        apic::end_of_interrupt();
     }
 }
 

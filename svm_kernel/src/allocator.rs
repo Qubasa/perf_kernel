@@ -12,7 +12,7 @@ pub mod fixed_size_block;
 
 use fixed_size_block::FixedSizeBlockAllocator;
 #[global_allocator]
-pub static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new());
+pub static ALLOCATOR: Locked<FixedSizeBlockAllocator> = Locked::new(FixedSizeBlockAllocator::new(HEAP_START));
 
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
