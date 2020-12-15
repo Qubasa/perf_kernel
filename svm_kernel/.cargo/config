@@ -2,7 +2,7 @@
 [build]
 target = "x86_64-os.json"
 jobs = 8
-rustflags = [ "-C", "target-cpu=native" ]
+# rustflags = [ "-C", "target-cpu=native" ]
 
 # Use inbuilt memcpy & memset
 [unstable]

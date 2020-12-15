@@ -1,4 +1,3 @@
-
 #![feature(result_contains_err)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
@@ -106,15 +105,21 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
-    unsafe {
-        let apic = interrupts::APIC.lock();
-        smp::init(&apic, &acpi);
-        if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-            apic.mp_init(apic.id.unwrap()+1, boot_info.smp_trampoline);
-        }
+    // unsafe {
+    //     let apic = interrupts::APIC.lock();
+    //     smp::init(&apic, &acpi);
+    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
+    //         apic.mp_init(apic.id.unwrap()+1, boot_info.smp_trampoline);
+    //     }
+    // }
 
-        log::info!("OffsetPageTable: {:#x}", boot_info.physical_memory_offset);
-    }
+    // let mut mem_mb = boot_info.max_phys_memory / 1024 / 1024;
+
+    // if mem_mb % 1024 == 1023 {
+    //     mem_mb += 1;
+    // }
+    // log::info!("Max physical memory: {} Gb", mem_mb / 1024);
+
 }
 
 

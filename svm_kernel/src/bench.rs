@@ -30,7 +30,7 @@ impl Bench {
 
 pub fn overflow() {
     let a: [u8; 0x1000] = [0; 0x1000];
-    let mut x: u64 = 0;
+    let mut x: u64;
     unsafe {
         asm!("mov {}, rsp", out(reg) x);
     }

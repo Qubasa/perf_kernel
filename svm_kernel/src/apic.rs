@@ -34,8 +34,10 @@ impl Apic {
         return self.bsp.unwrap();
     }
 
-    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: unsafe extern "C" fn() -> !) {
+    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: unsafe extern "C" fn() -> !,
+        ) {
 
+        log::info!("Trampoline ptr: {:?}", trampoline);
         log::info!("Booting core {}", apic_id);
         // Send INIT ipi
         let low = InterCmdRegLow::new()
@@ -49,7 +51,6 @@ impl Apic {
 
         // Convert func pointer to u64
         let trampoline = trampoline as u64;
-        log::info!("trampoline addr: {:?}", trampoline);
 
         // Check if trampoline in first MB
         if trampoline >= 0x100_000 {

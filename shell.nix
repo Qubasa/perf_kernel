@@ -1,7 +1,9 @@
   { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
     buildInputs = with pkgs; [
+      zlib.out
       rustup
+      nasm
       entr
       llvmPackages.lld
     ];

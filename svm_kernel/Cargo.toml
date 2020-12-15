@@ -30,9 +30,9 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-# run-command = ["qemu-kvm","-cpu", "host", "-smp","cores=4", "-drive", "format=raw,file={}", "-serial", "stdio", "-display", "none", "-s", "-S"]
-run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-drive", "format=raw,file={}","-serial", "stdio", "-display", "none", "-m", "1G"]
-# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-drive", "format=raw,file={}",]
+run-command = ["qemu-kvm","-cpu", "host", "-smp","cores=4", "-drive", "format=raw,file={}", "-m", "1G", "-nographic"]
+# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-drive", "format=raw,file={}","-serial", "stdio", "-display", "none", "-m", "1G"]
+# run-command = ["qemu-kvm","-cpu","host", "-m", "1G", "-smp","cores=4", "-drive", "format=raw,file={}"]
 # build-command = ["build", "--release"]
 build-command = ["build"]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]

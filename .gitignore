@@ -1,6 +1,7 @@
 .envrc
 svm_kernel/external/chocolate_milk/
 svm_kernel/target/
+target/**
 .direnv
 .ccls-cache
 cpuid.c
