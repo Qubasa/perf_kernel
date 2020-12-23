@@ -10,7 +10,8 @@ ENTRY(__bootloader_start)
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x4000)); . = SEGMENT_START("text-segment", 0x4000) + SIZEOF_HEADERS;
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x7000)); . = SEGMENT_START("text-segment", 0x7000) + SIZEOF_HEADERS;
+    . = 0x7c00;
     .bootloader : {
       KEEP(*(.boot-first-stage))
     }

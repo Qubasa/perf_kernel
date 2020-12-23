@@ -2,8 +2,8 @@ section .boot-first-stage
 bits 16 ; tell NASM this is 16 bit code
 global __bootloader_start
 global __bootloader_end
-extern stage_4
 
+align 8
 __bootloader_start:
     mov si,hello ; point si register to hello label memory location
     mov ah,0x0e ; 0x0e means 'Write Character in TTY mode'
@@ -15,7 +15,6 @@ __bootloader_start:
     jmp .loop
 halt:
     cli ; clear interrupt flag
-    jmp stage_4
     hlt ; halt execution
 hello: db "Hello world!",0
 
