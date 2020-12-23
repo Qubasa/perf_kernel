@@ -1,7 +1,5 @@
 ## ==== WORK IN PROGRESS ====
-Current status: Implementic acpi & srat support
-
-## 
+Current status: Replace current bootloader with a self written one for multi core support
 
 ## Description
 x86_64 HPC AMD kernel written in Rust.
