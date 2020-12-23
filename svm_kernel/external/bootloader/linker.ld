@@ -11,7 +11,7 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x7000)); . = SEGMENT_START("text-segment", 0x7000) + SIZEOF_HEADERS;
-    . = 0x7c00;
+    . = 0x7c00; /* This is needed so absolute addressing works correctly when converted to bin */
     .bootloader : {
       KEEP(*(.boot-first-stage))
     }
