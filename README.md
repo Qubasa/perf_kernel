@@ -26,6 +26,7 @@ Install the dependencies listed in `shell.nix` or execute
 Install cargo dependencies:
 ```
 $ cargo install bootimage
+$ rustup component add llvm-tools-preview
 ```
 
 Run in qemu with:

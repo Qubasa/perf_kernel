@@ -2,6 +2,9 @@
 svm_kernel/external/chocolate_milk/
 svm_kernel/target/
 target/**
+parse-gdt/target/
+gdb.sh
+run_bootloader.sh
 .direnv
 .ccls-cache
 cpuid.c
