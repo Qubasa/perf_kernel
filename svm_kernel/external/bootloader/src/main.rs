@@ -4,8 +4,7 @@
 use bootloader::*;
 
 #[no_mangle]
-fn stage_4() {
-
+fn bootloader_main() {
 }
 
 #[panic_handler]

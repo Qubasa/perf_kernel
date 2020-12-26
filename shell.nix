@@ -4,6 +4,7 @@
       zlib.out
       rustup
       nasm
+      bochs
       entr
       llvmPackages.lld
     ];
