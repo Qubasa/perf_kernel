@@ -4,6 +4,7 @@ use crate::time::{rdtsc, elapsed};
 
 pub enum CpuidIndex {
     TscInvariant = 0x8000_0007,
+    Rdtscp       = 0x8000_0001
 }
 
 impl CpuidIndex {
@@ -59,6 +60,11 @@ pub fn check_support() {
     let tsc_invariant = res.edx & (1 << 8);
     if tsc_invariant == 0 {
         log::warn!("rtdsc does not increment at a fixed rate");
+    }
+
+    let res = unsafe { __cpuid( CpuidIndex::Rdtscp.as_u32()) };
+    if res.edx == 0 {
+        panic!("Rdtscp instruction is not supported");
     }
 }
 

@@ -1,5 +1,5 @@
 use x86_64::instructions::port::Port;
-use core::arch::x86_64::{__rdtscp};
+use core::arch::x86_64::{_rdtsc};
 use core::sync::atomic::{AtomicU64, Ordering};
 
 /// The TSC tick rate in MHz
@@ -47,8 +47,9 @@ pub fn sleep(microseconds: u64) {
 
 #[inline]
 pub fn rdtsc() -> u64 {
-    let mut x: u32 = 0;
-    unsafe { __rdtscp(&mut x as *mut u32) }
+    // let mut x: u32 = 0;
+    // unsafe { __rdtscp(&mut x as *mut u32) }
+    unsafe {_rdtsc()}
 }
 
 /// Using the PIT, determine the frequency of rdtsc. Round this frequency to

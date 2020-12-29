@@ -15,7 +15,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 pc-keyboard = "0.5.1"
-bootloader = { path="external/bootloader" }
+bootloader = { path="external/bootloader", features=["map_physical_memory", "sse"] }
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = { path="external/pic8259_simple"  }
 uart_16550 = { path = "external/uart_16550"  }
@@ -30,7 +30,7 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-run-command = ["qemu-kvm","-cpu", "host", "-smp","cores=4", "-drive", "format=raw,file={}", "-m", "1G", "-nographic", "-s", "-S"]
+run-command = ["qemu-kvm", "-smp","cores=2", "-drive", "format=raw,file={}", "-m", "1G"]
 # run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-drive", "format=raw,file={}","-serial", "stdio", "-display", "none", "-m", "1G"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "1G", "-smp","cores=4", "-drive", "format=raw,file={}"]
 # build-command = ["build", "--release"]

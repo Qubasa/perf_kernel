@@ -56,15 +56,15 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 pub fn init(boot_info: &'static bootloader::BootInfo){
     use x86_64::VirtAddr;
 
+    // Check support of hardware features needed for benchmarking
+    bench::check_support();
+
     // Load gdt into current cpu with lgdt
     // Also set code and tss segment selector registers
     gdt::init();
 
     // Load idt into the current cpu with lidt
     interrupts::load_idt();
-
-    // Check support of hardware features needed for benchmarking
-    bench::check_support();
 
     // Measure speed of rtsc once
     unsafe {
@@ -105,13 +105,13 @@ pub fn init(boot_info: &'static bootloader::BootInfo){
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
-    // unsafe {
-    //     let apic = interrupts::APIC.lock();
-    //     smp::init(&apic, &acpi);
-    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-    //         apic.mp_init(apic.id.unwrap()+1, boot_info.smp_trampoline);
-    //     }
-    // }
+    unsafe {
+        let apic = interrupts::APIC.lock();
+        smp::init(&apic, &acpi);
+        if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
+            apic.mp_init(apic.id.unwrap()+1, boot_info.smp_trampoline);
+        }
+    }
 
     // let mut mem_mb = boot_info.max_phys_memory / 1024 / 1024;
 
