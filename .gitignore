@@ -6,6 +6,7 @@ parse-gdt/target/
 gdb.sh
 run_bootloader.sh
 svm_kernel/external/bootloader/target/
+svm_kernel/external/mybootloader/target
 .direnv
 .ccls-cache
 cpuid.c
