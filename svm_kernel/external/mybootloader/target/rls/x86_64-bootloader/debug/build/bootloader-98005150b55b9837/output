@@ -1,0 +1,6 @@
+cargo:rustc-link-search=native=/home/lhebendanz/Projects/rust-kernel-svm/svm_kernel/external/bootloader/target/rls/x86_64-bootloader/debug/build/bootloader-98005150b55b9837/out
+cargo:rustc-link-lib=static=stage_0
+cargo:warning=/home/lhebendanz/Projects/rust-kernel-svm/svm_kernel/external/bootloader/target/rls/x86_64-bootloader/debug/build/bootloader-98005150b55b9837/out
+cargo:rerun-if-changed=stage_0.nasm
+cargo:rerun-if-changed=build.rs
+cargo:rerun-if-changed=linker.ld
