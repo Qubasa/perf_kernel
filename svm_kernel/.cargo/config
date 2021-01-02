@@ -11,7 +11,7 @@ build-std = ["core", "compiler_builtins", "alloc"]
 
 # Make cargo run automatically start qemu
 [target.'cfg(target_os = "none")']
-runner = "bootimage runner"
+runner = "bootimage runner --grub"
 
 [alias]
 # llvm-arg list: https://llvm.org/docs/CommandGuide/llc.html
