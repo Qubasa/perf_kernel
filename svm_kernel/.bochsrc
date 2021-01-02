@@ -1,3 +1,0 @@
-display_library: sdl2
-plugin_ctrl: speaker=0
-floppya: 1_44=target/x86_64-os/debug/bootimage-svm_kernel.bin, status=inserted

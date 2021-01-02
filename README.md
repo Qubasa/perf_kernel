@@ -1,5 +1,5 @@
 ## ==== WORK IN PROGRESS ====
-Current status: Replace current bootloader with a self written one for multi core support
+Working grub bootloader, currently implementing mode switch to long mode
 
 ## Description
 x86_64 HPC AMD kernel written in Rust.
@@ -23,7 +23,7 @@ Install the dependencies listed in `shell.nix` or execute
 
 Install cargo dependencies:
 ```
-$ cargo install bootimage
+$ cargo install -p svm_kernel/bootimage
 $ rustup component add llvm-tools-preview
 ```
 
@@ -37,7 +37,7 @@ or CTRL+C
 Build on filechange:
 ```
 $ cd svm_kernel
-$ ./watch.sh
+$ cargo watch
 ```
 
 ## Release build:

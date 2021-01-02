@@ -5,6 +5,7 @@
       rustup
       nasm
       xorriso
+      grub2
       entr
       llvmPackages.lld
     ];
