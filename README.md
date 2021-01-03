@@ -48,12 +48,12 @@ $ cargo run --release
 The resulting file lies in: `target/x86_64-os/release/bootimage-svm_kernel.bin`
 Flash it with:
 ```bash
-$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.bin of=/dev/MYDEVICE
+$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/MYDEVICE
 ```
 
 OR
 Edit the file `Cargo.toml` and change `build-command` to `["build", "--release"]`
-Then execute `cargo bootimage`
+Then execute `cargo bootimage --grub`
 
 ## Generate & view assembly
 ```
@@ -81,7 +81,7 @@ You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the break
 
 ## Debug with radare2
 ```
-$ r2 -B 0x200000 target/x86_64-os/debug/svm_kernel
+$ r2 -B [TODO] target/x86_64-os/debug/svm_kernel
 ```
 
 ## Run tests
