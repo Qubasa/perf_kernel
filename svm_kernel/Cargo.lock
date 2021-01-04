@@ -17,6 +17,7 @@ name = "bootloader"
 version = "0.1.0"
 dependencies = [
  "llvm-tools",
+ "uart_16550",
 ]
 
 [[package]]
@@ -172,9 +173,7 @@ checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
 
 [[package]]
 name = "x86_64"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5b4b42dbabe13b69023e1a1407d395f1a1a33df76e9a9efdbe303acc907e292"
+version = "0.13.1"
 dependencies = [
  "bit_field",
  "bitflags",

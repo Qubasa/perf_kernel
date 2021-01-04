@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.1.0"
-x86_64 = { version = "0.12.2", default-features = false, features = ["instructions"] }
+x86_64 = { path="../x86_64", default-features = false, features = ["instructions"] }
 
 [features]
 default = [ "nightly" ]
