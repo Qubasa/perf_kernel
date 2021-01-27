@@ -1,8 +1,8 @@
-  { pkgs ? import <nixpkgs> {} }:
+  { pkgs ? import <nixpkgs> {}, unstable ? import <nixos-unstable> {} }:
   pkgs.mkShell {
     buildInputs = with pkgs; [
       zlib.out
-      rustup
+      unstable.rustup
       nasm
       xorriso
       grub2

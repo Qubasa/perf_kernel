@@ -16,8 +16,13 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 name = "bootloader"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "llvm-tools",
+ "log",
+ "multiboot2",
+ "spin 0.6.0",
  "uart_16550",
+ "x86_64",
 ]
 
 [[package]]
@@ -75,6 +80,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "multiboot2"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13e9fc890ff2ef2ded9084c964b950da1bc9e26d480e446ae721607b899db1fd"
+dependencies = [
+ "bitflags",
 ]
 
 [[package]]

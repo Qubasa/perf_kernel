@@ -7,7 +7,6 @@
 #![feature(alloc_error_handler)]
 #![feature(const_in_array_repeat_expressions)]
 #![feature(const_mut_refs)]
-#![feature(min_const_generics)]
 #![feature(asm)]
 #![no_std]
 

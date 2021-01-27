@@ -1,4 +1,4 @@
-ENTRY(bootloader_main)
+ENTRY(init_bootloader)
 
 SECTIONS {
     . = 1M;
@@ -11,6 +11,7 @@ SECTIONS {
     .text :
     {
         *(.text)
+        *(.init_bootloader)
     }
 
 

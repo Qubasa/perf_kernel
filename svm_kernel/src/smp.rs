@@ -100,11 +100,12 @@ pub fn init(apic: &crate::apic::Apic, acpi_table: &crate::acpi::Acpi) {
 
 pub fn core_signal_up(apic: &crate::apic::Apic) {
     // Transition from launched to online
-    let old_state = APICS[apic.id.unwrap() as usize].compare_and_swap(
+    let old_state = APICS[apic.id.unwrap() as usize].compare_exchange(
         ApicState::Launched as u8,
         ApicState::Online as u8,
         Ordering::SeqCst,
-    );
+        Ordering::SeqCst,
+    ).unwrap();
 
     if apic.is_bsp() && old_state != ApicState::Online as u8 {
         panic!("BSP was not marked online");

@@ -1,32 +1,42 @@
 #![no_std]
 #![no_main]
 #![feature(global_asm)]
+#![feature(asm)]
 
-#[allow(unused_imports)]
-use bootloader::*;
-
-use uart_16550::SerialPort;
+use multiboot2;
+use bootloader::mylog::LOGGER;
+use log::LevelFilter;
 
 global_asm!(include_str!("boot.s"));
-
+global_asm!(include_str!("start.s"));
 extern "C" {
     static _kernel_start_addr: usize;
 }
-use core::fmt::Write;
-#[no_mangle]
-unsafe fn bootloader_main() {
-    let ptr = 0xb8000 as *mut u32;
-    *ptr = 0x2f4b2f4f + _kernel_start_addr as u32;
 
-    let mut serial_port = SerialPort::new(0x3F8);
-    serial_port.init();
-    serial_port.write_str("Hello World!").unwrap();
+#[no_mangle]
+extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(LevelFilter::Info);
+    log::info!("Bootloader main.");
+
+    if magic != 0x36d76289 {
+        panic!(
+            "EAX magic is incorrect. Booted from a non compliant bootloader: {:#x}",
+            magic
+        );
+    }
+
+    log::info!("Parsing multiboot headers at addr: {:#x}", mboot2_info_ptr);
+    let boot_info = unsafe { multiboot2::load(mboot2_info_ptr as usize) };
+
+    log::info!("Boot info: {:?}", boot_info);
+
     loop {}
 }
 
-
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {
-    }
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    use bootloader::println;
+    println!("ERROR: {}", info);
+    loop {}
 }

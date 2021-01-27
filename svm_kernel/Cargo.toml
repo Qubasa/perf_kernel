@@ -24,6 +24,7 @@ spin = "0.6.0"
 x86_64 = {path= "external/x86_64"}
 modular-bitfield = "0.10.0"
 
+
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]
@@ -32,7 +33,7 @@ features = ["spin_no_std"]
 [package.metadata.bootimage]
 # run-command = ["qemu-system-x86_64", "-smp","cores=2", "-cdrom", "{}", "-m", "1G","-serial", "stdio", "-display", "none"]
 run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-m", "1G"]
-# run-command = ["qemu-kvm","-cpu","host", "-m", "1G", "-smp","cores=4", "-cdrom", "{}"]
+# run-command = ["qemu-kvm","-cpu","host", "-m", "1G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
 # build-command = ["build", "--release"]
 build-command = ["build"]
 test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]

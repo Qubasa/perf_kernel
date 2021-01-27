@@ -12,6 +12,10 @@
 pub use crate::bootinfo::BootInfo;
 
 pub mod bootinfo;
+pub mod serial;
+pub mod vga;
+pub mod print;
+pub mod mylog;
 
 
 global_asm!(include_str!("boot.s"));

@@ -13,4 +13,3 @@ header_start:
 .long 8 # size
 
 header_end:
-.asciz "==== HELLO ===="
