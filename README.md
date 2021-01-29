@@ -101,7 +101,8 @@ $ cargo test --test heap_allocator
 * https://www.amd.com/system/files/TechDocs/24593.pdf
 * https://github.com/gamozolabs/chocolate_milk/
 * https://uefi.org/sites/default/files/resources/ACPI_6_3_final_Jan30.pdf
-
+* [Use 1Gib pages sparringly](https://forum.osdev.org/viewtopic.php?f=1&t=32699)
+* [Don't touch MTRRs](https://forum.osdev.org/viewtopic.php?t=29034&p=246311)
 
 
 

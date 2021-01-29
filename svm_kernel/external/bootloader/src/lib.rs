@@ -16,7 +16,7 @@ pub mod serial;
 pub mod vga;
 pub mod print;
 pub mod mylog;
-
+pub mod memory;
 
 global_asm!(include_str!("boot.s"));
 

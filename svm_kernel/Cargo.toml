@@ -32,7 +32,7 @@ features = ["spin_no_std"]
 # cargo run command options
 [package.metadata.bootimage]
 # run-command = ["qemu-system-x86_64", "-smp","cores=2", "-cdrom", "{}", "-m", "1G","-serial", "stdio", "-display", "none"]
-run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-m", "1G"]
+run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-m", "4G"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "1G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
 # build-command = ["build", "--release"]
 build-command = ["build"]

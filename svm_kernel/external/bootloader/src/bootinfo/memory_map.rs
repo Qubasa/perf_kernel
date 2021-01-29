@@ -1,7 +1,9 @@
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use x86_64::structures::paging::page::{Size1GiB, PageSize};
 
-const PAGE_SIZE: u64 = 4096;
+
+const PAGE_SIZE: u64 = Size1GiB::SIZE;
 
 const MAX_MEMORY_MAP_SIZE: usize = 64;
 
