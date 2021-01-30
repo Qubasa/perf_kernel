@@ -53,31 +53,29 @@ extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
      * Convert memory areas to memory map
      * also sums up detected RAM in KiB
      */
+    let map_tag = boot_info.memory_map_tag().unwrap();
     let mut existing_ram = 0;
-    {
-        let map_tag = boot_info.memory_map_tag().unwrap();
-        for i in map_tag.all_memory_areas() {
-            existing_ram += i.size();
+    for i in map_tag.all_memory_areas() {
+        existing_ram += i.size();
 
-            let region = MemoryRegion {
-                range: FrameRange::new(i.start_address(), i.end_address()),
-                region_type: match i.typ() {
-                    MemoryAreaType::Reserved => MemoryRegionType::Reserved,
-                    MemoryAreaType::Available => MemoryRegionType::Usable,
-                    MemoryAreaType::AcpiAvailable => MemoryRegionType::AcpiReclaimable,
-                    MemoryAreaType::ReservedHibernate => MemoryRegionType::AcpiNvs,
-                    MemoryAreaType::Defective => MemoryRegionType::BadMemory,
-                },
-            };
+        let region = MemoryRegion {
+            range: FrameRange::new(i.start_address(), i.end_address()),
+            region_type: match i.typ() {
+                MemoryAreaType::Reserved => MemoryRegionType::Reserved,
+                MemoryAreaType::Available => MemoryRegionType::Usable,
+                MemoryAreaType::AcpiAvailable => MemoryRegionType::AcpiReclaimable,
+                MemoryAreaType::ReservedHibernate => MemoryRegionType::AcpiNvs,
+                MemoryAreaType::Defective => MemoryRegionType::BadMemory,
+            },
+        };
 
-            log::debug!(
-                "Frame {:#x} - {:#x} Type: {:#?}",
-                i.start_address(),
-                i.end_address(),
-                i.typ()
-            );
-            mem_map.add_region(region);
-        }
+        log::debug!(
+            "Frame {:#x} - {:#x} Type: {:#?}",
+            i.start_address(),
+            i.end_address(),
+            i.typ()
+        );
+        mem_map.add_region(region);
     }
     existing_ram = existing_ram / 1024;
     log::info!("Existing ram: {} Kib", existing_ram);
