@@ -30,8 +30,9 @@ build-std = "core"
 
 [profile.dev]
 panic = "abort"
+opt-level = 0
 
 [profile.release]
 panic = "abort"
 lto = false
-debug = true
+debug = false

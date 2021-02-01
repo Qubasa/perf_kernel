@@ -27,7 +27,7 @@ use x86_64::instructions::port::Port;
 macro_rules! wait_for {
     ($cond:expr) => {
         while !$cond {
-            core::sync::atomic::spin_loop_hint()
+            core::hint::spin_loop()
         }
     };
 }

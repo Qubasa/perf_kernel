@@ -6,6 +6,7 @@
 
 use core::panic::PanicInfo;
 use svm_kernel::{exit_qemu, init, println, QemuExitCode};
+use bootloader::{entry_point, BootInfo};
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -13,9 +14,10 @@ fn panic(info: &PanicInfo) -> ! {
     exit_qemu(QemuExitCode::Success);
     loop {}
 }
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    init();
+entry_point!(main);
+
+fn main(boot_info: &'static BootInfo) -> ! {
+    init(boot_info);
     test_main();
 
     loop {}

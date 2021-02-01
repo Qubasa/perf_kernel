@@ -8,7 +8,10 @@
 #![no_std]
 #![feature(global_asm)]
 #![feature(llvm_asm)]
-
+#![allow(incomplete_features)]
+#![feature(const_generics)]
+#![feature(abi_x86_interrupt)]
+#![feature(naked_functions)]
 pub use crate::bootinfo::BootInfo;
 
 pub mod bootinfo;
@@ -17,6 +20,8 @@ pub mod vga;
 pub mod print;
 pub mod mylog;
 pub mod memory;
+pub mod gdt;
+
 
 global_asm!(include_str!("boot.s"));
 
