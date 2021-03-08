@@ -4,3 +4,6 @@
 [submodule "svm_kernel/external/x86_64"]
 	path = svm_kernel/external/x86_64
 	url = git@github.com:Luis-Hebendanz/x86_64.git
+[submodule "svm_kernel/external/x86"]
+	path = svm_kernel/external/x86
+	url = git@github.com:Luis-Hebendanz/x86_64.git
