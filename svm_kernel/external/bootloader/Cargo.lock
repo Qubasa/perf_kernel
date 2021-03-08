@@ -22,7 +22,7 @@ dependencies = [
  "multiboot2",
  "spin 0.6.0",
  "uart_16550",
- "x86_64",
+ "x86",
 ]
 
 [[package]]
@@ -81,7 +81,16 @@ name = "uart_16550"
 version = "0.2.10"
 dependencies = [
  "bitflags",
+ "x86",
  "x86_64",
+]
+
+[[package]]
+name = "x86"
+version = "0.13.1"
+dependencies = [
+ "bit_field",
+ "bitflags",
 ]
 
 [[package]]

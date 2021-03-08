@@ -22,7 +22,7 @@ dependencies = [
  "multiboot2",
  "spin 0.6.0",
  "uart_16550",
- "x86_64",
+ "x86",
 ]
 
 [[package]]
@@ -176,6 +176,7 @@ name = "uart_16550"
 version = "0.2.10"
 dependencies = [
  "bitflags",
+ "x86",
  "x86_64",
 ]
 
@@ -184,6 +185,14 @@ name = "unicode-xid"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
+
+[[package]]
+name = "x86"
+version = "0.13.1"
+dependencies = [
+ "bit_field",
+ "bitflags",
+]
 
 [[package]]
 name = "x86_64"

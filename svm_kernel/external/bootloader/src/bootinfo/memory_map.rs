@@ -1,9 +1,8 @@
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use x86_64::structures::paging::page::{Size1GiB, PageSize};
 
 
-const PAGE_SIZE: u64 = Size1GiB::SIZE;
+const PAGE_SIZE: u64 = 4096;
 
 const MAX_MEMORY_MAP_SIZE: usize = 64;
 
@@ -19,6 +18,7 @@ pub struct MemoryMap {
 #[doc(hidden)]
 #[allow(clippy::new_without_default)]
 impl MemoryMap {
+    /// Creates empty memory map
     pub const fn new() -> Self {
         MemoryMap {
             entries: [MemoryRegion::empty(); MAX_MEMORY_MAP_SIZE],

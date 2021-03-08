@@ -23,7 +23,8 @@
 use log::{error, info, LevelFilter};
 use svm_kernel::mylog::LOGGER;
 
-use bootloader::{entry_point, BootInfo};
+use bootloader::bootinfo;
+use bootloader::entry_point;
 
 extern crate alloc;
 
@@ -33,7 +34,7 @@ extern crate alloc;
  * the given function has the correct signature
  */
 entry_point!(kernel_main);
-fn kernel_main(boot_info: &'static BootInfo) -> ! {
+fn kernel_main(boot_info: &'static bootinfo::BootInfo) -> ! {
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(LevelFilter::Info);

@@ -1,3 +1,4 @@
+
 [package]
 name = "uart_16550"
 version = "0.2.10"
@@ -9,7 +10,13 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.1.0"
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = { path="../x86_64", default-features = false, features = ["instructions"] }
+
+
+[target.'cfg(target_arch = "x86")'.dependencies]
+x86 = { path="../x86", default-features = false, features = ["instructions"] }
 
 [features]
 default = [ "nightly" ]

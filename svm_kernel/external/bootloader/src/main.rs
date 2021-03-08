@@ -4,21 +4,17 @@
 #![feature(asm)]
 
 #[allow(unused_imports)]
-use bootloader::bootinfo::FrameRange;
-use bootloader::bootinfo::MemoryMap;
-use bootloader::bootinfo::MemoryRegion;
+use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;
-use bootloader::memory;
 use bootloader::mylog::LOGGER;
-use bootloader::gdt;
 use log::LevelFilter;
 use multiboot2;
 use multiboot2::MemoryAreaType;
-use x86_64::registers::control::{Cr0, Cr0Flags, Cr3, Cr3Flags, Cr4, Cr4Flags};
-use x86_64::registers::model_specific::{Efer, EferFlags};
-use x86_64::structures::paging::frame::PhysFrame;
-use x86_64::structures::paging::{MappedPageTable, LegacyOffsetPageTable, Mapper, Page, PageTableFlags, Size4KiB};
-use x86_64::{PhysAddr, VirtAddr};
+use x86::registers::control::{Cr0, Cr0Flags, Cr3, Cr3Flags, Cr4, Cr4Flags};
+use x86::registers::model_specific::{Efer, EferFlags};
+use x86::structures::paging::frame::PhysFrame;
+use x86::structures::paging::{MappedPageTable, Mapper, Page, PageTableFlags, Size4KiB};
+use x86::{PhysAddr, VirtAddr};
 
 
 global_asm!(include_str!("boot.s"));
@@ -33,7 +29,7 @@ extern "C" {
     static __bootloader_end: usize;
 }
 
-static mut MEM_MAP: MemoryMap = MemoryMap::new();
+static mut MEM_MAP: bootinfo::MemoryMap = bootinfo::MemoryMap::new();
 
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
@@ -62,8 +58,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     for i in map_tag.all_memory_areas() {
         existing_ram += i.size();
 
-        let region = MemoryRegion {
-            range: FrameRange::new(i.start_address(), i.end_address()),
+        let region = bootinfo::MemoryRegion {
+            range: bootinfo::FrameRange::new(i.start_address(), i.end_address()),
             region_type: match i.typ() {
                 MemoryAreaType::Reserved => MemoryRegionType::Reserved,
                 MemoryAreaType::Available => MemoryRegionType::Usable,
@@ -97,74 +93,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     if !supports_gb_pages() {
         panic!("Current CPU does not support 1GiB pages");
     }
-
-
-    // Create a page table obj at addr _p4
-    let mut mapper: LegacyOffsetPageTable = {
-        let p4_addr = &_p4 as *const _ as u64;
-        let phys_frame = PhysFrame::from_start_address(PhysAddr::new(p4_addr)).unwrap();
-        Cr3::write(phys_frame, Cr3Flags::PAGE_LEVEL_WRITETHROUGH);
-        // Offset is zero because everything is still in physical address space
-        memory::init(VirtAddr::new(0))
-    };
-
-    // Zero the page table
-    mapper.level_4_table().zero();
-
-    // Create a 4KiB FrameAllocator instance
-    let mut frame_allocator = memory::BootInfoFrameAllocator::new(&MEM_MAP);
-
-    // Identity map the page table
-    let page_table_start = &__page_table_start as *const _ as usize;
-    let page_table_end = &__page_table_end as *const _ as usize;
-    for i in (page_table_start..page_table_end).step_by(0x1000) {
-        let frame = PhysFrame::<Size4KiB>::containing_address(PhysAddr::new(i as u64));
-        mapper.identity_map(frame, PageTableFlags::WRITABLE | PageTableFlags::PRESENT, &mut frame_allocator).unwrap().flush();
-    }
-
-    // Identity map the bootloader
-    let bootloader_start = &__bootloader_start as *const _ as usize;
-    let bootloader_end = &__bootloader_end as *const _ as usize;
-    for i in (bootloader_start..bootloader_end).step_by(0x1000) {
-        let frame = PhysFrame::<Size4KiB>::containing_address(PhysAddr::new(i as u64));
-        mapper.identity_map(frame, PageTableFlags::WRITABLE | PageTableFlags::PRESENT, &mut frame_allocator).unwrap().flush();
-    }
-
-    // Identity map the kernel
-    let kernel_start = &_kernel_start_addr as *const _ as usize;
-    let kernel_end = &_kernel_end_addr as *const _ as usize;
-    for i in (kernel_start..kernel_end).step_by(0x1000) {
-        let frame = PhysFrame::<Size4KiB>::containing_address(PhysAddr::new(i as u64));
-        mapper.identity_map(frame, PageTableFlags::WRITABLE | PageTableFlags::PRESENT, &mut frame_allocator).unwrap().flush();
-    }
-
-    // Sync mapping to this point
-    core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
-
-
-    log::info!("Enable PAE");
-    // Enable PAE
-    let mut cr4_data = Cr4::read();
-    cr4_data.set(Cr4Flags::PHYSICAL_ADDRESS_EXTENSION, true);
-    Cr4::write(cr4_data);
-
-    log::info!("Enable long mode");
-    // Set long mode bit in efer
-    let mut efer = Efer::read();
-    efer.set(EferFlags::LONG_MODE_ACTIVE, true);
-    Efer::write(efer);
-
-
-    log::info!("Enable paging1");
-    // Enable paging
-    let mut cr0 = Cr0::read();
-    cr0.set(Cr0Flags::PAGING, true);
-    Cr0::write(cr0);
-
-    log::info!("Load 64bit GDT");
-    // Load 64bit GDT
-    gdt::init();
-
 
     log::info!("looping now");
     loop {}

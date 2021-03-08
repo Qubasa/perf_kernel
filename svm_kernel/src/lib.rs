@@ -52,7 +52,7 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
 }
 
 // All kernel inits summed up
-pub fn init(boot_info: &'static bootloader::BootInfo){
+pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo){
     use x86_64::VirtAddr;
 
     // Check support of hardware features needed for benchmarking

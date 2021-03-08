@@ -9,7 +9,9 @@ edition = "2018"
 
 [dependencies]
 uart_16550 = { path = "../uart_16550"  }
-x86_64 = { path = "../x86_64", features=["instructions"]  }
+
+[target.'cfg(target_arch = "x86")'.dependencies]
+x86 = { path = "../x86", features=["instructions"]  }
 spin = "0.6.0"
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 multiboot2 = "0.10.1"

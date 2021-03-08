@@ -12,18 +12,29 @@
 #![feature(const_generics)]
 #![feature(abi_x86_interrupt)]
 #![feature(naked_functions)]
-pub use crate::bootinfo::BootInfo;
+
+// The dependencies here are set to target_arch = x86 because
+// the 'bootimage' command first builds this crate as dependencie of the kernel
+// which is in x86_64 build mode. As some dependencies do not build in x86_64
+// we create an "empty" crate for x86_64 and if bootimage then directly builds
+// this crate in x86 mode everything will be build accordingly.
 
 pub mod bootinfo;
+
+#[cfg(target_arch="x86")]
 pub mod serial;
+#[cfg(target_arch="x86")]
 pub mod vga;
+#[cfg(target_arch="x86")]
 pub mod print;
+#[cfg(target_arch="x86")]
 pub mod mylog;
-pub mod memory;
-pub mod gdt;
 
 
 global_asm!(include_str!("boot.s"));
+
+
+
 
 /// Defines the entry point function.
 ///
@@ -44,3 +55,4 @@ macro_rules! entry_point {
         }
     };
 }
+

@@ -22,7 +22,12 @@
 
 use bitflags::bitflags;
 use core::fmt;
+
+#[cfg(target_arch="x86_64")]
 use x86_64::instructions::port::Port;
+
+#[cfg(target_arch="x86")]
+use x86::instructions::port::Port;
 
 macro_rules! wait_for {
     ($cond:expr) => {

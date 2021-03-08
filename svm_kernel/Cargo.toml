@@ -15,7 +15,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 pc-keyboard = "0.5.1"
-bootloader = { path="external/bootloader" }
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = { path="external/pic8259_simple"  }
 uart_16550 = { path = "external/uart_16550"  }
@@ -23,7 +22,7 @@ rangeset = {path = "external/rangeset"}
 spin = "0.6.0"
 x86_64 = {path= "external/x86_64"}
 modular-bitfield = "0.10.0"
-
+bootloader = { path="external/bootloader" }
 
 [dependencies.lazy_static]
 version = "1.4.0"

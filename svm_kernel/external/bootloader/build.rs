@@ -9,6 +9,10 @@ fn main() {
         process::{self, Command},
     };
 
+    if std::env::var("CARGO_CFG_TARGET_ARCH").unwrap() == "x86_64" {
+            process::exit(1);
+    }
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
 
     let kernel = PathBuf::from(match env::var("KERNEL") {

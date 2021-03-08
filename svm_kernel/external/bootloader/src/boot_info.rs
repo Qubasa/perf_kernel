@@ -1,13 +1,15 @@
+#![no_std]
+
 use core::slice;
+use core::convert::TryFrom;
 
-use bootloader::bootinfo::{E820MemoryRegion, MemoryMap, MemoryRegion, MemoryRegionType};
-use usize_conversions::usize_from;
-use x86_64::VirtAddr;
+mod bootinfo;
+pub use bootinfo::*;
 
-pub(crate) fn create_from(memory_map_addr: VirtAddr, entry_count: u64) -> MemoryMap {
-    let memory_map_start_ptr = usize_from(memory_map_addr.as_u64()) as *const E820MemoryRegion;
+pub fn create_from(memory_map_addr: u64, entry_count: u64) -> MemoryMap {
+    let memory_map_start_ptr = memory_map_addr as *const E820MemoryRegion;
     let e820_memory_map =
-        unsafe { slice::from_raw_parts(memory_map_start_ptr, usize_from(entry_count)) };
+        unsafe { slice::from_raw_parts(memory_map_start_ptr, usize::try_from(entry_count).unwrap()) };
 
     let mut memory_map = MemoryMap::new();
     for region in e820_memory_map {
@@ -29,3 +31,4 @@ pub(crate) fn create_from(memory_map_addr: VirtAddr, entry_count: u64) -> Memory
 
     memory_map
 }
+
