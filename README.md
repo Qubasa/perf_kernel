@@ -69,20 +69,30 @@ $ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x8
 ```
 In another shell execute:
 ```bash
-$ rust-gdb target/x86_64-os/debug/svm_kernel -ex "target remote:1234"
+$ gdb target/x86_64-os/debug/svm_kernel.d -ex "target remote:1234"
 ```
+You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
+Note: `svm_kernel.d` are the extracted symbols from the svm_kernel binary.
 
-In gdb every core is handled like a thread. This means with the commands:
+If you want to debug other cores you have to use qemu in emulation mode and not in kvm mode!
+If qemu is in emulation mode gdb sees other cores as threads thus settings breakpoints has to be done
+as follows:
+List all cores and its IDs:
 ```
 (gdb) thread
 ```
+Set breakpoint
+```
+(gdb) break <location> thread <thread-id>
+```
 
-You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
+
 
 ## Debug with radare2
 ```
 $ r2 -B [TODO] target/x86_64-os/debug/svm_kernel
 ```
+Look into `svm_kernel/external/bootloader/linker.ld` to find the offset where the kernel gets mapped to.
 
 ## Run tests
 To execute tests run:
