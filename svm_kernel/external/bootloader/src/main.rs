@@ -94,7 +94,11 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         panic!("Current CPU does not support 1GiB pages");
     }
 
+    // Load interrupt handlers
+    bootloader::interrupts::load_idt();
+
     log::info!("looping now");
+
     loop {}
 }
 

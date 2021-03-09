@@ -29,7 +29,10 @@ pub mod vga;
 pub mod print;
 #[cfg(target_arch="x86")]
 pub mod mylog;
-
+#[cfg(target_arch="x86")]
+pub mod interrupts;
+#[cfg(target_arch="x86")]
+pub mod default_interrupt;
 
 global_asm!(include_str!("boot.s"));
 
