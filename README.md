@@ -12,11 +12,7 @@ Clone the repo with submodules:
 $ git clone --recursive <url>
 ```
 
-Install the rust nightly toolchain:
-```
-nightly-x86_64-unknown-linux-gnu (default)
-rustc 1.49.0-nightly (ffa2e7ae8 2020-10-24)
-```
+Pinned rustc version is found in [rust-toolchain](rust-toolchain)
 
 Install the dependencies listed in `shell.nix` or execute
 `nix-shell shell.nix` if on NixOS.
@@ -92,7 +88,7 @@ Set breakpoint
 ```
 $ r2 -B [TODO] target/x86_64-os/debug/svm_kernel
 ```
-Look into `svm_kernel/external/bootloader/linker.ld` to find the offset where the kernel gets mapped to.
+Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
 
 ## Run tests
 To execute tests run:
