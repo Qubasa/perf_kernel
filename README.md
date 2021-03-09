@@ -12,7 +12,7 @@ Clone the repo with submodules:
 $ git clone --recursive <url>
 ```
 
-Pinned rustc version is found in [rust-toolchain](rust-toolchain)
+Pinned rustc version is found in [rust-toolchain](svm_kernel/rust-toolchain)
 
 Install the dependencies listed in `shell.nix` or execute
 `nix-shell shell.nix` if on NixOS.
