@@ -17,3 +17,7 @@ test.rs
 test.c
 .~lock*
 .__pycache__
+.envrc
+.direnv
+.history
+.__pycache__
