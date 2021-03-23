@@ -2,6 +2,61 @@
 .intel_syntax noprefix
 
 init_bootloader:
+    mov esp, offset __stack_start
     push ebx
     push eax
     call bootloader_main
+
+# ebx -> entry_point
+# eax -> BootInfo memory map
+switch_to_long_mode:
+    # Write back cache and add a memory fence. I'm not sure if this is
+    # necessary, but better be on the safe side.
+    wbinvd
+    mfence
+
+    # enable PAE-flag in cr4 (Physical Address Extension)
+    mov eax, cr4
+    or eax, (1 << 5)
+    mov cr4, eax
+
+    # set the long mode bit in the EFER MSR (model specific register)
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, (1 << 8)
+    wrmsr
+
+    # enable paging in the cr0 register
+    mov eax, cr0
+    or eax, (1 << 31)
+    mov cr0, eax
+
+load_64bit_gdt:
+    lgdt gdt_64_pointer                # Load GDT.Pointer defined below.
+
+jump_to_long_mode:
+    push 0x8
+    mov eax, offset spin_here
+    push eax
+    retf # Load CS with 64 bit segment and flush the instruction cache
+
+.code64
+spin_here:
+    jmp spin_here
+
+.align 4
+zero_idt:
+    .word 0
+    .byte 0
+
+gdt_64:
+    .quad 0x0000000000000000          # Null Descriptor - should be present.
+    .quad 0x00209A0000000000          # 64-bit code descriptor (exec/read).
+    .quad 0x0000920000000000          # 64-bit data descriptor (read/write).
+
+.align 4
+    .word 0                              # Padding to make the "address of the GDT" field aligned on a 4-byte boundary
+
+gdt_64_pointer:
+    .word gdt_64_pointer - gdt_64 - 1    # 16-bit Size (Limit) of GDT.
+    .long gdt_64                            # 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)

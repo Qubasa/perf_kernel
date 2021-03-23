@@ -33,11 +33,14 @@ pub mod mylog;
 pub mod interrupts;
 #[cfg(target_arch="x86")]
 pub mod default_interrupt;
+#[cfg(target_arch="x86")]
+pub mod pagetable;
 
 global_asm!(include_str!("boot.s"));
 
-
-
+pub const ONE_MEG: u64 = 1048576;
+pub const TWO_MEG: u64 = ONE_MEG * 2;
+pub const ONE_GIG: u64 = 1073741824;
 
 /// Defines the entry point function.
 ///

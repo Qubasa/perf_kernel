@@ -9,12 +9,14 @@ edition = "2018"
 
 [dependencies]
 uart_16550 = { path = "../uart_16550"  }
+bitflags = "1.0.4"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
 x86 = { path = "../x86", features=["instructions"]  }
 spin = "0.6.0"
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 multiboot2 = "0.10.1"
+
 
 [dependencies.lazy_static]
 version = "1.4.0"
@@ -25,6 +27,7 @@ llvm-tools = { version = "0.1" }
 
 [features]
 binary = []
+
 
 [package.metadata.bootloader]
 target = "i686-unknown-linux-gnu.json"

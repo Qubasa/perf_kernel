@@ -65,10 +65,9 @@ $ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x8
 ```
 In another shell execute:
 ```bash
-$ gdb target/x86_64-os/debug/svm_kernel.d -ex "target remote:1234"
+$ gdb target/x86_64-os/debug/isofiles/boot/kernel.elf -ex "target remote:1234"
 ```
 You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
-Note: `svm_kernel.d` are the extracted symbols from the svm_kernel binary.
 
 If you want to debug other cores you have to use qemu in emulation mode and not in kvm mode!
 If qemu is in emulation mode gdb sees other cores as threads thus settings breakpoints has to be done
@@ -109,6 +108,8 @@ $ cargo test --test heap_allocator
 * https://uefi.org/sites/default/files/resources/ACPI_6_3_final_Jan30.pdf
 * [Use 1Gib pages sparringly](https://forum.osdev.org/viewtopic.php?f=1&t=32699)
 * [Don't touch MTRRs](https://forum.osdev.org/viewtopic.php?t=29034&p=246311)
-
+* https://virtio-fs.gitlab.io/index.html#overview
+* https://gitlab.redox-os.org/redox-os/tfs
+* http://9p.cat-v.org/
 
 

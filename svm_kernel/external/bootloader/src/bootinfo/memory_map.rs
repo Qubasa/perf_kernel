@@ -139,9 +139,19 @@ impl FrameRange {
         }
     }
 
+    /// Returns the size in bytes of the frame range
+    pub fn size(&self) -> u64 {
+        (self.end_frame_number - self.start_frame_number) * PAGE_SIZE
+    }
+
     /// Returns true if the frame range contains no frames.
     pub fn is_empty(&self) -> bool {
         self.start_frame_number == self.end_frame_number
+    }
+
+    /// Checks if the supplied address lies inbetween the frame range
+    pub fn intersects(&self, addr: u64) -> bool {
+        return self.start_frame_number >= addr && self.end_frame_number < addr;
     }
 
     /// Returns the physical start address of the memory region.

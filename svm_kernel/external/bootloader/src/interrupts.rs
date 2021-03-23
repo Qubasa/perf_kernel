@@ -12,6 +12,7 @@ lazy_static::lazy_static! {
 pub fn load_idt() {
     IDT.load();
 }
+#[allow(dead_code)]
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 #[repr(usize)]
@@ -75,6 +76,7 @@ pub extern "x86-interrupt" fn default_diverging_with_error_handler<const N: usiz
 ) -> ! {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {} error: {}", N, error);
+    log::error!("Exception name: {:#?}", IndexToException::new(N));
     panic!("{:?}", stack_frame);
 }
 
@@ -83,6 +85,7 @@ pub extern "x86-interrupt" fn default_diverging_handler<const N: usize>(
 ) -> ! {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {}", N);
+    log::error!("Exception name: {:#?}", IndexToException::new(N));
     panic!("{:?}", stack_frame);
 }
 
@@ -92,6 +95,8 @@ pub extern "x86-interrupt" fn default_handler_with_error<const N: usize>(
 ) {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {}, error code: {}", N, error);
+
+    log::error!("Exception name: {:#?}", IndexToException::new(N));
     panic!("{:?}", stack_frame);
 }
 
