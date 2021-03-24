@@ -1,25 +1,32 @@
-ENTRY(init_bootloader)
+ENTRY(_start_bootloader)
 
 SECTIONS {
-    . = 2M;
-    __offset = .; /* Do not move this label */
+    . = 1M;
     __stack_end = .;
-    . += 0x2000;
+    . += 0x4000;
     __stack_start = .;
     __bootloader_start = .;
-    .boot :
+    .boot : ALIGN(2)
     {
         /* ensure that the multiboot header is at the beginning */
         KEEP(*(.multiboot_header))
     }
-    .text :
+    .bootloader : ALIGN(16)
     {
-        *(.text)
         *(.init_bootloader)
+        *(.text .text.*)
+        *(.rodata .rodata.*)
+        *(.data .data.*)
+        *(.bss .bss.*)
+        *(.got .got.*)
+    }
+    .bootloader_debug : {
+        *(.debug*)
     }
     __bootloader_end = .;
 
-    . = ALIGN(0x1000);
+    . = 2M;
+    __identity_map_offset = .; /* Do not move this label */
     .kernel :
     {
         KEEP(*(.kernel))
@@ -32,7 +39,7 @@ SECTIONS {
         _p3 = .;
         . += 0x1000;
         _p2_tables_start = .;
-            . = (0x800000 - 0x1000*2);
+            . = (8M - 0x2000);
         _p2_tables_end = .;
-    __page_table_end = .; /* Allocates 8Mb of RAM */
+    __page_table_end = .; /* Allocates 8Mb of RAM to map 4Gb of virt addr*/
 }

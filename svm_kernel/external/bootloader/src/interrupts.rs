@@ -10,45 +10,52 @@ lazy_static::lazy_static! {
 }
 
 pub fn load_idt() {
+    unsafe {
+        log::info!(
+            "IDT addr: {:#x}",
+            core::mem::transmute::<&'static InterruptDescriptorTable, u32>(&IDT)
+        );
+    }
     IDT.load();
 }
+
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 #[repr(usize)]
 enum IndexToException {
-   Divide_Error = 0,
-   Debug,
-   NMI,
-   Breakpoint,
-   Overflow,
-   Bound_Range_Exceeded,
-   Invalid_Opcode,
-   Device_Not_Available,
-   Double_Fault,
-   Coprocessor_Segment_Overrun,
-   Invalid_Tss,
-   Segment_Not_Present,
-   Stack_Segment_Fault,
-   General_Protection_Fault,
-   Page_Fault = 14,
-   reserved0 = 15,
-   x87_Floating_Point = 16,
-   Alignment_Check,
-   Machine_Check,
-   Simd_Floating_Point,
-   Virtualization = 20,
-   reserved1,
-   reserved2,
-   reserved3,
-   reserved4,
-   reserved5,
-   reserved6,
-   reserved7,
-   reserved8,
-   reserved9,
-   Security_Exception = 30,
-   Uknown_Software_Defined
+    Divide_Error = 0,
+    Debug,
+    NMI,
+    Breakpoint,
+    Overflow,
+    Bound_Range_Exceeded,
+    Invalid_Opcode,
+    Device_Not_Available,
+    Double_Fault,
+    Coprocessor_Segment_Overrun,
+    Invalid_Tss,
+    Segment_Not_Present,
+    Stack_Segment_Fault,
+    General_Protection_Fault,
+    Page_Fault = 14,
+    reserved0 = 15,
+    x87_Floating_Point = 16,
+    Alignment_Check,
+    Machine_Check,
+    Simd_Floating_Point,
+    Virtualization = 20,
+    reserved1,
+    reserved2,
+    reserved3,
+    reserved4,
+    reserved5,
+    reserved6,
+    reserved7,
+    reserved8,
+    reserved9,
+    Security_Exception = 30,
+    Uknown_Software_Defined,
 }
 
 impl IndexToException {
@@ -56,26 +63,33 @@ impl IndexToException {
         if n > 30 {
             return IndexToException::Uknown_Software_Defined;
         }
-        unsafe {
-            core::intrinsics::transmute::<usize,IndexToException>(n)
-        }
+        unsafe { core::intrinsics::transmute::<usize, IndexToException>(n) }
     }
 }
 
 pub extern "x86-interrupt" fn page_fault_handler<const N: usize>(
-    stack_frame: &mut InterruptStackFrame, error: PageFaultErrorCode
+    stack_frame: &mut InterruptStackFrame,
+    error: PageFaultErrorCode,
 ) {
     log::error!("EXECPTION: Default Interrupt Handler");
-    log::error!("This interrupt has not been initialized: {} page fault error: {:#?}", N, error);
+    log::error!(
+        "This interrupt has not been initialized: {} page fault error: {:#?}",
+        N,
+        error
+    );
     panic!("{:?}", stack_frame);
 }
 
-
 pub extern "x86-interrupt" fn default_diverging_with_error_handler<const N: usize>(
-    stack_frame: &mut InterruptStackFrame, error: u32
+    stack_frame: &mut InterruptStackFrame,
+    error: u32,
 ) -> ! {
     log::error!("EXECPTION: Default Interrupt Handler");
-    log::error!("This interrupt has not been initialized: {} error: {}", N, error);
+    log::error!(
+        "This interrupt has not been initialized: {} error: {}",
+        N,
+        error
+    );
     log::error!("Exception name: {:#?}", IndexToException::new(N));
     panic!("{:?}", stack_frame);
 }
@@ -89,12 +103,16 @@ pub extern "x86-interrupt" fn default_diverging_handler<const N: usize>(
     panic!("{:?}", stack_frame);
 }
 
-
 pub extern "x86-interrupt" fn default_handler_with_error<const N: usize>(
-    stack_frame: &mut InterruptStackFrame, error: u32,
+    stack_frame: &mut InterruptStackFrame,
+    error: u32,
 ) {
     log::error!("EXECPTION: Default Interrupt Handler");
-    log::error!("This interrupt has not been initialized: {}, error code: {}", N, error);
+    log::error!(
+        "This interrupt has not been initialized: {}, error code: {}",
+        N,
+        error
+    );
 
     log::error!("Exception name: {:#?}", IndexToException::new(N));
     panic!("{:?}", stack_frame);

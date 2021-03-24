@@ -16,10 +16,8 @@ use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
 use x86::{PhysAddr, VirtAddr};
 
-
 global_asm!(include_str!("boot.s"));
 global_asm!(include_str!("start.s"));
-
 
 /*
  * Important: The variables defined below are NOT pointers
@@ -27,12 +25,12 @@ global_asm!(include_str!("start.s"));
  * To make it to an actual pointer get a reference of it.
  */
 extern "C" {
-    fn switch_to_long_mode(boot_info: &'static bootinfo::MemoryMap, entry_point: *const usize);
+    fn switch_to_long_mode(boot_info: &'static bootinfo::MemoryMap, entry_point: u64);
     static __bootloader_start: usize;
-    static __offset: usize;
+    static __identity_map_offset: usize;
     static __stack_end: usize;
     static __stack_start: usize;
-    static init_bootloader: usize;
+    static _start_bootloader: usize;
     static __bootloader_end: usize;
     static _kernel_start_addr: usize;
     static _kernel_end_addr: usize;
@@ -49,7 +47,7 @@ static mut MEM_MAP: bootinfo::MemoryMap = bootinfo::MemoryMap::new();
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     #[allow(non_snake_case)]
-    let PHYS_MEM_OFFSET = &__offset as *const _ as u64;
+    let PHYS_MEM_OFFSET = &__identity_map_offset as *const _ as u64;
 
     // Initialization
     {
@@ -60,13 +58,12 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             &__bootloader_start as *const _
         );
         log::info!("Bootloader main addr:  {:#?}", &bootloader_main as *const _);
-        log::info!("Bootloader init addr:  {:#?}", &init_bootloader as *const _);
+        log::info!("Bootloader init addr:  {:#?}", &_start_bootloader as *const _);
         log::info!("Stack start:  {:#?}", &__stack_start as *const _);
         log::info!("Stack end:  {:#?}", &__stack_end as *const _);
         let esp: u32;
         asm!("mov {}, esp", out(reg) esp);
         log::info!("ESP:  {:#x}", esp);
-
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -79,6 +76,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             );
         }
     }
+
+    asm!(".byte 0xff");
 
     // Parses the multiboot2 header
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);
@@ -195,7 +194,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         let mut pde_allocator = pagetable::PdeAllocator::new(&_p2_tables_start, &_p2_tables_end);
 
-        // Map first 2Gb
+        // Identity map first 2Gb
         for pdpe_i in 0..2 {
             let mut entry = pagetable::PageTableEntry::new();
             let pde: &'static mut pagetable::PageTable = pde_allocator
@@ -206,14 +205,17 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let virt_addr =
                     pdpe_i as u64 * bootloader::ONE_GIG + pde_i as u64 * bootloader::TWO_MEG;
 
+
+                let phys_addr;
                 // Do not map memory below phys mem offset
                 if pdpe_i == 0 && virt_addr < PHYS_MEM_OFFSET {
-                    continue;
+                    phys_addr = 0;
+                }else {
+                    phys_addr = frame_finder.next().expect("Not enough available memory")
                 }
 
-                let phys_addr = frame_finder.next().expect("Not enough available memory");
-                // log::info!("Mapping {:#x} to {:#x}", virt_addr, phys_addr);
                 if virt_addr != phys_addr {
+                    log::info!("Mapping {:#x} to {:#x}", virt_addr, phys_addr);
                     panic!("Identity mapping failed");
                 }
                 entry.set_addr(
@@ -238,8 +240,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     //TODO: Update MEM_MAP
     //TODO: Change set_addr to accept u64 instead of PhysAddr u32
     //TODO: Check if kernel bigger then available memory
+    //TODO: Check if kernel + bootloader bigger then u32 (aka. 4Gb)
     //TODO: Map memory variably
     //TODO: Check that this is an AMD cpu
+    //TODO: Check that program header has offset of 2Mb
     log::info!("Done creating page table.");
 
     // Load P4 to CR3 register
@@ -249,9 +253,32 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         Cr3::write(PhysFrame::from_start_address(p4_physical).unwrap(), flags);
     }
 
-    switch_to_long_mode(&MEM_MAP, 0 as *const usize);
+    log::info!("Kernel header start addr: {:#x}", &_kernel_start_addr as *const _ as u32);
+    let kernel_header = core::mem::transmute::<&usize, &Elf64Header>(&_kernel_start_addr);
+    let magic = [
+        0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
+    ];
+    if kernel_header.e_ident != magic {
+        panic!("Invalid ELF header magic of kernel!");
+    }
+    log::info!("Kernel header entry point: {:#x}", kernel_header.e_entry);
+    log::info!("Kernel offset: {:#x}", &_kernel_start_addr as *const _ as u64);
+
+    switch_to_long_mode(&MEM_MAP, &_kernel_start_addr as *const _ as u64);
 
     loop {}
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
+struct Elf64Header {
+    e_ident: [u8; 16],
+    e_type: u16,
+    e_machine: u16,
+    e_version: u32,
+    e_entry: u64,
+    /*redacted*/
 }
 
 #[allow(dead_code)]

@@ -35,10 +35,15 @@ extern crate alloc;
  */
 entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static bootinfo::BootInfo) -> ! {
+  unsafe {
+    asm!("jmp over");
+    asm!(".asciz \"REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\"");
+    asm!("over:");
+  }
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(LevelFilter::Info);
-    // panic!("Reached kernel main");
+    panic!("Reached kernel main");
 
     // Initialize routine for kernel
     svm_kernel::init(boot_info);
