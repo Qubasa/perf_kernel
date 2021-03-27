@@ -1,6 +1,8 @@
 .section .init_bootloader, "awx"
 .intel_syntax noprefix
 .global _start_bootloader
+.global switch_to_long_mode
+.global jump_to_long_mode
 
 _start_bootloader:
     mov esp, offset __stack_start
@@ -9,6 +11,7 @@ _start_bootloader:
     call bootloader_main
 
 switch_to_long_mode:
+    pop eax # return addr
     pop esi # mem map
     pop edi # entry_point
     # Write back cache and add a memory fence. I'm not sure if this is
@@ -37,7 +40,7 @@ load_64bit_gdt:
 
 jump_to_long_mode:
     push 0x8
-    push 0x203ef0
+    push edi
     retf # Load CS with 64 bit segment and flush the instruction cache
 
 .code64

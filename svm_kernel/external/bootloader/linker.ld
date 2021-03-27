@@ -20,9 +20,6 @@ SECTIONS {
         *(.bss .bss.*)
         *(.got .got.*)
     }
-    .bootloader_debug : {
-        *(.debug*)
-    }
     __bootloader_end = .;
 
     . = 2M;
@@ -32,6 +29,9 @@ SECTIONS {
         KEEP(*(.kernel))
     }
 
+    /* .bootloader_debug : { */
+    /*     *(.debug*) */
+    /* } */
     . = ALIGN(0x1000);
     __page_table_start = .;
         _p4 = .;

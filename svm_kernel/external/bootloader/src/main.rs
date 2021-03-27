@@ -25,7 +25,7 @@ global_asm!(include_str!("start.s"));
  * To make it to an actual pointer get a reference of it.
  */
 extern "C" {
-    fn switch_to_long_mode(boot_info: &'static bootinfo::MemoryMap, entry_point: u64);
+    fn switch_to_long_mode(boot_info: &'static bootinfo::MemoryMap, entry_point: u64) -> !;
     static __bootloader_start: usize;
     static __identity_map_offset: usize;
     static __stack_end: usize;
@@ -58,7 +58,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             &__bootloader_start as *const _
         );
         log::info!("Bootloader main addr:  {:#?}", &bootloader_main as *const _);
-        log::info!("Bootloader init addr:  {:#?}", &_start_bootloader as *const _);
+        log::info!(
+            "Bootloader init addr:  {:#?}",
+            &_start_bootloader as *const _
+        );
         log::info!("Stack start:  {:#?}", &__stack_start as *const _);
         log::info!("Stack end:  {:#?}", &__stack_end as *const _);
         let esp: u32;
@@ -76,8 +79,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             );
         }
     }
-
-    asm!(".byte 0xff");
 
     // Parses the multiboot2 header
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);
@@ -205,12 +206,11 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let virt_addr =
                     pdpe_i as u64 * bootloader::ONE_GIG + pde_i as u64 * bootloader::TWO_MEG;
 
-
                 let phys_addr;
                 // Do not map memory below phys mem offset
                 if pdpe_i == 0 && virt_addr < PHYS_MEM_OFFSET {
                     phys_addr = 0;
-                }else {
+                } else {
                     phys_addr = frame_finder.next().expect("Not enough available memory")
                 }
 
@@ -244,6 +244,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     //TODO: Map memory variably
     //TODO: Check that this is an AMD cpu
     //TODO: Check that program header has offset of 2Mb
+    //TODO: Check that bootloader is smaller then 1Mb
     log::info!("Done creating page table.");
 
     // Load P4 to CR3 register
@@ -253,31 +254,39 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         Cr3::write(PhysFrame::from_start_address(p4_physical).unwrap(), flags);
     }
 
-    log::info!("Kernel header start addr: {:#x}", &_kernel_start_addr as *const _ as u32);
-    let kernel_header = core::mem::transmute::<&usize, &Elf64Header>(&_kernel_start_addr);
+    log::info!(
+        "Kernel header start addr: {:#x}",
+        &_kernel_start_addr as *const _ as u32
+    );
+    let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&_kernel_start_addr);
     let magic = [
         0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00,
     ];
     if kernel_header.e_ident != magic {
-        panic!("Invalid ELF header magic of kernel!");
+        for i in kernel_header.e_ident.iter() {
+            bootloader::print!("{:#x} ", i);
+        }
+        panic!("\n Invalid ELF header magic of kernel!");
     }
-    log::info!("Kernel header entry point: {:#x}", kernel_header.e_entry);
-    log::info!("Kernel offset: {:#x}", &_kernel_start_addr as *const _ as u64);
+    log::info!("Kernel entry addr: {:#x}", kernel_header.e_entry);
+    log::info!(
+        "Kernel offset: {:#x}",
+        &_kernel_start_addr as *const _ as u64
+    );
 
-    switch_to_long_mode(&MEM_MAP, &_kernel_start_addr as *const _ as u64);
-
-    loop {}
+    let entry_addr = kernel_header.e_entry as u64;
+    switch_to_long_mode(&MEM_MAP, entry_addr);
 }
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-struct Elf64Header {
+struct Elf32Header {
     e_ident: [u8; 16],
     e_type: u16,
     e_machine: u16,
     e_version: u32,
-    e_entry: u64,
+    e_entry: u32,
     /*redacted*/
 }
 
