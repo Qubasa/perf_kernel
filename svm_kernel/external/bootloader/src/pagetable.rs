@@ -308,7 +308,6 @@ impl BootInfoFrameAllocator {
 
     /// Returns an iterator over the usable frames specified in the memory map.
     pub fn usable_2m_frames(&self, phys_mem_offset: u64) -> impl Iterator<Item = u64> {
-        log::info!("phys_mem_offset: {:#x}", phys_mem_offset);
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);

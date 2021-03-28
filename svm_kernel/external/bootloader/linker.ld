@@ -42,4 +42,5 @@ SECTIONS {
             . = (8M - 0x2000);
         _p2_tables_end = .;
     __page_table_end = .; /* Allocates 8Mb of RAM to map 4Gb of virt addr*/
+    __minimum_mem_requirement = .;
 }

@@ -323,8 +323,9 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             for section in sections {
                 let name = core::str::from_utf8(
                     &str_table[section.sh_name as usize..]
-                        .split(|&c|{  c == 0})
-                        .next().unwrap(),
+                        .split(|&c| c == 0)
+                        .next()
+                        .unwrap(),
                 )
                 .unwrap();
                 if name == ".bss" {
@@ -335,11 +336,11 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
 
         if let Some(section) = bss_sec {
             let offset = section.sh_offset as usize;
-            let bss = &mut buf[offset..offset+section.sh_size as usize];
+            let bss = &mut buf[offset..offset + section.sh_size as usize];
             for i in bss {
                 *i = 0;
             }
-        }else{
+        } else {
             panic!("Kernel does not have a .bss section");
         }
     }
@@ -460,7 +461,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         already_padded += pad_size;
     }
 
-    println!("cargo:warning=Total padding: {:#x}", already_padded);
+    println!("cargo:warning=Total padding: {} Kb", already_padded / 1024);
     eprintln!("Writing to file");
     kernel_fd
         .seek(std::io::SeekFrom::Start(0))

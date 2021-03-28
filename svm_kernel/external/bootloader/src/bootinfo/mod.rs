@@ -30,7 +30,7 @@ pub struct BootInfo {
     /// used by the kernel.
     pub memory_map: MemoryMap,
     /// Function pointer to a cpu core init function
-    pub smp_trampoline: unsafe extern "C" fn() -> !,
+    pub smp_trampoline: u32,
     pub physical_memory_offset: u64,
     tls_template: TlsTemplate,
     /// The amount of physical memory available in bytes
@@ -42,23 +42,24 @@ impl BootInfo {
     /// Create a new boot information structure. This function is only for internal purposes.
     #[allow(unused_variables)]
     #[doc(hidden)]
-    pub fn new(
-        memory_map: MemoryMap,
-        smp_trampoline: unsafe extern "C" fn() -> !,
-        tls_template: Option<TlsTemplate>,
-        max_phys_memory: u64,
-        physical_memory_offset: u64,
+    pub const fn new(
     ) -> Self {
-        let tls_template = tls_template.unwrap_or(TlsTemplate {
+        let tls_template = TlsTemplate {
             start_addr: 0,
             file_size: 0,
             mem_size: 0,
-        });
+        };
+
+        let smp_trampoline = 0;
+
+        let memory_map = MemoryMap::new();
+        let physical_memory_offset = 0;
+
         BootInfo {
             memory_map,
             smp_trampoline,
             tls_template,
-            max_phys_memory,
+            max_phys_memory: 0,
             physical_memory_offset,
             _non_exhaustive: 0,
         }

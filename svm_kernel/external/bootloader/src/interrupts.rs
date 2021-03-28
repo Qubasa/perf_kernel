@@ -10,12 +10,6 @@ lazy_static::lazy_static! {
 }
 
 pub fn load_idt() {
-    unsafe {
-        log::info!(
-            "IDT addr: {:#x}",
-            core::mem::transmute::<&'static InterruptDescriptorTable, u32>(&IDT)
-        );
-    }
     IDT.load();
 }
 

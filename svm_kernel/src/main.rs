@@ -38,7 +38,12 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(LevelFilter::Info);
 
-    panic!("Reached kernel!!");
+    unsafe {
+        panic!(
+            "Reached kernel!! {:#x}",
+            core::mem::transmute::<&'static bootinfo::BootInfo, u64>(_boot_info)
+        );
+    }
 
     // Initialize routine for kernel
     // svm_kernel::init(boot_info);

@@ -34,10 +34,10 @@ impl Apic {
         return self.bsp.unwrap();
     }
 
-    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: unsafe extern "C" fn() -> !,
+    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: u32,
         ) {
 
-        log::info!("Trampoline ptr: {:?}", trampoline);
+        log::info!("Trampoline ptr: {:#x}", trampoline);
         log::info!("Booting core {}", apic_id);
         // Send INIT ipi
         let low = InterCmdRegLow::new()

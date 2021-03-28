@@ -12,8 +12,8 @@ _start_bootloader:
 
 switch_to_long_mode:
     pop eax # return addr
-    pop esi # mem map
-    pop edi # entry_point
+    pop edi # mem map
+    pop esi # entry_point
     # Write back cache and add a memory fence. I'm not sure if this is
     # necessary, but better be on the safe side.
     wbinvd
@@ -39,9 +39,8 @@ load_64bit_gdt:
     lgdt gdt_64_pointer                # Load GDT.Pointer defined below.
 
 jump_to_long_mode:
-    push esi
     push 0x8
-    push edi
+    push esi
     retf # Load CS with 64 bit segment and flush the instruction cache
 
 .code64
