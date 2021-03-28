@@ -39,6 +39,7 @@ load_64bit_gdt:
     lgdt gdt_64_pointer                # Load GDT.Pointer defined below.
 
 jump_to_long_mode:
+    push esi
     push 0x8
     push edi
     retf # Load CS with 64 bit segment and flush the instruction cache

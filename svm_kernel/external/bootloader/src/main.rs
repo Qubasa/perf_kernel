@@ -245,6 +245,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     //TODO: Check that this is an AMD cpu
     //TODO: Check that program header has offset of 2Mb
     //TODO: Check that bootloader is smaller then 1Mb
+    //TODO: Enable sse
+    //TODO: Enable write protection CR0 bit
+    //TODO: Enable non execute bit
+    //TODO: Enable floating point
     log::info!("Done creating page table.");
 
     // Load P4 to CR3 register
