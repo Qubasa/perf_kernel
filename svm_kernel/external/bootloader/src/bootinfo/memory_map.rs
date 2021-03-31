@@ -1,7 +1,6 @@
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 
-
 const PAGE_SIZE: u64 = 4096;
 
 const MAX_MEMORY_MAP_SIZE: usize = 64;
@@ -15,6 +14,20 @@ pub struct MemoryMap {
     next_entry_index: u64,
 }
 
+#[derive(Debug)]
+pub enum PartitionError {
+    NotSameRegion(MemoryRegion, MemoryRegion),
+    AddrDoesNotExist,
+    InvalidRegionType,
+    AddrIsNotAligned(u64),
+    RegionTypeIsNotUsable(MemoryRegion),
+}
+
+#[derive(Debug)]
+pub enum RemoveError {
+    RegionDoesNotExist,
+}
+
 #[doc(hidden)]
 #[allow(clippy::new_without_default)]
 impl MemoryMap {
@@ -26,6 +39,114 @@ impl MemoryMap {
         }
     }
 
+    /// Returns true if supplied address is in a usable region
+    pub fn get_region_by_addr(&self, addr: u64) -> Option<&MemoryRegion> {
+        for i in self.entries[0..self.next_entry_index()].iter() {
+            if i.range.intersects(addr) {
+                return Some(i);
+            }
+        }
+        return None;
+    }
+
+    pub fn partition_memory_region(
+        &mut self,
+        start_addr: u64,
+        end_addr: u64,
+        region_type: MemoryRegionType,
+    ) -> Result<[MemoryRegion; 3], PartitionError> {
+        if region_type == MemoryRegionType::Empty {
+            return Err(PartitionError::InvalidRegionType);
+        }
+
+        if start_addr % PAGE_SIZE != 0 {
+            return Err(PartitionError::AddrIsNotAligned(start_addr));
+        }
+
+        if end_addr % PAGE_SIZE != 0 {
+            return Err(PartitionError::AddrIsNotAligned(end_addr));
+        }
+
+        let end_region = self
+            .get_region_by_addr(end_addr - 1)
+            .ok_or(PartitionError::AddrDoesNotExist)?
+            .clone();
+        let region = self
+            .get_region_by_addr(start_addr)
+            .ok_or(PartitionError::AddrDoesNotExist)?
+            .clone();
+        if region != end_region {
+            return Err(PartitionError::NotSameRegion(region, end_region));
+        }
+
+        if region.region_type != MemoryRegionType::Usable {
+            return Err(PartitionError::RegionTypeIsNotUsable(region));
+        }
+
+        let mut regions = [MemoryRegion::empty(); 3];
+        regions[1].region_type = region_type;
+
+        let start_diff = core::cmp::max(region.range.start_addr(), start_addr)
+            - core::cmp::min(region.range.start_addr(), start_addr);
+
+        let end_diff = core::cmp::max(region.range.end_addr(), end_addr)
+            - core::cmp::min(region.range.end_addr(), end_addr);
+
+        if start_diff < PAGE_SIZE {
+            // Also include lower region
+            regions[1].range.set_start_addr(region.range.start_addr());
+            regions[0].region_type = MemoryRegionType::Empty;
+        } else {
+            regions[1].range.set_start_addr(start_addr);
+            regions[0].region_type = MemoryRegionType::Usable;
+            regions[0].range.set_start_addr(region.range.start_addr());
+            regions[0].range.set_end_addr(start_addr);
+        }
+
+        if end_diff < PAGE_SIZE {
+            // Also include upper region
+            regions[1].range.set_end_addr(region.range.end_addr());
+            regions[2].region_type = MemoryRegionType::Empty;
+        } else {
+            regions[1].range.set_end_addr(end_addr);
+            regions[2].region_type = MemoryRegionType::Usable;
+            regions[2].range.set_start_addr(end_addr);
+            regions[2].range.set_end_addr(region.range.end_addr());
+        }
+
+        self.remove_region(region).unwrap();
+
+        for &i in regions.iter() {
+            if i.region_type != MemoryRegionType::Empty {
+                self.add_region(i);
+            }
+        }
+
+        return Ok(regions);
+    }
+
+    /// Remove memory region
+    pub fn remove_region(&mut self, region: MemoryRegion) -> Result<(), RemoveError> {
+        let entry_index = self.next_entry_index();
+        let mut found = false;
+        for i in self.entries[0..entry_index].iter_mut() {
+            if *i == region {
+                *i = MemoryRegion::empty();
+                found = true;
+                break;
+            }
+        }
+
+        if found {
+            self.next_entry_index -= 1;
+            self.sort();
+            return Ok(());
+        } else {
+            return Err(RemoveError::RegionDoesNotExist);
+        }
+    }
+
+    /// Add memory region
     pub fn add_region(&mut self, region: MemoryRegion) {
         assert!(
             self.next_entry_index() < MAX_MEMORY_MAP_SIZE,
@@ -151,7 +272,15 @@ impl FrameRange {
 
     /// Checks if the supplied address lies inbetween the frame range
     pub fn intersects(&self, addr: u64) -> bool {
-        return self.start_frame_number >= addr && self.end_frame_number < addr;
+        return self.start_addr() <= addr && self.end_addr() > addr;
+    }
+
+    pub fn set_start_addr(&mut self, addr: u64) {
+        self.start_frame_number = addr / PAGE_SIZE;
+    }
+
+    pub fn set_end_addr(&mut self, addr: u64) {
+        self.end_frame_number = addr / PAGE_SIZE;
     }
 
     /// Returns the physical start address of the memory region.

@@ -99,7 +99,10 @@ Run specific test:
 $ cargo test --test heap_allocator
 ```
 
-
+## Developed on a
+* AMD Ryzen 5 3500U
+* EPYC-v1
+* AMD Family 17h Model 18h
 
 ## Resources
 * https://os.phil-opp.com/

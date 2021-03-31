@@ -4,6 +4,7 @@
 #![test_runner(svm_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(asm)]
+#![feature(test)]
 /*
  * Followed the tutorial here: https://os.phil-opp.com
  * TODO: Replace builtin memcpy, memset with optimized one
@@ -38,12 +39,21 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(LevelFilter::Info);
 
-    unsafe {
-        panic!(
-            "Reached kernel!! {:#x}",
-            core::mem::transmute::<&'static bootinfo::BootInfo, u64>(_boot_info)
-        );
-    }
+
+
+    use x86_64::registers::xcontrol::{XCr0, XCr0Flags};
+    let mut flags = XCr0::read();
+    log::info!("Raw XCr0Flags: {:#x}", XCr0::read_raw());
+    log::info!("XCr0Flags: {:#?}", XCr0::read());
+
+    // unsafe {
+    //     use core::arch::x86_64::{_mm_getcsr};
+    //     let val = _mm_getcsr();
+    //     core::hint::black_box(val);
+    // }
+
+    log::info!("Reached kernel!!");
+    svm_kernel::exit_qemu(svm_kernel::QemuExitCode::Success);
 
     // Initialize routine for kernel
     // svm_kernel::init(boot_info);

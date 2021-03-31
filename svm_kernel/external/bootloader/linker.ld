@@ -5,6 +5,8 @@ SECTIONS {
     __stack_end = .;
     . += 0x4000;
     __stack_start = .;
+
+    . = ALIGN(0x1000);
     __bootloader_start = .;
     .boot : ALIGN(2)
     {
@@ -20,18 +22,18 @@ SECTIONS {
         *(.bss .bss.*)
         *(.got .got.*)
     }
+    . = ALIGN(0x1000);
     __bootloader_end = .;
 
     . = 2M;
-    __identity_map_offset = .; /* Do not move this label */
+    __kernel_start = .;
     .kernel :
     {
         KEEP(*(.kernel))
     }
+    . = ALIGN(0x1000);
+    __kernel_end = .;
 
-    /* .bootloader_debug : { */
-    /*     *(.debug*) */
-    /* } */
     . = ALIGN(0x1000);
     __page_table_start = .;
         _p4 = .;

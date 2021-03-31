@@ -42,13 +42,15 @@ pub enum QemuExitCode {
 }
 
 // Write to port 0xf4 to exit qemu
-pub fn exit_qemu(exit_code: QemuExitCode) {
+pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
     use x86_64::instructions::port::Port;
 
     unsafe {
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
+
+    panic!("Failed to exit Qemu");
 }
 
 // All kernel inits summed up

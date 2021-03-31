@@ -4,6 +4,7 @@
 
 pub use self::memory_map::*;
 
+
 mod memory_map;
 
 /// This structure represents the information that the bootloader passes to the kernel.

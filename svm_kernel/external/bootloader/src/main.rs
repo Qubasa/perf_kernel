@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(global_asm)]
 #![feature(asm)]
+#![feature(test)]
 #![allow(unused_imports)]
 
 use bootloader::bootinfo;
@@ -11,6 +12,7 @@ use bootloader::pagetable;
 use core::convert::TryInto;
 use log::LevelFilter;
 use multiboot2;
+mod media_extensions;
 use multiboot2::MemoryAreaType;
 use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
@@ -32,8 +34,9 @@ extern "C" {
     static __stack_start: usize;
     static _start_bootloader: usize;
     static __bootloader_end: usize;
-    static _kernel_start_addr: usize;
-    static _kernel_end_addr: usize;
+    static __kernel_start: usize;
+    static _kernel_size: usize;
+    static __kernel_end: usize;
     static __page_table_start: usize;
     static _p4: usize;
     static _p3: usize;
@@ -47,8 +50,11 @@ static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
 
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
-    #[allow(non_snake_case)]
-    let PHYS_MEM_OFFSET = &__identity_map_offset as *const _ as u64;
+
+    // Needs to be here or else the linker does not include the
+    // kernel. The symbol _kernel_size does not come from the linker script
+    // but from objcopy. Read more under `$ man objcopy`
+    core::hint::black_box(_kernel_size);
 
     // Initialization
     {
@@ -64,6 +70,15 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 "EAX magic is incorrect. Booted from a non compliant bootloader: {:#x}",
                 magic
             );
+        }
+
+        // Checks that this is a x64 processor
+        use core::arch::x86::__cpuid;
+
+        let res = __cpuid(0x8000_0001);
+
+        if res.edx & (1 << 29) == 0 {
+            panic!("Processor does not support x86_64 instruction set");
         }
     }
 
@@ -100,7 +115,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             );
             BOOT_INFO.memory_map.add_region(region);
         }
-        log::info!("Existing Ram: {} Kib", existing_ram / 1024);
+        BOOT_INFO.max_phys_memory = existing_ram;
+        log::info!("Existing Ram: {} KiB", existing_ram / 1024);
 
         // Sums up usable ram
         for i in map_tag.memory_areas() {
@@ -115,22 +131,23 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Checks that the current loaded image lies in available (good) physical memory
     {
         for i in BOOT_INFO.memory_map.iter() {
-            check(&i, __stack_start as *const usize as u64);
-            check(&i, __stack_end as *const usize as u64);
-            check(&i, __bootloader_start as *const usize as u64);
-            check(&i, __bootloader_end as *const usize as u64);
-            check(&i, _kernel_start_addr as *const usize as u64);
-            check(&i, _kernel_end_addr as *const usize as u64);
-            check(&i, __page_table_start as *const usize as u64);
-            check(&i, __page_table_end as *const usize as u64);
+            check(&i, &__stack_start as *const usize as u64);
+            check(&i, &__stack_end as *const usize as u64);
+            check(&i, &__bootloader_start as *const usize as u64);
+            check(&i, &__bootloader_end as *const usize as u64);
+            check(&i, &__kernel_start as *const usize as u64);
+            check(&i, &__kernel_end as *const usize as u64);
+            check(&i, &__page_table_start as *const usize as u64);
+            check(&i, &__page_table_end as *const usize as u64);
         }
 
         fn check(region: &bootloader::bootinfo::MemoryRegion, addr: u64) {
             if region.range.intersects(addr) {
                 if region.region_type != MemoryRegionType::Usable {
                     panic!(
-                        "Part of loaded image lies in non usable memory! Addr: {:#x}",
-                        addr
+                        "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
+                        addr,
+                        region,
                     );
                 }
             }
@@ -172,8 +189,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         // 4*(8*512*512*512) = 4G (lol)
         // Memory requirements for first 4Gb mapped with 2Mb pages
         // 4*(8*512*512) = 8Mb
-        let p3_physical = &_p3 as *const _ as u32;
-        let p3_physical = PhysAddr::new(p3_physical);
+        let p3_physical = &_p3 as *const _ as u64;
         let mut entry = pagetable::PageTableEntry::new();
         entry.set_addr(
             p3_physical,
@@ -182,14 +198,14 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         p4_table[0] = entry;
 
         // Populate p3 table with 2Mb pages
-        let p3_table = &mut *(p3_physical.as_u32() as *mut pagetable::PageTable);
-        let mut frame_finder = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map)
-            .usable_2m_frames(PHYS_MEM_OFFSET);
+        let p3_table = &mut *(p3_physical as *mut pagetable::PageTable);
+        // let mut frame_finder = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map)
+        //     .usable_2m_frames(PHYS_MEM_OFFSET);
 
         let mut pde_allocator = pagetable::PdeAllocator::new(&_p2_tables_start, &_p2_tables_end);
 
-        // Identity map first 2Gb
-        for pdpe_i in 0..2 {
+        // Identity map first 4Gb
+        for pdpe_i in 0..4 {
             let mut entry = pagetable::PageTableEntry::new();
             let pde: &'static mut pagetable::PageTable = pde_allocator
                 .next()
@@ -199,45 +215,87 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let virt_addr =
                     pdpe_i as u64 * bootloader::ONE_GIG + pde_i as u64 * bootloader::TWO_MEG;
 
-                let phys_addr;
-                // Map first 2Mb also as identity
-                if pdpe_i == 0 && virt_addr < PHYS_MEM_OFFSET {
-                    phys_addr = 0;
-                } else {
-                    phys_addr = frame_finder.next().expect("Not enough available memory")
-                }
+                let phys_addr = virt_addr;
+                use bootinfo::MemoryRegionType;
 
-                if virt_addr != phys_addr {
-                    log::info!("Mapping {:#x} to {:#x}", virt_addr, phys_addr);
-                    panic!("Identity mapping failed");
-                }
-                entry.set_addr(
-                    PhysAddr::new(
-                        phys_addr
-                            .try_into()
-                            .expect("phys addr outside of 32bit range"),
-                    ),
-                    pagetable::PageTableFlags::PRESENT
-                        | pagetable::PageTableFlags::WRITABLE
-                        | pagetable::PageTableFlags::HUGE_PAGE,
-                );
+                // TODO: Make more efficient with a search algo
+                let flags =
+                    if let Some(mem_area) = BOOT_INFO.memory_map.get_region_by_addr(phys_addr) {
+                        match mem_area.region_type {
+                            MemoryRegionType::Usable => {
+                                pagetable::PageTableFlags::PRESENT
+                                    | pagetable::PageTableFlags::WRITABLE
+                                    | pagetable::PageTableFlags::HUGE_PAGE
+                            }
+                            MemoryRegionType::BadMemory => {
+                                continue;
+                            }
+                            _ => {
+                                pagetable::PageTableFlags::PRESENT
+                                    | pagetable::PageTableFlags::HUGE_PAGE
+                                    | pagetable::PageTableFlags::NO_EXECUTE
+                            }
+                        }
+                    } else {
+                        continue;
+                    };
+                entry.set_addr(phys_addr, flags);
             }
             let pde_addr = core::mem::transmute::<&'static mut pagetable::PageTable, u32>(pde);
             entry.set_addr(
-                PhysAddr::new(pde_addr),
+                pde_addr as u64,
                 pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
             );
             p3_table[pdpe_i] = entry;
         }
     }
-    //TODO: Update MEM_MAP
-    //TODO: Populate BOOT_INFO
-    //TODO: Change set_addr to accept u64 instead of PhysAddr u32
-    //TODO: Check if kernel bigger then available memory
-    //TODO: Map memory variably
+
+    // Update MEM_MAP
+    {
+        BOOT_INFO.memory_map.partition_memory_region(
+            &__kernel_start as *const _ as u64,
+            &__kernel_end as *const _ as u64,
+            bootinfo::MemoryRegionType::Kernel,
+        ).unwrap();
+
+        BOOT_INFO.memory_map.partition_memory_region(
+            &__bootloader_start as *const _ as u64,
+            &__bootloader_end as *const _ as u64,
+            bootinfo::MemoryRegionType::Bootloader,
+        ).unwrap();
+
+        BOOT_INFO.memory_map.partition_memory_region(
+            &__stack_end as *const _ as u64,
+            &__stack_start as *const _ as u64,
+            bootinfo::MemoryRegionType::KernelStack,
+        ).unwrap();
+
+        BOOT_INFO.memory_map.partition_memory_region(
+            &__page_table_start as *const _ as u64,
+            &__page_table_end as *const _ as u64,
+            bootinfo::MemoryRegionType::PageTable,
+        ).unwrap();
+    }
+
     //TODO: Enable sse
-    //TODO: Enable write protection CR0 bit
-    //TODO: Enable non execute bit
+    media_extensions::enable_all();
+
+    // Enable write protection CR0 bit
+    {
+        use x86::registers::control::{Cr0, Cr0Flags};
+        let mut flags = Cr0::read();
+        flags.set(Cr0Flags::WRITE_PROTECT, true);
+        Cr0::write(flags);
+    }
+
+    // Enable no execute bit
+    {
+        use x86::registers::model_specific::{Efer, EferFlags};
+        let mut flags = Efer::read();
+        flags.set(EferFlags::NO_EXECUTE_ENABLE, true);
+        Efer::write(flags);
+    }
+
     //TODO: Enable floating point
     log::debug!("Done creating page table.");
 
@@ -248,7 +306,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         Cr3::write(PhysFrame::from_start_address(p4_physical).unwrap(), flags);
     }
 
-    let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&_kernel_start_addr);
+    let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&__kernel_start);
     let magic = [
         0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00,
@@ -260,7 +318,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         panic!("\n Invalid ELF header magic of kernel!");
     }
 
-    let start_addr = &_kernel_start_addr as *const _ as u64;
+    let start_addr = &__kernel_start as *const _ as u64;
     if start_addr != bootloader::TWO_MEG {
         panic!(
             "Kernel start address needs to be 0x200000. Is however: {:#x}",
@@ -269,10 +327,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     log::debug!("Switching to long mode...");
-    log::debug!(
-        "Bootinfo {:#x}",
-        core::mem::transmute::<&'static bootinfo::BootInfo, u32>(&BOOT_INFO)
-    );
 
     let entry_addr = kernel_header.e_entry as u64;
     switch_to_long_mode(&BOOT_INFO, entry_addr);
@@ -306,53 +360,4 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     use bootloader::println;
     println!("ERROR: {}", info);
     loop {}
-}
-
-use x86::structures::paging::page_table::{PageTable, PageTableFlags};
-pub unsafe fn dump_page_table(page_table_ptr: &PageTable, pae: bool) {
-    for i in 0..512 {
-        let entry = &page_table_ptr[i];
-        if entry.is_unused() {
-            continue;
-        }
-
-        let page_table_ptr = &*(entry.addr().as_u32() as *const PageTable);
-        let ps = entry.flags().contains(PageTableFlags::HUGE_PAGE);
-        if pae == true && ps == true {
-            panic!("Grub pagetable uses 2Mb pages");
-        } else if pae == false && ps == false {
-            // 4Kib pages
-            let mut last_kb = 0;
-            let mut last_addr = PhysAddr::new(0);
-            for z in 0..512 {
-                let entry = &page_table_ptr[z];
-                if entry.is_unused() {
-                    continue;
-                }
-                if last_addr == entry.addr() {
-                    continue;
-                }
-                bootloader::println!(
-                    "{:#x} - {}Mb {}<->{}Kb Mapped to: {:#?}",
-                    i * 4 * 1024 * 1024 + z * 4 * 1024,
-                    i * 4,
-                    last_kb,
-                    z * 4,
-                    entry.addr()
-                );
-                if z * 4 - last_kb == 512 || z * 4 - last_kb == 1024 {
-                    panic!(" You sure this is not a 4Mb or 2Mb page?");
-                }
-                last_kb = z * 4;
-                last_addr = entry.addr();
-            }
-        } else if pae == false && ps == true {
-            bootloader::println!(
-                "{:#x} - {}Mb Mapped to: {:#?}",
-                i * 4 * 1024 * 1024,
-                i * 4,
-                entry.addr()
-            );
-        }
-    }
 }
