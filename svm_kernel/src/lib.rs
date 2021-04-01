@@ -162,6 +162,7 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 
 // Prints panic error and quits qemu
+#[allow(unreachable_code)]
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     println!("[failed]\n");
     println!("Error: {}\n", info);

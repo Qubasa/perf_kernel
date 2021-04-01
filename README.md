@@ -1,5 +1,5 @@
 ## ==== WORK IN PROGRESS ====
-Working grub bootloader, currently implementing mode switch to long mode
+Working on multicore support
 
 ## Description
 x86_64 HPC AMD kernel written in Rust.
@@ -20,7 +20,7 @@ Install the dependencies listed in `shell.nix` or execute
 Install cargo dependencies:
 ```
 $ cargo install -p svm_kernel/bootimage
-$ rustup component add llvm-tools-preview
+$ rustup component add llvm-tools-preview rustc-src
 ```
 
 Run in qemu with:
@@ -61,13 +61,18 @@ You can find the asm file in `target/x86_64-os/release/deps/svm_kernel-*.s`
 
 ## Debug with gdb
 ```bash
-$ qemu-kvm -cpu qemu64,+svm,vendor=AuthenticAMD -drive format=raw,file=target/x86_64-os/debug/bootimage-svm_kernel.bin -nographic -s -S
+$ qemu-kvm -cpu host -smp cores=4 -cdrom target/x86_64-os/debug/bootimage-svm_kernel.iso -serial stdio -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -m 2G
 ```
 In another shell execute:
 ```bash
 $ gdb target/x86_64-os/debug/isofiles/boot/kernel.elf -ex "target remote:1234"
 ```
 You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
+
+To get debug symbols for the kernel and not for the bootloader execute:
+```
+(gdb) symbol-file target/x86_64-os/debug/svm_kernel
+```
 
 If you want to debug other cores you have to use qemu in emulation mode and not in kvm mode!
 If qemu is in emulation mode gdb sees other cores as threads thus settings breakpoints has to be done
@@ -82,11 +87,14 @@ Set breakpoint
 ```
 
 
-
 ## Debug with radare2
+```bash
+$ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # Debug bootloader
 ```
-$ r2 -B [TODO] target/x86_64-os/debug/svm_kernel
+```bash
+$ r2 target/x86_64-os/debug/svm_kernel # Debug kernel
 ```
+
 Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
 
 ## Run tests

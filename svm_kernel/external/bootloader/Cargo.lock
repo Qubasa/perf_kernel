@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.13.1"
+version = "0.13.4"
 dependencies = [
  "bit_field",
  "bitflags",
