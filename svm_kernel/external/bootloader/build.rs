@@ -81,7 +81,7 @@ fn main() {
         .expect("llvm-objcopy not found in llvm-tools");
     {
         let mut cmd = Command::new(&objcopy);
-        cmd.arg("--strip-all");
+        cmd.arg("--strip-debug");
         cmd.arg(&kernel);
         cmd.arg(&stripped_kernel);
         let exit_status = cmd
@@ -262,6 +262,8 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     use std::convert::{TryFrom, TryInto};
     use std::io::{Read, Seek, Write};
 
+    eprintln!("Padding kernel file: {:#?}", kernel.clone().into_os_string());
+
     // Read file to vec
     let mut buf = Vec::<u8>::new();
     let mut kernel_fd = std::fs::OpenOptions::new()
@@ -272,6 +274,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     kernel_fd
         .read_to_end(&mut buf)
         .expect("Could not read kernel file");
+
 
     /*
      * Parse ELF header
@@ -336,6 +339,10 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
 
         if let Some(section) = bss_sec {
             let offset = section.sh_offset as usize;
+            eprintln!("BSS Section: {:#?}", section);
+            eprintln!("BSS Offset: {:#x}", offset);
+            eprintln!("Range end index: {:#x}", offset + section.sh_size as usize);
+            eprintln!("Buf size: {:#x}", buf.len());
             let bss = &mut buf[offset..offset + section.sh_size as usize];
             for i in bss {
                 *i = 0;
@@ -405,6 +412,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         .zip(load_segments.iter().skip(1))
         .enumerate()
     {
+        //TODO: Use max() - min() instead of cast to isize
         let vdiff = (isize::try_from(seg_next.p_vaddr).unwrap())
             .checked_sub(isize::try_from(seg.p_vaddr).unwrap())
             .unwrap();
