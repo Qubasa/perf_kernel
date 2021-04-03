@@ -1,4 +1,7 @@
-use crate::interrupts::{default_handler, default_handler_with_error, default_diverging_handler, default_diverging_with_error_handler};
+use crate::interrupts::{
+    default_diverging_handler, default_diverging_with_error_handler, default_handler,
+    default_handler_with_error,
+};
 use x86::structures::idt::InterruptDescriptorTable;
 
 pub fn init_default_handlers(idt: &mut InterruptDescriptorTable) {
@@ -10,21 +13,28 @@ pub fn init_default_handlers(idt: &mut InterruptDescriptorTable) {
     idt[5].set_handler_fn(default_handler::<5>);
     idt[6].set_handler_fn(default_handler::<6>);
     idt[7].set_handler_fn(default_handler::<7>);
-    idt.double_fault.set_handler_fn(default_diverging_with_error_handler::<8>);
+    idt.double_fault
+        .set_handler_fn(default_diverging_with_error_handler::<8>);
 
     idt[9].set_handler_fn(default_handler::<9>);
-    idt.invalid_tss.set_handler_fn(default_handler_with_error::<10>);
-    idt.segment_not_present.set_handler_fn(default_handler_with_error::<11>);
-    idt.stack_segment_fault.set_handler_fn(default_handler_with_error::<12>);
-    idt.general_protection_fault.set_handler_fn(default_handler_with_error::<13>);
-
+    idt.invalid_tss
+        .set_handler_fn(default_handler_with_error::<10>);
+    idt.segment_not_present
+        .set_handler_fn(default_handler_with_error::<11>);
+    idt.stack_segment_fault
+        .set_handler_fn(default_handler_with_error::<12>);
+    idt.general_protection_fault
+        .set_handler_fn(default_handler_with_error::<13>);
 
     idt[16].set_handler_fn(default_handler::<16>);
-    idt.alignment_check.set_handler_fn(default_handler_with_error::<17>);
-    idt.machine_check.set_handler_fn(default_diverging_handler::<18>); // diverging
+    idt.alignment_check
+        .set_handler_fn(default_handler_with_error::<17>);
+    idt.machine_check
+        .set_handler_fn(default_diverging_handler::<18>); // diverging
     idt[19].set_handler_fn(default_handler::<19>);
     idt[20].set_handler_fn(default_handler::<20>);
-    idt.security_exception.set_handler_fn(default_handler_with_error::<30>);
+    idt.security_exception
+        .set_handler_fn(default_handler_with_error::<30>);
     idt[32].set_handler_fn(default_handler::<32>);
     idt[33].set_handler_fn(default_handler::<33>);
     idt[34].set_handler_fn(default_handler::<34>);

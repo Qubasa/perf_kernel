@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
@@ -14,4 +13,3 @@ macro_rules! print {
         }
     };
 }
-

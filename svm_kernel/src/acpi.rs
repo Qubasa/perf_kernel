@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 
+use crate::acpi_regs::*;
 use crate::memory::{id_map_nocache, map_and_read_phys};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
@@ -15,27 +16,24 @@ use x86_64::structures::paging::{
     FrameAllocator, Mapper, OffsetPageTable, Page, PhysFrame, Size4KiB,
 };
 use x86_64::{PhysAddr, VirtAddr};
-use crate::acpi_regs::*;
 
 static mut ACPI_TABLES: Option<Acpi> = None;
 
 pub unsafe fn init_acpi_table(
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    ) {
-       if let None = ACPI_TABLES {
-           let mut acpi = Acpi::new();
-           acpi.init(mapper, frame_allocator);
-           ACPI_TABLES = Some(acpi);
-       } else {
+    mapper: &mut OffsetPageTable,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) {
+    if let None = ACPI_TABLES {
+        let mut acpi = Acpi::new();
+        acpi.init(mapper, frame_allocator);
+        ACPI_TABLES = Some(acpi);
+    } else {
         panic!("Tried to init acpi table twice");
-       }
+    }
 }
 
 pub fn get_acpi_table() -> &'static Acpi {
-    unsafe {
-        ACPI_TABLES.as_ref().unwrap()
-    }
+    unsafe { ACPI_TABLES.as_ref().unwrap() }
 }
 
 pub struct Acpi {

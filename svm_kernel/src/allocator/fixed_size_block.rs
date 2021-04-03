@@ -1,4 +1,4 @@
-use super::{HEAP_SIZE};
+use super::HEAP_SIZE;
 use alloc::alloc::Layout;
 use core::convert::TryFrom;
 use core::ptr;
@@ -25,7 +25,7 @@ const ALLOC_STEPS: usize = 16;
 // TODO: Use a generic here?
 pub struct FixedSizeBlockAllocator {
     arr: [Option<u16>; HEAP_SIZE / ALLOC_STEPS],
-    heap_start: usize
+    heap_start: usize,
 }
 
 impl FixedSizeBlockAllocator {

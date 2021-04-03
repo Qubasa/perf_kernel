@@ -1,10 +1,10 @@
 use crate::println;
-use core::arch::x86_64::{__cpuid};
-use crate::time::{rdtsc, elapsed};
+use crate::time::{elapsed, rdtsc};
+use core::arch::x86_64::__cpuid;
 
 pub enum CpuidIndex {
     TscInvariant = 0x8000_0007,
-    Rdtscp       = 0x8000_0001
+    Rdtscp = 0x8000_0001,
 }
 
 impl CpuidIndex {
@@ -19,7 +19,7 @@ pub struct Bench {
 
 impl Bench {
     pub fn start() -> Self {
-        Bench { start: rdtsc()}
+        Bench { start: rdtsc() }
     }
 
     pub fn end(&mut self) {
@@ -48,11 +48,9 @@ pub fn overflow() {
 pub fn black_box<T>(dummy: T) -> T {
     // we need to "use" the argument in some way LLVM can't
     // introspect.
-    unsafe {asm!("/* {0} */" , in(reg) &dummy)}
+    unsafe { asm!("/* {0} */" , in(reg) &dummy) }
     dummy
 }
-
-
 
 pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
@@ -62,7 +60,7 @@ pub fn check_support() {
         log::warn!("rtdsc does not increment at a fixed rate");
     }
 
-    let res = unsafe { __cpuid( CpuidIndex::Rdtscp.as_u32()) };
+    let res = unsafe { __cpuid(CpuidIndex::Rdtscp.as_u32()) };
     if res.edx == 0 {
         panic!("Rdtscp instruction is not supported");
     }

@@ -89,7 +89,7 @@ impl Writer {
             }
         }
     }
-    pub fn flush(&mut self){
+    pub fn flush(&mut self) {
         for row in 0..BUFFER_HEIGHT {
             self.clear_row(row);
         }

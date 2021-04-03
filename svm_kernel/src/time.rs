@@ -1,6 +1,6 @@
-use x86_64::instructions::port::Port;
-use core::arch::x86_64::{_rdtsc};
+use core::arch::x86_64::_rdtsc;
 use core::sync::atomic::{AtomicU64, Ordering};
+use x86_64::instructions::port::Port;
 
 /// The TSC tick rate in MHz
 /// We "default" to a 3 GHz tick rate, which is likely within a ballpark of
@@ -20,7 +20,7 @@ pub fn tsc_mhz() -> u64 {
 /// Returns the TSC value upon a future time in microseconds
 #[inline]
 pub fn future(microseconds: u64) -> u64 {
-	rdtsc() + (microseconds * tsc_mhz())
+    rdtsc() + (microseconds * tsc_mhz())
 }
 
 /// Returns system uptime in seconds as a float
@@ -32,8 +32,7 @@ pub fn uptime() -> f64 {
 /// Return number of seconds elapsed since a prior TSC value
 #[inline]
 pub fn elapsed(start_time: u64) -> f64 {
-    (rdtsc() - start_time) as f64 /
-        RDTSC_MHZ.load(Ordering::Relaxed) as f64 / 1_000_000.0
+    (rdtsc() - start_time) as f64 / RDTSC_MHZ.load(Ordering::Relaxed) as f64 / 1_000_000.0
 }
 
 /// Busy sleep for a given number of microseconds
@@ -49,7 +48,7 @@ pub fn sleep(microseconds: u64) {
 pub fn rdtsc() -> u64 {
     // let mut x: u32 = 0;
     // unsafe { __rdtscp(&mut x as *mut u32) }
-    unsafe {_rdtsc()}
+    unsafe { _rdtsc() }
 }
 
 /// Using the PIT, determine the frequency of rdtsc. Round this frequency to
@@ -59,7 +58,7 @@ pub unsafe fn calibrate() {
     let start = rdtsc();
 
     if RDTSC_START.load(Ordering::SeqCst) != 0 {
-      return;
+        return;
     }
 
     RDTSC_START.store(start, Ordering::Relaxed);

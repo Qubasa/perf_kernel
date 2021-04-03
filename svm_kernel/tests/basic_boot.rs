@@ -5,8 +5,8 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use svm_kernel::{println, mylog::LOGGER};
-use log::{error, warn, info, debug, trace};
+use log::{debug, error, info, trace, warn};
+use svm_kernel::{mylog::LOGGER, println};
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {

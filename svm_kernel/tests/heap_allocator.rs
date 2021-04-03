@@ -233,7 +233,6 @@ struct Test2 {
 
 #[test_case]
 fn multiple_vecs() {
-
     let mut bench = Bench::start();
     let mut vec0 = Vec::new();
     let mut vec1 = Vec::new();
@@ -252,7 +251,7 @@ fn multiple_vecs() {
         bus: 0,
         source: 0,
         mapped_to: 2,
-        flags: 0xff
+        flags: 0xff,
     };
     let test2 = Test2 {
         typ: 2,
@@ -260,7 +259,7 @@ fn multiple_vecs() {
         id: 1,
         res0: 0,
         address: 0xbaab,
-        interrupt_base: 0xc
+        interrupt_base: 0xc,
     };
 
     vec0.push(test0);
@@ -273,5 +272,3 @@ fn multiple_vecs() {
 
     bench.end();
 }
-
-

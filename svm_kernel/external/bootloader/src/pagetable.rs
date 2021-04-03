@@ -31,7 +31,7 @@ impl PageTableEntry {
     /// Returns the physical address mapped by this entry, might be zero.
     #[inline]
     pub fn addr(&self) -> u64 {
-        self.entry
+        self.entry & 0x000f_ffff_ffff_f000
     }
 
     /// Map the entry to the specified physical address with the specified flags.
@@ -63,7 +63,7 @@ impl PageTableEntry {
 impl fmt::Debug for PageTableEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut f = f.debug_struct("PageTableEntry");
-        f.field("addr", &self.entry);
+        f.field("addr", &self.addr());
         f.field("flags", &self.flags());
         f.finish()
     }
@@ -289,12 +289,11 @@ impl BootInfoFrameAllocator {
     pub fn usable_2m_frames(&self, phys_mem_offset: u64) -> impl Iterator<Item = u64> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable_regions =
+            unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
 
         // Filter out regions smaller then 2Mb
-        let adjusted_regions = usable_regions.filter(move |r| {
-            r.range.size() >= crate::TWO_MEG
-        });
+        let adjusted_regions = usable_regions.filter(move |r| r.range.size() >= crate::TWO_MEG);
 
         // Reduce frame range to fit into 2Mb pages
         let adjusted_regions = adjusted_regions.map(|r| {

@@ -34,9 +34,7 @@ impl Apic {
         return self.bsp.unwrap();
     }
 
-    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: u32,
-        ) {
-
+    pub unsafe fn mp_init(&self, apic_id: u8, trampoline: u32) {
         log::info!("Trampoline ptr: {:#x}", trampoline);
         log::info!("Booting core {}", apic_id);
         // Send INIT ipi
@@ -233,7 +231,7 @@ pub unsafe fn end_of_interrupt() {
     write_apic(Register::EndOfInterrupt, 0);
 }
 
-pub fn msr_is_bsp() -> bool{
+pub fn msr_is_bsp() -> bool {
     let apic_base_reg = Msr::new(0x0000_001B);
     unsafe {
         let base_reg = ApicBaseReg::from_bytes(apic_base_reg.read().to_le_bytes());
@@ -242,10 +240,8 @@ pub fn msr_is_bsp() -> bool{
 }
 
 pub fn local_apic_id() -> u8 {
-    use core::arch::x86_64::{__cpuid};
-    let res = unsafe {
-        __cpuid(0x0000_0001)
-    };
+    use core::arch::x86_64::__cpuid;
+    let res = unsafe { __cpuid(0x0000_0001) };
 
     return (res.ebx >> 24) as u8;
 }

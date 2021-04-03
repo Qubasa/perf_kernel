@@ -262,7 +262,10 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     use std::convert::{TryFrom, TryInto};
     use std::io::{Read, Seek, Write};
 
-    eprintln!("Padding kernel file: {:#?}", kernel.clone().into_os_string());
+    eprintln!(
+        "Padding kernel file: {:#?}",
+        kernel.clone().into_os_string()
+    );
 
     // Read file to vec
     let mut buf = Vec::<u8>::new();
@@ -274,7 +277,6 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     kernel_fd
         .read_to_end(&mut buf)
         .expect("Could not read kernel file");
-
 
     /*
      * Parse ELF header

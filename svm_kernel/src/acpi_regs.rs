@@ -106,5 +106,3 @@ impl fmt::Debug for NonMaskableInts {
         unsafe { write!(f, "Non Maskable Interrupt: {}", self.int_num) }
     }
 }
-
-

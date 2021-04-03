@@ -3,7 +3,7 @@ ENTRY(_start_bootloader)
 SECTIONS {
     . = 1M;
     __stack_end = .;
-    . += 0x4000;
+    . += 0x6000;
     __stack_start = .;
 
     . = ALIGN(0x1000);
@@ -43,6 +43,8 @@ SECTIONS {
         _p2_tables_start = .;
             . = (8M - 0x2000);
         _p2_tables_end = .;
+        . += 0x1000; /* First p1 table to map 0-2Mb with 4Kb pages*/
+        _p1 = .;
     __page_table_end = .; /* Allocates 8Mb of RAM to map 4Gb of virt addr*/
     __minimum_mem_requirement = .;
 }

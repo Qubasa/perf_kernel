@@ -76,7 +76,6 @@ pub fn num_cores() -> u32 {
 }
 
 pub fn init(apic: &crate::apic::Apic, acpi_table: &crate::acpi::Acpi) {
-
     let apics = acpi_table.apics.as_ref().unwrap();
     if apic.is_bsp() {
         // Set the total core count based on the number of detected APICs on the
@@ -86,26 +85,25 @@ pub fn init(apic: &crate::apic::Apic, acpi_table: &crate::acpi::Acpi) {
 
         // Init every found core as offline
         for &apic_id in apics {
-            APICS[apic_id.id as usize].store(ApicState::Offline as u8,
-                                          Ordering::SeqCst);
+            APICS[apic_id.id as usize].store(ApicState::Offline as u8, Ordering::SeqCst);
         }
     }
 
     log::info!("Set current core to online: {}", apic.id.unwrap());
     // Set our core to online
-    APICS[apic.id.unwrap() as usize]
-        .store(ApicState::Online as u8, Ordering::SeqCst);
-
+    APICS[apic.id.unwrap() as usize].store(ApicState::Online as u8, Ordering::SeqCst);
 }
 
 pub fn core_signal_up(apic: &crate::apic::Apic) {
     // Transition from launched to online
-    let old_state = APICS[apic.id.unwrap() as usize].compare_exchange(
-        ApicState::Launched as u8,
-        ApicState::Online as u8,
-        Ordering::SeqCst,
-        Ordering::SeqCst,
-    ).unwrap();
+    let old_state = APICS[apic.id.unwrap() as usize]
+        .compare_exchange(
+            ApicState::Launched as u8,
+            ApicState::Online as u8,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        )
+        .unwrap();
 
     if apic.is_bsp() && old_state != ApicState::Online as u8 {
         panic!("BSP was not marked online");

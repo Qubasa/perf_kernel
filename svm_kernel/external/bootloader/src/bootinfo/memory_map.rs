@@ -6,7 +6,8 @@ const PAGE_SIZE: u64 = 4096;
 const MAX_MEMORY_MAP_SIZE: usize = 64;
 
 /// A map of the physical memory regions of the underlying machine.
-#[repr(C)]
+#[derive(Copy, Clone)]
+#[repr(C, packed)]
 pub struct MemoryMap {
     entries: [MemoryRegion; MAX_MEMORY_MAP_SIZE],
     // u64 instead of usize so that the structure layout is platform
@@ -79,8 +80,10 @@ impl MemoryMap {
             return Err(PartitionError::NotSameRegion(region, end_region));
         }
 
-        if region.region_type != MemoryRegionType::Usable {
-            return Err(PartitionError::RegionTypeIsNotUsable(region));
+        unsafe {
+            if region.region_type != MemoryRegionType::Usable {
+                return Err(PartitionError::RegionTypeIsNotUsable(region));
+            }
         }
 
         let mut regions = [MemoryRegion::empty(); 3];
@@ -117,8 +120,10 @@ impl MemoryMap {
         self.remove_region(region).unwrap();
 
         for &i in regions.iter() {
-            if i.region_type != MemoryRegionType::Empty {
-                self.add_region(i);
+            unsafe {
+                if i.region_type != MemoryRegionType::Empty {
+                    self.add_region(i);
+                }
             }
         }
 
@@ -160,26 +165,28 @@ impl MemoryMap {
     pub fn sort(&mut self) {
         use core::cmp::Ordering;
 
-        self.entries.sort_unstable_by(|r1, r2| {
-            if r1.range.is_empty() {
-                Ordering::Greater
-            } else if r2.range.is_empty() {
-                Ordering::Less
-            } else {
-                let ordering = r1
-                    .range
-                    .start_frame_number
-                    .cmp(&r2.range.start_frame_number);
-
-                if ordering == Ordering::Equal {
-                    r1.range.end_frame_number.cmp(&r2.range.end_frame_number)
+        unsafe {
+            self.entries.sort_unstable_by(|r1, r2| {
+                if r1.range.is_empty() {
+                    Ordering::Greater
+                } else if r2.range.is_empty() {
+                    Ordering::Less
                 } else {
-                    ordering
+                    let ordering = r1
+                        .range
+                        .start_frame_number
+                        .cmp(&r2.range.start_frame_number);
+
+                    if ordering == Ordering::Equal {
+                        r1.range.end_frame_number.cmp(&r2.range.end_frame_number)
+                    } else {
+                        ordering
+                    }
                 }
+            });
+            if let Some(first_zero_index) = self.entries.iter().position(|r| r.range.is_empty()) {
+                self.next_entry_index = first_zero_index as u64;
             }
-        });
-        if let Some(first_zero_index) = self.entries.iter().position(|r| r.range.is_empty()) {
-            self.next_entry_index = first_zero_index as u64;
         }
     }
 
@@ -211,7 +218,7 @@ impl fmt::Debug for MemoryMap {
 
 /// Represents a region of physical memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct MemoryRegion {
     /// The range of frames that belong to the region.
     pub range: FrameRange,
@@ -234,7 +241,7 @@ impl MemoryRegion {
 
 /// A range of frames with an exclusive upper bound.
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct FrameRange {
     /// The frame _number_ of the first 4KiB frame in the region.
     ///

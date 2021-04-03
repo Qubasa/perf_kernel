@@ -1,16 +1,14 @@
-use log::{Record, Level, Metadata};
+use log::{Level, Metadata, Record};
 
+use crate::println;
 use crate::serial::SERIAL_WRITER;
 use crate::vga::VGA_WRITER;
-use crate::println;
 
 pub struct HWLogger;
 
 pub static LOGGER: HWLogger = HWLogger;
 
-
 impl log::Log for HWLogger {
-
     // Enable logging at level Trace if cond is met
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Trace
@@ -28,6 +26,3 @@ impl log::Log for HWLogger {
         VGA_WRITER.lock().flush();
     }
 }
-
-
-

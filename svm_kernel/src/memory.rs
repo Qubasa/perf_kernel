@@ -1,5 +1,6 @@
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::page::PageSize;
 use x86_64::structures::paging::Mapper;
 use x86_64::structures::paging::Page;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
@@ -59,7 +60,7 @@ use x86_64::{
 //TODO: If rust allows it in the future save the iterator in struct
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        let frame = self.usable_frames().nth(self.next);
+        let frame = self.usable_frames::<Size4KiB>().nth(self.next);
         self.next += 1;
         frame
     }
@@ -118,6 +119,7 @@ pub unsafe fn id_map_nocache(
 }
 
 use bootloader::bootinfo::MemoryMap;
+use bootloader::bootinfo::{FrameRange, MemoryRegion, MemoryRegionType};
 /// A FrameAllocator that returns usable frames from the bootloader's memory map.
 #[derive(Debug)]
 pub struct BootInfoFrameAllocator {
@@ -125,7 +127,6 @@ pub struct BootInfoFrameAllocator {
     next: usize,
 }
 
-use bootloader::bootinfo::MemoryRegionType;
 impl BootInfoFrameAllocator {
     /// Create a FrameAllocator from the passed memory map.
     ///
@@ -140,15 +141,48 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+    pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
-        let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
+        let usable_regions =
+            unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
+
+        // Filter out regions smaller then 2Mb
+        let adjusted_regions = usable_regions.filter(move |r| r.range.size() >= T::SIZE);
+
+        // Reduce frame range to fit into 2Mb pages
+        let adjusted_regions = adjusted_regions.map(|r| {
+            let diff = r.range.size() % T::SIZE;
+            if diff != 0 {
+                let new = r.range.end_addr() - diff;
+                return MemoryRegion {
+                    range: FrameRange::new(r.range.start_addr(), new),
+                    region_type: r.region_type,
+                };
+            }
+            *r
+        });
+
         // map each region to its address range
-        let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
+        let addr_ranges = adjusted_regions.map(|r| r.range.start_addr()..r.range.end_addr());
+
         // transform to an iterator of frame start addresses
-        let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+        let frame_addresses = addr_ranges.flat_map(move |r| r.step_by(T::SIZE as usize));
+
         // create `PhysFrame` types from the start addresses
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
+
+    // /// Returns an iterator over the usable frames specified in the memory map.
+    // fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+    //     // get usable regions from memory map
+    //     let regions = self.memory_map.iter();
+    //     let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
+    //     // map each region to its address range
+    //     let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
+    //     // transform to an iterator of frame start addresses
+    //     let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
+    //     // create `PhysFrame` types from the start addresses
+    //     frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    // }
 }

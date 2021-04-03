@@ -18,7 +18,7 @@ use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
 use x86::{PhysAddr, VirtAddr};
 
-global_asm!(include_str!("boot.s"));
+global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
 
 /*
@@ -42,6 +42,7 @@ extern "C" {
     static _p3: usize;
     static _p2_tables_start: usize;
     static _p2_tables_end: usize;
+    static _p1: usize;
     static __page_table_end: usize;
     static __minimum_mem_requirement: usize;
 }
@@ -50,7 +51,6 @@ static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
 
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
-
     // Needs to be here or else the linker does not include the
     // kernel. The symbol _kernel_size does not come from the linker script
     // but from objcopy. Read more under `$ man objcopy`
@@ -59,7 +59,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Debug);
+        log::set_max_level(LevelFilter::Info);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -83,6 +83,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Parses the multiboot2 header
+    //TODO: Fix memory region range bug in multiboot2
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);
 
     /*
@@ -143,12 +144,14 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         fn check(region: &bootloader::bootinfo::MemoryRegion, addr: u64) {
             if region.range.intersects(addr) {
-                if region.region_type != MemoryRegionType::Usable {
-                    panic!(
-                        "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
-                        addr,
-                        region,
-                    );
+                unsafe {
+                    if region.region_type != MemoryRegionType::Usable {
+                        panic!(
+                            "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
+                            addr,
+                            region,
+                        );
+                    }
                 }
             }
         }
@@ -199,18 +202,18 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         // Populate p3 table with 2Mb pages
         let p3_table = &mut *(p3_physical as *mut pagetable::PageTable);
-        // let mut frame_finder = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map)
-        //     .usable_2m_frames(PHYS_MEM_OFFSET);
 
+        // Create iterator that on every next() call returns a new mutable pde page table
         let mut pde_allocator = pagetable::PdeAllocator::new(&_p2_tables_start, &_p2_tables_end);
 
-        // Identity map first 4Gb
+        // Identity map first 4Gb with 2Mb pages
         for pdpe_i in 0..4 {
             let mut entry = pagetable::PageTableEntry::new();
             let pde: &'static mut pagetable::PageTable = pde_allocator
                 .next()
                 .expect("Not enough space for another p2 table");
 
+            // Go over pde entries and populate them with 2Mb pages with virt = phys addr
             for (pde_i, entry) in pde.iter_mut().enumerate() {
                 let virt_addr =
                     pdpe_i as u64 * bootloader::ONE_GIG + pde_i as u64 * bootloader::TWO_MEG;
@@ -250,34 +253,90 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    // Update MEM_MAP
+    // Map first 2Mb with 4Kb pages
     {
-        BOOT_INFO.memory_map.partition_memory_region(
-            &__kernel_start as *const _ as u64,
-            &__kernel_end as *const _ as u64,
-            bootinfo::MemoryRegionType::Kernel,
-        ).unwrap();
+        let p3_physical = &_p3 as *const _ as u64;
+        let p3_table = &*(p3_physical as *mut pagetable::PageTable);
 
-        BOOT_INFO.memory_map.partition_memory_region(
-            &__bootloader_start as *const _ as u64,
-            &__bootloader_end as *const _ as u64,
-            bootinfo::MemoryRegionType::Bootloader,
-        ).unwrap();
+        // Get first entry in p2 table
+        let p2_table = &mut *(p3_table[0].addr() as *mut pagetable::PageTable);
+        let p2_entry = &mut p2_table[0];
 
-        BOOT_INFO.memory_map.partition_memory_region(
-            &__stack_end as *const _ as u64,
-            &__stack_start as *const _ as u64,
-            bootinfo::MemoryRegionType::KernelStack,
-        ).unwrap();
+        // Write to p2_table[0] a p1 table address
+        let p1_physical = &_p1 as *const _ as u64;
+        let p1_table = &mut *(p1_physical as *mut pagetable::PageTable);
+        p1_table.zero();
+        p2_entry.set_addr(
+            p1_physical,
+            p2_entry.flags() & !pagetable::PageTableFlags::HUGE_PAGE,
+        );
 
-        BOOT_INFO.memory_map.partition_memory_region(
-            &__page_table_start as *const _ as u64,
-            &__page_table_end as *const _ as u64,
-            bootinfo::MemoryRegionType::PageTable,
-        ).unwrap();
+        // Identity map 1Mb - 2Mb in 4Kb pages
+        for (pte_i, entry) in p1_table.iter_mut().enumerate().skip(256) {
+            let virt_addr = pte_i * 4096;
+            let phys_addr = virt_addr;
+            entry.set_addr(
+                phys_addr as u64,
+                pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
+            );
+        }
+
+        // Identity map vga address
+        use x86::structures::paging::{page::Size4KiB, Page};
+        let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xb8000));
+        let p1_index = (page.start_address().as_u32() >> 12) as usize;
+        p1_table[p1_index].set_addr(
+            page.start_address().as_u32() as u64,
+            pagetable::PageTableFlags::PRESENT
+                | pagetable::PageTableFlags::WRITABLE
+                | pagetable::PageTableFlags::NO_CACHE,
+        );
     }
 
-    //TODO: Enable sse
+    // Update MEM_MAP
+    {
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__kernel_start as *const _ as u64,
+                &__kernel_end as *const _ as u64,
+                bootinfo::MemoryRegionType::Kernel,
+            )
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__bootloader_start as *const _ as u64,
+                &__bootloader_end as *const _ as u64,
+                bootinfo::MemoryRegionType::Bootloader,
+            )
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__stack_end as *const _ as u64,
+                &__stack_start as *const _ as u64,
+                bootinfo::MemoryRegionType::KernelStack,
+            )
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__page_table_start as *const _ as u64,
+                &__page_table_end as *const _ as u64,
+                bootinfo::MemoryRegionType::PageTable,
+            )
+            .unwrap();
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(0, 4096, bootinfo::MemoryRegionType::FrameZero)
+            .unwrap();
+    }
+
+    // Enable all media extensions
     media_extensions::enable_all();
 
     // Enable write protection CR0 bit

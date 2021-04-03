@@ -4,7 +4,6 @@
 
 pub use self::memory_map::*;
 
-
 mod memory_map;
 
 /// This structure represents the information that the bootloader passes to the kernel.
@@ -20,8 +19,8 @@ mod memory_map;
 /// Note that no type checking occurs for the entry point function, so be careful to
 /// use the correct argument types. To ensure that the entry point function has the correct
 /// signature, use the [`entry_point`] macro.
-#[derive(Debug)]
-#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+#[repr(C, packed)]
 pub struct BootInfo {
     /// A map of the physical memory regions of the underlying machine.
     ///
@@ -43,8 +42,7 @@ impl BootInfo {
     /// Create a new boot information structure. This function is only for internal purposes.
     #[allow(unused_variables)]
     #[doc(hidden)]
-    pub const fn new(
-    ) -> Self {
+    pub const fn new() -> Self {
         let tls_template = TlsTemplate {
             start_addr: 0,
             file_size: 0,

@@ -21,22 +21,22 @@
 
 pub mod bootinfo;
 
-#[cfg(target_arch="x86")]
-pub mod serial;
-#[cfg(target_arch="x86")]
-pub mod vga;
-#[cfg(target_arch="x86")]
-pub mod print;
-#[cfg(target_arch="x86")]
-pub mod mylog;
-#[cfg(target_arch="x86")]
-pub mod interrupts;
-#[cfg(target_arch="x86")]
+#[cfg(target_arch = "x86")]
 pub mod default_interrupt;
-#[cfg(target_arch="x86")]
+#[cfg(target_arch = "x86")]
+pub mod interrupts;
+#[cfg(target_arch = "x86")]
+pub mod mylog;
+#[cfg(target_arch = "x86")]
 pub mod pagetable;
+#[cfg(target_arch = "x86")]
+pub mod print;
+#[cfg(target_arch = "x86")]
+pub mod serial;
+#[cfg(target_arch = "x86")]
+pub mod vga;
 
-global_asm!(include_str!("boot.s"));
+global_asm!(include_str!("multiboot2_header.s"));
 
 pub const ONE_MEG: u64 = 1048576;
 pub const TWO_MEG: u64 = ONE_MEG * 2;
@@ -61,4 +61,3 @@ macro_rules! entry_point {
         }
     };
 }
-

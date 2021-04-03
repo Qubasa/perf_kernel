@@ -23,7 +23,7 @@ pub enum Register {
 #[derive(Debug, Clone, Copy)]
 pub struct ApicId {
     pub res0: B24,
-    pub aid: B8
+    pub aid: B8,
 }
 
 #[bitfield]
@@ -120,4 +120,3 @@ pub struct SpuriousInterReg {
     pub fcc: B1,
     pub res0: B22,
 }
-

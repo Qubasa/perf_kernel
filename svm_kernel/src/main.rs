@@ -61,6 +61,9 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 //TODO: Implement a bare metal debugger
 // https://lib.rs/crates/gdbstub
 // https://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html
+// TODO: Make panic handler print stuff without a global lock
+// If an error occurs while reading memory inside the print lock
+// a deadlock occurs
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     svm_kernel::println!("{}", info);
