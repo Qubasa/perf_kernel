@@ -49,6 +49,10 @@ extern "C" {
 
 static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
 
+// TODO: We have some n^2 complexity checking in here
+// we need a flame graph / execution hotspot map and start optimizing
+// there. As I do not how well this scales if we have 2Tb+ of memory.
+// I think it should be fine, nonetheless it should be looked after at some point
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
@@ -74,16 +78,20 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         // Checks that this is a x64 processor
         use core::arch::x86::__cpuid;
-
         let res = __cpuid(0x8000_0001);
-
         if res.edx & (1 << 29) == 0 {
             panic!("Processor does not support x86_64 instruction set");
         }
     }
 
+    if mboot2_info_ptr % 8 != 0 {
+        panic!(
+            "Multiboot tag address is not 8 byte aligned: {:#x}",
+            mboot2_info_ptr
+        );
+    }
+
     // Parses the multiboot2 header
-    //TODO: Fix memory region range bug in multiboot2
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);
 
     /*
@@ -129,6 +137,27 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         );
     }
 
+    // Fix overlapping memory ranges
+    {
+        let mut last: Option<&mut bootinfo::MemoryRegion> = None;
+        for map in BOOT_INFO.memory_map.iter_mut() {
+            if let Some(ref mut last) = last {
+                if last.range.intersects(map.range.start_addr()) {
+                    log::debug!("Memory maps intersect: \n {:#?} <-> {:#?}", last, map);
+                    if map.region_type == bootinfo::MemoryRegionType::Usable {
+                        map.range.set_start_addr(last.range.end_addr());
+                        continue;
+                    }
+
+                    let max_end_addr = core::cmp::max(last.range.end_addr(), map.range.end_addr());
+                    map.range.set_end_addr(max_end_addr);
+                    last.range.set_end_addr(map.range.start_addr());
+                }
+            }
+            last = Some(map);
+        }
+    }
+
     // Checks that the current loaded image lies in available (good) physical memory
     {
         for i in BOOT_INFO.memory_map.iter() {
@@ -143,6 +172,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
 
         fn check(region: &bootloader::bootinfo::MemoryRegion, addr: u64) {
+            if addr % 4096 != 0 {
+                panic!("Region is not page aligned: {:#?}", region);
+            }
+
             if region.range.intersects(addr) {
                 unsafe {
                     if region.region_type != MemoryRegionType::Usable {
@@ -221,7 +254,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let phys_addr = virt_addr;
                 use bootinfo::MemoryRegionType;
 
-                // TODO: Make more efficient with a search algo
                 let flags =
                     if let Some(mem_area) = BOOT_INFO.memory_map.get_region_by_addr(phys_addr) {
                         match mem_area.region_type {
@@ -271,14 +303,29 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             p2_entry.flags() & !pagetable::PageTableFlags::HUGE_PAGE,
         );
 
-        // Identity map 1Mb - 2Mb in 4Kb pages
-        for (pte_i, entry) in p1_table.iter_mut().enumerate().skip(256) {
-            let virt_addr = pte_i * 4096;
-            let phys_addr = virt_addr;
-            entry.set_addr(
-                phys_addr as u64,
-                pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
-            );
+        // Identity map 0Mb - 2Mb in 4Kb pages
+        for (pte_i, entry) in p1_table.iter_mut().enumerate() {
+            let addr = pte_i as u64 * 4096u64;
+
+            // Skip page before stack_end to know when we overstep stack boundaries
+            if addr == (&__stack_end as *const _ as u64) - 4096u64 {
+                log::debug!("Not mapping addr as stack end page:{:#x}", addr);
+                continue;
+            }
+
+            // Only map usable mem regions
+            if let Some(mem_area) = BOOT_INFO.memory_map.get_region_by_addr(addr) {
+                match mem_area.region_type {
+                    MemoryRegionType::Usable => {
+                        entry.set_addr(
+                            addr as u64,
+                            pagetable::PageTableFlags::PRESENT
+                                | pagetable::PageTableFlags::WRITABLE,
+                        );
+                    }
+                    _ => (),
+                }
+            }
         }
 
         // Identity map vga address
@@ -355,15 +402,14 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         Efer::write(flags);
     }
 
-    //TODO: Enable floating point
-    log::debug!("Done creating page table.");
-
     // Load P4 to CR3 register
     {
         use x86::registers::control::{Cr3, Cr3Flags};
         let (_, flags) = Cr3::read();
         Cr3::write(PhysFrame::from_start_address(p4_physical).unwrap(), flags);
     }
+
+    log::debug!("Done creating page table.");
 
     let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&__kernel_start);
     let magic = [

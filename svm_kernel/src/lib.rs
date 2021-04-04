@@ -61,22 +61,20 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     // Check support of hardware features needed for benchmarking
     bench::check_support();
 
-    log::info!("Load gdt");
     // Load gdt into current cpu with lgdt
     // Also set code and tss segment selector registers
     gdt::init();
 
-    log::info!("Load idt");
     // Load idt into the current cpu with lidt
     interrupts::load_idt();
 
-    log::info!("Calibrate time");
     // Measure speed of rtsc once
     unsafe {
         time::calibrate();
     }
 
     log::info!("Offset page table");
+
     // Create OffsetPageTable instance by
     // calculating address with: Cr3::read() + offset from bootloader
     let mut mapper: OffsetPageTable =
