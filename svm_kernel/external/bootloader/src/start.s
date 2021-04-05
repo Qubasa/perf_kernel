@@ -56,10 +56,6 @@ reset_selectors:
     jmp rsi
 
 .align 4
-zero_idt:
-    .word 0
-    .byte 0
-
 gdt_64:
     .quad 0x0000000000000000          # Null Descriptor - should be present.
     .quad 0x00209A0000000000          # 64-bit code descriptor (exec/read).
