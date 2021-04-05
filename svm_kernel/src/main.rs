@@ -32,8 +32,10 @@ extern crate alloc;
  * The macro entry_point creates the nomangle _start func for us and checks that
  * the given function has the correct signature
  */
+//TODO: Reset rsp to start of stack
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
+
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
@@ -48,10 +50,10 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     // test_main();
 
     // Busy loop don't crash
-    log::info!("Quitting kernel...");
-    svm_kernel::exit_qemu(svm_kernel::QemuExitCode::Success);
-    // info!("Kernel going to loop now xoxo");
-    // svm_kernel::hlt_loop();
+    // log::info!("Quitting kernel...");
+    // svm_kernel::exit_qemu(svm_kernel::QemuExitCode::Success);
+    log::info!("Kernel going to loop now xoxo");
+    svm_kernel::hlt_loop();
 }
 
 /*

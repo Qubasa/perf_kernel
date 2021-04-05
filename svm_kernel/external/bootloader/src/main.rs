@@ -63,7 +63,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Info);
+        log::set_max_level(LevelFilter::Warn);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -235,6 +235,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         // Populate p3 table with 2Mb pages
         let p3_table = &mut *(p3_physical as *mut pagetable::PageTable);
+        p3_table.zero();
 
         // Create iterator that on every next() call returns a new mutable pde page table
         let mut pde_allocator = pagetable::PdeAllocator::new(&_p2_tables_start, &_p2_tables_end);
@@ -245,6 +246,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             let pde: &'static mut pagetable::PageTable = pde_allocator
                 .next()
                 .expect("Not enough space for another p2 table");
+            pde.zero();
 
             // Go over pde entries and populate them with 2Mb pages with virt = phys addr
             for (pde_i, entry) in pde.iter_mut().enumerate() {

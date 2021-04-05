@@ -1,8 +1,16 @@
 use x86_64::registers::control::Cr3;
-use x86_64::structures::paging::mapper::MapToError;
+// use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::mapper::MappedFrame;
+use x86_64::{
+    structures::paging::{FrameAllocator, PhysFrame, Size1GiB, Size2MiB, Size4KiB},
+    PhysAddr,
+};
+use x86_64::structures::paging::mapper::TranslateResult;
 use x86_64::structures::paging::page::PageSize;
 use x86_64::structures::paging::Mapper;
 use x86_64::structures::paging::Page;
+use x86_64::structures::paging::PageTableFlags;
+use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
 
@@ -52,10 +60,6 @@ pub fn print_pagetable(mapper: &OffsetPageTable) {
     log::info!("Done");
 }
 
-use x86_64::{
-    structures::paging::{FrameAllocator, PhysFrame, Size4KiB},
-    PhysAddr,
-};
 
 //TODO: If rust allows it in the future save the iterator in struct
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
@@ -73,12 +77,16 @@ pub unsafe fn map_and_read_phys<T: Copy>(
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     addr: PhysAddr,
 ) -> T {
-    // Map the start address
-    id_map_nocache(mapper, frame_allocator, addr).unwrap();
-
-    // Add type size and map if on new page
     let size = core::mem::size_of::<T>() as u64;
-    id_map_nocache(mapper, frame_allocator, addr + size).unwrap();
+    let frame = PhysFrame::<Size4KiB>::containing_address(addr);
+    let frame2 = PhysFrame::<Size4KiB>::containing_address(addr + size);
+
+    // Map the start address
+    id_map(mapper, frame_allocator, frame, None).unwrap();
+
+    if frame != frame2 {
+        id_map(mapper, frame_allocator, frame2, None).unwrap();
+    }
 
     // NOTE: Can't use read_volatile because pointer is not necesseraly aligned
     // like in acpi when searching for tables (as by spec)
@@ -87,34 +95,85 @@ pub unsafe fn map_and_read_phys<T: Copy>(
     *ptr
 }
 
-// Identity map page and return page
-// if already identity mapped succeed and return page
-// if mapped but not as identity then return error
-pub unsafe fn id_map_nocache(
-    mapper: &mut OffsetPageTable,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    addr: PhysAddr,
-) -> Result<Page, MapToError<Size4KiB>> {
-    // Seek for page & phys frame containing address
-    let page = Page::<Size4KiB>::containing_address(VirtAddr::new(addr.as_u64()));
-    use x86_64::structures::paging::PageTableFlags as Flags;
-    let frame = PhysFrame::containing_address(addr);
-    let flags = Flags::PRESENT | Flags::WRITABLE | Flags::NO_CACHE | Flags::NO_EXECUTE;
+#[derive(Debug)]
+pub enum IdMapError {
+    FrameAllocationFailed,
+    MappingIsNotIdentity(PhysAddr, PhysAddr),
+    AlreadyMappedDiffFlags(PageTableFlags),
+}
 
-    // Identity map both and do not fail if they are already id mapped
-    let map_to_result = match mapper.map_to(page, frame, flags, frame_allocator) {
-        Ok(i) => i,
-        Err(MapToError::PageAlreadyMapped(mapped_frame)) => {
-            if mapped_frame != frame {
-                return Err(MapToError::PageAlreadyMapped(mapped_frame));
+
+/// Identity map phys frame
+/// If virt addr already mapped checks if contains requested flags
+/// and correct phys frame addr. Adds default flag NO_CACHE
+pub unsafe fn id_map_nocache<T: PageSize>(
+    mapper: &mut (impl Mapper<T> + Translate),
+    frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
+    my_frame: PhysFrame<T>,
+    add_flags: Option<PageTableFlags>,
+) -> Result<Page<T>, IdMapError> {
+    let my_flags = PageTableFlags::NO_CACHE | (add_flags.unwrap_or(PageTableFlags::empty()));
+    id_map(mapper, frame_allocator, my_frame, Some(my_flags))
+}
+
+/// Identity map phys frame
+/// If virt addr already mapped checks if contains requested flags
+/// and correct phys frame addr
+pub unsafe fn id_map<T: PageSize>(
+    mapper: &mut (impl Mapper<T> + Translate),
+    frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
+    my_frame: PhysFrame<T>,
+    add_flags: Option<PageTableFlags>,
+) -> Result<Page<T>, IdMapError> {
+    let addr = VirtAddr::new(my_frame.start_address().as_u64());
+    let page = Page::<T>::from_start_address(addr).unwrap();
+    let my_flags = PageTableFlags::PRESENT | (add_flags.unwrap_or(PageTableFlags::empty()));
+
+    match mapper.translate(addr) {
+        TranslateResult::NotMapped => mapper
+            .identity_map(my_frame, my_flags, frame_allocator)
+            .map_err(|_| IdMapError::FrameAllocationFailed)?
+            .flush(),
+        TranslateResult::InvalidFrameAddress(_) => return Err(IdMapError::FrameAllocationFailed),
+        TranslateResult::Mapped { flags, frame, .. } => match frame {
+            MappedFrame::Size4KiB(frame) => {
+                let my_frame = PhysFrame::<Size4KiB>::containing_address(my_frame.start_address());
+                if my_frame.start_address() != frame.start_address() {
+                    return Err(IdMapError::MappingIsNotIdentity(
+                        my_frame.start_address(),
+                        frame.start_address(),
+                    ));
+                }
+                if !flags.contains(my_flags) {
+                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
+                }
             }
-            return Ok(page);
-        }
-        Err(e) => return Err(e),
+            MappedFrame::Size2MiB(frame) => {
+                if !flags.contains(my_flags) {
+                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
+                }
+                let my_frame = PhysFrame::<Size2MiB>::containing_address(my_frame.start_address());
+                if my_frame.start_address() != frame.start_address() {
+                    return Err(IdMapError::MappingIsNotIdentity(
+                        my_frame.start_address(),
+                        frame.start_address(),
+                    ));
+                }
+            }
+            MappedFrame::Size1GiB(frame) => {
+                if !flags.contains(my_flags) {
+                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
+                }
+                let my_frame = PhysFrame::<Size1GiB>::containing_address(my_frame.start_address());
+                if my_frame.start_address() != frame.start_address() {
+                    return Err(IdMapError::MappingIsNotIdentity(
+                        my_frame.start_address(),
+                        frame.start_address(),
+                    ));
+                }
+            }
+        },
     };
-
-    // Flush TLB
-    map_to_result.flush();
     Ok(page)
 }
 
@@ -172,17 +231,4 @@ impl BootInfoFrameAllocator {
         // create `PhysFrame` types from the start addresses
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
-
-    // /// Returns an iterator over the usable frames specified in the memory map.
-    // fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
-    //     // get usable regions from memory map
-    //     let regions = self.memory_map.iter();
-    //     let usable_regions = regions.filter(|r| r.region_type == MemoryRegionType::Usable);
-    //     // map each region to its address range
-    //     let addr_ranges = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
-    //     // transform to an iterator of frame start addresses
-    //     let frame_addresses = addr_ranges.flat_map(|r| r.step_by(4096));
-    //     // create `PhysFrame` types from the start addresses
-    //     frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
-    // }
 }

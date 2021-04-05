@@ -73,23 +73,18 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         time::calibrate();
     }
 
-    log::info!("Offset page table");
-
     // Create OffsetPageTable instance by
     // calculating address with: Cr3::read() + offset from bootloader
     let mut mapper: OffsetPageTable =
         unsafe { memory::init(VirtAddr::new(boot_info.physical_memory_offset)) };
 
-    log::info!("Frame allocator");
     // Create FrameAllocator instance
     let mut frame_allocator = unsafe { memory::BootInfoFrameAllocator::new(&boot_info.memory_map) };
 
-    log::info!("Init heap");
     // Initialize the heap allocator
     // by mapping the heap pages
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
 
-    log::info!("Init acpi table");
     // Parse acpi tables once
     unsafe {
         acpi::init_acpi_table(&mut mapper, &mut frame_allocator);
@@ -112,13 +107,13 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
-    unsafe {
-        let apic = interrupts::APIC.lock();
-        smp::init(&apic, &acpi);
-        if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-            apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
-        }
-    }
+    // unsafe {
+    //     let apic = interrupts::APIC.lock();
+    //     smp::init(&apic, &acpi);
+    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
+    //         apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
+    //     }
+    // }
 
     // let mut mem_mb = boot_info.max_phys_memory / 1024 / 1024;
 
