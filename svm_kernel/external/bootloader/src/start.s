@@ -41,18 +41,19 @@ load_64bit_gdt:
 
 jump_to_long_mode:
     push 0x8
-    mov eax, offset reset_selectors
+    mov eax, offset reset_state
     push eax
     retf # Load CS with 64 bit segment and flush the instruction cache
 
 .code64
-reset_selectors:
+reset_state:
     xor rax, rax
     mov ss, rax
     mov es, rax
     mov gs, rax
-    mov rax, 16 # offset to 3rd entrie in gdt_64
+    mov rax, 16 # offset to 3rd entry in gdt_64
     mov ds, rax
+    mov rsp, offset __stack_start
     jmp rsi
 
 .align 4

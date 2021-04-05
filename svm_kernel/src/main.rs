@@ -40,7 +40,9 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
 
-    log::info!("Reached kernel!!");
+    unsafe {
+        log::info!("Reached kernel!! {:#x}", core::mem::transmute::<&bootinfo::BootInfo, u64>(_boot_info));
+    }
 
     // Initialize routine for kernel
     svm_kernel::init(_boot_info);
