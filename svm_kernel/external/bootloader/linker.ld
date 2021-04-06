@@ -2,6 +2,8 @@ ENTRY(_start_bootloader)
 
 SECTIONS {
     . = 1M;
+    __stack_guard = .;
+    . += 0x1000;
     __stack_end = .;
     . += 0x6000;
     __stack_start = .;

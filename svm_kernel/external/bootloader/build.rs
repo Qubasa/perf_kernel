@@ -27,6 +27,8 @@ fn main() {
         }
     });
 
+    eprintln!("Original kernel path: {:#?}", kernel.clone());
+
     let kernel_file_name = kernel
         .file_name()
         .expect("KERNEL has no valid file name")
@@ -170,25 +172,6 @@ fn main() {
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-struct Elf32Header {
-    e_ident: [u8; 16],
-    e_type: u16,
-    e_machine: u16,
-    e_version: u32,
-    e_entry: u32,
-    e_phoff: u32,
-    e_shoff: u32,
-    e_flags: u32,
-    e_ehsize: u16,
-    e_phentsize: u16,
-    e_phnum: u16,
-    e_shentsize: u16,
-    e_shnum: u16,
-    e_shstrndx: u16,
-}
-
-#[derive(Clone, Copy, Debug)]
-#[repr(C, packed)]
 struct Elf64Header {
     e_ident: [u8; 16],
     e_type: u16,
@@ -241,6 +224,15 @@ impl Ord for Elf64_Phdr {
 }
 
 use std::fmt;
+impl fmt::Display for Elf64_Shdr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        unsafe {
+            writeln!(f, "\nsh_addr: {:#x}", self.sh_addr)?;
+            writeln!(f, "sh_offset: {:#x}", self.sh_offset)?;
+            writeln!(f, "sh_size: {:#x}", self.sh_size)
+        }
+    }
+}
 impl fmt::Display for Elf64_Phdr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe { write!(f, "Virtual Address: {:#x}", self.p_vaddr) }
@@ -253,13 +245,54 @@ impl fmt::Debug for Elf64_Phdr {
     }
 }
 
+#[cfg(feature = "binary")]
+fn apply_type<T: Sized>(offset: u64, num_types: u64, buf: &[u8]) -> Result<&[T], ApplyTypeError> {
+    use std::convert::TryFrom;
+    use ApplyTypeError::*;
+    let type_size: usize = std::mem::size_of::<T>();
+    let offset = usize::try_from(offset).map_err(|_| UsizeTransform)?;
+    let num_types = usize::try_from(num_types).map_err(|_| UsizeTransform)?;
+    let s = &buf[offset..offset + type_size * num_types];
+    let (prefix, headers, suffix) = unsafe { s.align_to::<T>() };
+    if !prefix.is_empty() || !suffix.is_empty() {
+        return Err(MisalignedRead(std::any::type_name::<T>()));
+    }
+    Ok(headers)
+}
+
+#[cfg(feature = "binary")]
+fn apply_type_mut<T: Sized>(
+    offset: u64,
+    num_types: u64,
+    buf: &mut [u8],
+) -> Result<&mut [T], ApplyTypeError> {
+    use std::convert::TryFrom;
+    use ApplyTypeError::*;
+    let type_size: usize = std::mem::size_of::<T>();
+    let offset = usize::try_from(offset).map_err(|_| UsizeTransform)?;
+    let num_types = usize::try_from(num_types).map_err(|_| UsizeTransform)?;
+    let s = &mut buf[offset..offset + type_size * num_types];
+    let (prefix, headers, suffix) = unsafe { s.align_to_mut::<T>() };
+    if !prefix.is_empty() || !suffix.is_empty() {
+        return Err(MisalignedRead(std::any::type_name::<T>()));
+    }
+    Ok(headers)
+}
+
+#[cfg(feature = "binary")]
+#[derive(Debug)]
+enum ApplyTypeError {
+    UsizeTransform,
+    MisalignedRead(&'static str),
+}
+
 /*
  * Pads the kernel ELF file on disk to match it's memory representation by inserting zeros
  * where necessary.
  */
 #[cfg(feature = "binary")]
 fn pad_kernel(kernel: &std::path::PathBuf) {
-    use std::convert::{TryFrom, TryInto};
+    use std::convert::TryFrom;
     use std::io::{Read, Seek, Write};
 
     eprintln!(
@@ -283,9 +316,9 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
      */
     let header;
     {
-        const HEADER_SIZE: usize = std::mem::size_of::<Elf64Header>();
-        let header_buf: [u8; HEADER_SIZE] = buf[..HEADER_SIZE].try_into().expect("Failed try into");
-        header = unsafe { std::mem::transmute::<&[u8; HEADER_SIZE], &Elf64Header>(&header_buf) };
+        let headers = apply_type::<Elf64Header>(0, 1, &buf).unwrap();
+        header = headers[0];
+
         let magic = [
             0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00,
@@ -310,17 +343,10 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
      * Parse section header and zero .bss section
      */
     {
-        const SHEADER_SIZE: usize = std::mem::size_of::<Elf64_Shdr>();
-
         let mut bss_sec = None;
         {
-            let s = &buf[header.e_shoff as usize
-                ..header.e_shoff as usize + SHEADER_SIZE * header.e_shnum as usize];
-
-            let (prefix, sections, suffix) = unsafe { s.align_to::<Elf64_Shdr>() };
-            if !prefix.is_empty() || !suffix.is_empty() {
-                panic!("Misaligned sheader read");
-            }
+            let sections =
+                apply_type::<Elf64_Shdr>(header.e_shoff, header.e_shnum.into(), &buf).unwrap();
 
             let str_table_sec = sections[header.e_shstrndx as usize];
             let offset = str_table_sec.sh_offset as usize;
@@ -341,9 +367,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
 
         if let Some(section) = bss_sec {
             let offset = section.sh_offset as usize;
-            eprintln!("BSS Section: {:#?}", section);
-            eprintln!("BSS Offset: {:#x}", offset);
-            eprintln!("Range end index: {:#x}", offset + section.sh_size as usize);
+            eprintln!("BSS Section: {}", section);
             eprintln!("Buf size: {:#x}", buf.len());
             let bss = &mut buf[offset..offset + section.sh_size as usize];
             for i in bss {
@@ -357,26 +381,16 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     /*
      * Parse program header and start padding segments
      */
-    const PHEADER_SIZE: usize = std::mem::size_of::<Elf64_Phdr>();
     let mut load_segments = Vec::new();
     {
-        let phoff = header.e_phoff.try_into().unwrap();
-        let mut header_buf: [u8; PHEADER_SIZE] =
-            buf[phoff..phoff + PHEADER_SIZE].try_into().unwrap();
-        let pheader =
-            unsafe { std::mem::transmute::<&[u8; PHEADER_SIZE], &Elf64_Phdr>(&header_buf) };
+        let pheaders =
+            apply_type::<Elf64_Phdr>(header.e_phoff, header.e_phnum.into(), &buf).unwrap();
 
-        let mut i = 0;
-        #[allow(unused_assignments)]
-        while i < header.e_phnum.into() {
-            let window = phoff + PHEADER_SIZE * i;
-            header_buf = buf[window..window + PHEADER_SIZE].try_into().unwrap();
-
+        for pheader in pheaders {
             if pheader.p_type == 1 {
                 // LOAD Segment
                 load_segments.push(pheader.clone());
             }
-            i += 1;
         }
         load_segments.sort();
 
@@ -408,24 +422,32 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     }
 
     // Pad load segments with zeros
+    // TODO: Also update section header accordingly
+    // Then move .bss section zeroing down and check if file is big enough else
+    // append missing bytes
     let mut already_padded: usize = 0;
     for (i, (seg, seg_next)) in load_segments
         .iter()
         .zip(load_segments.iter().skip(1))
         .enumerate()
     {
-        //TODO: Use max() - min() instead of cast to isize
-        let vdiff = (isize::try_from(seg_next.p_vaddr).unwrap())
-            .checked_sub(isize::try_from(seg.p_vaddr).unwrap())
+        let vdiff = usize::try_from(
+            std::cmp::max(seg.p_vaddr, seg_next.p_vaddr)
+                - std::cmp::min(seg.p_vaddr, seg_next.p_vaddr),
+        )
+        .unwrap();
+        let mut pad_size = vdiff
+            .checked_sub(usize::try_from(seg.p_filesz).unwrap())
             .unwrap();
-        let mut pad_size =
-            usize::try_from((vdiff - isize::try_from(seg.p_filesz).unwrap()).abs()).unwrap();
         eprintln!("Pad size: {:#x}", pad_size);
 
         // Often times segments have spaces in between each other that do not belong to any segment
         // These spaces have to be subtracted from the padding
-        let sub_align =
-            seg_next.p_offset as isize - (seg.p_filesz as isize + seg.p_offset as isize);
+        let a = seg.p_filesz + seg.p_offset;
+        let b = seg_next.p_offset;
+        let sub_align = usize::try_from(std::cmp::max(a, b) - std::cmp::min(a, b)).unwrap();
+
+        // Debug
         unsafe {
             eprintln!(
                 "LOAD{}: In file align: {:#x} next segment offset: {:#x}",
@@ -434,8 +456,8 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
                 seg.p_filesz as isize + seg.p_offset as isize
             );
         }
-        eprintln!("Subtract align: {:#x}", sub_align.abs());
-        pad_size -= sub_align.abs() as usize;
+        eprintln!("Subtract align: {:#x}", sub_align);
+        pad_size -= sub_align;
 
         let index: usize = usize::try_from(seg.p_offset).unwrap()
             + usize::try_from(seg.p_filesz).unwrap()
@@ -448,17 +470,10 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         }
 
         // Update program header with new file size etc.
-        let p = &mut buf[header.e_phoff as usize
-            ..header.e_phoff as usize + PHEADER_SIZE * header.e_phnum as usize];
+        let pheaders =
+            apply_type_mut::<Elf64_Phdr>(header.e_phoff, header.e_phnum.into(), &mut buf).unwrap();
 
-        let p_iter = p.chunks_mut(PHEADER_SIZE);
-
-        for i in p_iter {
-            let (prefix, pheaders, suffix) = unsafe { i.align_to_mut::<Elf64_Phdr>() };
-            let pheader = &mut pheaders[0];
-            if !prefix.is_empty() || !suffix.is_empty() {
-                panic!("Misaligned pheader read");
-            }
+        for pheader in pheaders {
             if pheader.p_offset == seg.p_offset {
                 let pad_size = u64::try_from(pad_size).unwrap();
                 pheader.p_filesz += pad_size;
@@ -470,7 +485,6 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         // Sum of all applied pad sizes
         already_padded += pad_size;
     }
-
     println!("cargo:warning=Total padding: {} Kb", already_padded / 1024);
     eprintln!("Writing to file");
     kernel_fd

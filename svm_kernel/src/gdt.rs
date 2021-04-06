@@ -9,6 +9,7 @@ pub const PAGE_FAULT_IST_INDEX: u16 = 1;
  * The TSS is an array that holds addresses to different stacks
  * Can be assigned to exception handlers
  */
+//TODO: Map stack with one unwritable page at the end
 lazy_static! {
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
@@ -16,7 +17,7 @@ lazy_static! {
              // We need the space because else println can
              // overflow the stack. If you enable sse and run
              // into triple faults try increasing this number
-            const STACK_SIZE: usize = 4096 * 7;
+            const STACK_SIZE: usize = 4096 * 10;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
@@ -28,7 +29,7 @@ lazy_static! {
              // We need the space because else println can
              // overflow the stack. If you enable sse and run
              // into triple faults try increasing this number
-            const STACK_SIZE: usize = 4096 * 7;
+            const STACK_SIZE: usize = 4096 * 10;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(unsafe { &STACK });

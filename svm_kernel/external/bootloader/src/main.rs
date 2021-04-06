@@ -30,6 +30,7 @@ extern "C" {
     fn switch_to_long_mode(boot_info: &'static bootinfo::BootInfo, entry_point: u64) -> !;
     static __bootloader_start: usize;
     static __identity_map_offset: usize;
+    static __stack_guard: usize;
     static __stack_end: usize;
     static __stack_start: usize;
     static _start_bootloader: usize;
@@ -53,6 +54,11 @@ static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
 // we need a flame graph / execution hotspot map and start optimizing
 // there. As I do not how well this scales if we have 2Tb+ of memory.
 // I think it should be fine, nonetheless it should be looked after at some point
+// TODO: If supported by cpu map stack and kernel code to 1Gb pages then use MTRRs and PAT to
+// define uncachable memory and write protected memory
+// TODO: Firmware sets fixed MTRRs for the first 1Mb of memory. Parse them and check that
+// our heap allocator does not use uncachable memory maps
+// TODO: Also parse variable range MTRRs to see if they are set to something
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
@@ -310,8 +316,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             let addr = pte_i as u64 * 4096u64;
 
             // Skip page before stack_end to know when we overstep stack boundaries
-            if addr == (&__stack_end as *const _ as u64) - 4096u64 {
-                log::debug!("Not mapping addr as stack end page:{:#x}", addr);
+            if addr == (&__stack_guard as *const _ as u64) {
+                log::debug!("Not mapping addr as stack guard page:{:#x}", addr);
                 continue;
             }
 
@@ -365,7 +371,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         BOOT_INFO
             .memory_map
             .partition_memory_region(
-                &__stack_end as *const _ as u64,
+                &__stack_guard as *const _ as u64, // Stack guard page
                 &__stack_start as *const _ as u64,
                 bootinfo::MemoryRegionType::KernelStack,
             )
@@ -384,6 +390,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             .partition_memory_region(0, 4096, bootinfo::MemoryRegionType::FrameZero)
             .unwrap();
     }
+
+    log::debug!("BootInfo: {:#?}", BOOT_INFO);
 
     // Enable all media extensions
     media_extensions::enable_all();
