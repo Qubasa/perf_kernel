@@ -9,6 +9,7 @@ use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;
 use bootloader::mylog::LOGGER;
 use bootloader::pagetable;
+use bootloader::smp;
 use core::convert::TryInto;
 use log::LevelFilter;
 use multiboot2;
@@ -27,7 +28,11 @@ global_asm!(include_str!("start.s"));
  * To make it to an actual pointer get a reference of it.
  */
 extern "C" {
-    fn switch_to_long_mode(boot_info: &'static bootinfo::BootInfo, entry_point: u64) -> !;
+    fn switch_to_long_mode(
+        boot_info: &'static bootinfo::BootInfo,
+        entry_point: u32,
+        stack_addr: u32,
+    ) -> !;
     static __bootloader_start: usize;
     static __identity_map_offset: usize;
     static __stack_guard: usize;
@@ -69,7 +74,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Warn);
+        log::set_max_level(LevelFilter::Debug);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -99,6 +104,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Parses the multiboot2 header
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);
+
+    // Set num cores early so that debug print of BOOT_INFO is not too much
+    BOOT_INFO.cores.num_cores = smp::num_cores();
 
     /*
      * Convert memory areas to memory map
@@ -391,8 +399,53 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             .unwrap();
     }
 
-    log::debug!("BootInfo: {:#?}", BOOT_INFO);
+    log::info!("Num physical cores: {}", smp::num_cores());
+    log::debug!("Apic id: {}", smp::apic_id());
 
+    // Allocate 8Mb stack space for every core
+    // + 4096b guard page at the end
+    {
+        use core::convert::TryFrom;
+        let allocator = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map);
+        let stack_size = bootloader::TWO_MEG * 4;
+        let guard_page = bootloader::TWO_MEG;
+        let mut iter = allocator.usable_xsize_frames(stack_size + guard_page, bootloader::TWO_MEG);
+
+        for i in 0..smp::num_cores() {
+            let addr = iter
+                .next()
+                .expect("Not enough memory to allocate stack for all cores");
+            let stack_start = addr + stack_size + guard_page;
+            BOOT_INFO.cores[i as usize].stack_size = stack_size;
+            BOOT_INFO.cores[i as usize].stack_start_addr = stack_start;
+            BOOT_INFO.cores[i as usize].stack_end_addr = addr + guard_page;
+            log::debug!(
+                "Core {} stack space from: {:#x} to {:#x}",
+                i,
+                stack_start,
+                addr + guard_page,
+            );
+
+            let p3_physical = &_p3 as *const _ as u64;
+            let p3_table = &*(p3_physical as *mut pagetable::PageTable);
+
+            let p3_index = usize::try_from(addr >> 12 >> 9 >> 9).unwrap();
+            let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
+            let p2_index = usize::try_from(addr >> 12 >> 9).unwrap();
+            p2_table[p2_index].set_unused();
+
+            BOOT_INFO
+                .memory_map
+                .partition_memory_region(
+                    addr + (bootloader::TWO_MEG - 4096), // start addr
+                    stack_start,                         // end addr
+                    bootinfo::MemoryRegionType::KernelStack,
+                )
+                .unwrap();
+        }
+    }
+
+    log::debug!("BootInfo: {:#?}", BOOT_INFO);
     // Enable all media extensions
     media_extensions::enable_all();
 
@@ -421,6 +474,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     log::debug!("Done creating page table.");
 
+    // Check that kernel ELF header is correct
     let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&__kernel_start);
     let magic = [
         0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -433,6 +487,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         panic!("\n Invalid ELF header magic of kernel!");
     }
 
+    // Check that kernel lies at 2Mb in memory
     let start_addr = &__kernel_start as *const _ as u64;
     if start_addr != bootloader::TWO_MEG {
         panic!(
@@ -443,8 +498,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     log::debug!("Switching to long mode...");
 
-    let entry_addr = kernel_header.e_entry as u64;
-    switch_to_long_mode(&BOOT_INFO, entry_addr);
+    // Read start addr from ELF header and jump to it
+    let entry_addr = kernel_header.e_entry as u32;
+    let stack_addr = BOOT_INFO.cores[smp::apic_id() as usize].stack_start_addr as u32;
+    switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -14,6 +14,7 @@ switch_to_long_mode:
     pop eax # return addr (discarded)
     pop edi # mem map
     pop esi # entry_point
+    pop esp # stack pointer
 
     # Write back cache and add a memory fence. I'm not sure if this is
     # necessary, but better be on the safe side.
@@ -53,7 +54,6 @@ reset_state:
     mov gs, rax
     mov rax, 16 # offset to 3rd entry in gdt_64
     mov ds, rax
-    mov rsp, offset __stack_start
     jmp rsi
 
 .align 4

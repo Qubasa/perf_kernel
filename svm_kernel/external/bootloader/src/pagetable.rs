@@ -286,18 +286,23 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    pub fn usable_2m_frames(&self, phys_mem_offset: u64) -> impl Iterator<Item = u64> {
+    pub fn usable_xsize_frames(
+        &self,
+        xsize: u64,
+        alignment: u64,
+    ) -> impl Iterator<Item = u64> {
+        if alignment % 4096 != 0 {
+            panic!("alignment needs to be multiple of 4096");
+        }
+
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions =
             unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
 
-        // Filter out regions smaller then 2Mb
-        let adjusted_regions = usable_regions.filter(move |r| r.range.size() >= crate::TWO_MEG);
-
-        // Reduce frame range to fit into 2Mb pages
-        let adjusted_regions = adjusted_regions.map(|r| {
-            let diff = r.range.size() % crate::TWO_MEG;
+        // Reduce the end of frame range to fit into alignment
+        let adjusted_regions = usable_regions.map(move |r| {
+            let diff = r.range.size() % xsize;
             if diff != 0 {
                 let new = r.range.end_addr() - diff;
                 return MemoryRegion {
@@ -308,9 +313,14 @@ impl BootInfoFrameAllocator {
             *r
         });
 
+        // Increase the start of frame range to fit into alignment
         let adjusted_regions = adjusted_regions.map(move |r| {
-            if r.range.start_addr() < phys_mem_offset {
-                let new = r.range.start_addr() + (phys_mem_offset - r.range.start_addr());
+            let rest = r.range.start_addr() % alignment;
+            if rest != 0 {
+                let new = r.range.start_addr() + (alignment - rest);
+                if new > r.range.end_addr() {
+                    return MemoryRegion::empty();
+                }
                 return MemoryRegion {
                     range: FrameRange::new(new, r.range.end_addr()),
                     region_type: r.region_type,
@@ -319,11 +329,13 @@ impl BootInfoFrameAllocator {
             r
         });
 
+        // Filter out regions smaller then xsize
+        let adjusted_regions = adjusted_regions.filter(move |r| r.range.size() >= xsize);
+
         // map each region to its address range
         let addr_ranges = adjusted_regions.map(|r| r.range.start_addr()..r.range.end_addr());
         // transform to an iterator of frame start addresses
-        let frame_addresses =
-            addr_ranges.flat_map(move |r| r.step_by(crate::TWO_MEG.try_into().unwrap()));
+        let frame_addresses = addr_ranges.flat_map(move |r| r.step_by(xsize.try_into().unwrap()));
         frame_addresses
     }
 }

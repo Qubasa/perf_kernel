@@ -22,6 +22,8 @@
 pub mod bootinfo;
 
 #[cfg(target_arch = "x86")]
+pub mod smp;
+#[cfg(target_arch = "x86")]
 pub mod default_interrupt;
 #[cfg(target_arch = "x86")]
 pub mod interrupts;

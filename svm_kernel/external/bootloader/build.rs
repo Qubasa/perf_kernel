@@ -524,7 +524,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
 
             section.sh_offset += already_padded as u64;
 
-            // If section behind last load segment
+            // Edge case: If section behind last load segment
             let last = load_segments.last().unwrap();
             if section.sh_offset > last.p_offset + last.p_filesz {
                 section.sh_offset += *already_padded_vec.last().unwrap() as u64;
@@ -560,8 +560,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
 
         if let Some(section) = bss_sec {
             let offset = section.sh_offset as usize;
-            // Edge case: bss section lies outside of load_segment due to some
-            // weird reason
+            // Edge case: bss section lies outside of the padded file
             if offset + section.sh_size as usize > buf.len() {
                 for _ in 0..(offset + section.sh_size as usize - buf.len()) {
                     buf.push(0); // TODO: Make more efficient

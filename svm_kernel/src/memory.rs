@@ -200,6 +200,7 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
+    /// TODO: Needs to ensure that start addr is aligned to pageSize
     pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
@@ -228,7 +229,8 @@ impl BootInfoFrameAllocator {
         // transform to an iterator of frame start addresses
         let frame_addresses = addr_ranges.flat_map(move |r| r.step_by(T::SIZE as usize));
 
-        // create `PhysFrame` types from the start addresses
+        // panic!("Missing check if start addr is PageSize aligned");
+        // // create `PhysFrame` types from the start addresses
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
