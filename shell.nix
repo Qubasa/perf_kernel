@@ -3,6 +3,7 @@
   }:
   pkgs.mkShell {
     buildInputs = with pkgs; [
+      llvmPackages.bintools
       zlib.out
       rustup
       xorriso

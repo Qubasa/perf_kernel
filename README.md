@@ -122,5 +122,7 @@ $ cargo test --test heap_allocator
 * https://virtio-fs.gitlab.io/index.html#overview
 * https://gitlab.redox-os.org/redox-os/tfs
 * http://9p.cat-v.org/
+* https://www.linux-kvm.org/page/Tuning_Kernel
+
 
 

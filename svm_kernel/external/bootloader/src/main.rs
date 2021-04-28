@@ -74,7 +74,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Debug);
+        log::set_max_level(LevelFilter::Info);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -476,31 +476,34 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Check that kernel ELF header is correct
     let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(&__kernel_start);
-    let magic = [
-        0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00,
-    ];
-    if kernel_header.e_ident != magic {
-        for i in kernel_header.e_ident.iter() {
-            bootloader::print!("{:#x} ", i);
+    {
+        let magic = [
+            0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+        ];
+        if kernel_header.e_ident != magic {
+            for i in kernel_header.e_ident.iter() {
+                bootloader::print!("{:#x} ", i);
+            }
+            panic!("\n Invalid ELF header magic of kernel!");
         }
-        panic!("\n Invalid ELF header magic of kernel!");
     }
 
     // Check that kernel lies at 2Mb in memory
     let start_addr = &__kernel_start as *const _ as u64;
-    if start_addr != bootloader::TWO_MEG {
-        panic!(
-            "Kernel start address needs to be 0x200000. Is however: {:#x}",
-            start_addr
-        );
+    {
+        if start_addr != bootloader::TWO_MEG {
+            panic!(
+                "Kernel start address needs to be 0x200000. Is however: {:#x}",
+                start_addr
+            );
+        }
     }
-
     log::debug!("Switching to long mode...");
 
     // Read start addr from ELF header and jump to it
-    let entry_addr = kernel_header.e_entry as u32;
     let stack_addr = BOOT_INFO.cores[smp::apic_id() as usize].stack_start_addr as u32;
+    let entry_addr = kernel_header.e_entry as u32;
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 
