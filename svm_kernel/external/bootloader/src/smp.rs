@@ -13,3 +13,11 @@ pub fn apic_id() -> u8 {
         return (res.ebx & (0xFF << 24)) as u8;
     };
 }
+
+
+#[no_mangle]
+unsafe extern "C" fn smp_main() {
+
+    log::info!("=== smp main! === ");
+    loop {};
+}

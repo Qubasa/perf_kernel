@@ -30,8 +30,8 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-# run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
-run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
+run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-s", "-S"]
+# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "4G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
 # build-command = ["build", "--release"]
 build-command = ["build"]

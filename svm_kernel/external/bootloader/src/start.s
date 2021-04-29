@@ -4,49 +4,8 @@
 .global switch_to_long_mode
 .global jump_to_long_mode
 
-
-.code16
-smp_trampoline:
-    # clear the direction flag (e.g. go forward in memory when using
-    # instructions like lodsb)
-    cld
-    # disable interrupts
-    cli
-
-    # zero data segment
-    xor ax, ax
-    mov ds, ax
-
-    # Set the A20 line
-	in    al, 0x92
-	or    al, 2
-	out 0x92, al
-
-    # Load 32-bit GDT
-    lgdt gdt32_pointer
-
-    # Enable protected mode
-	mov eax, cr0
-	or  eax, (1 << 0)
-	mov cr0, eax
-    # normally this should be jmp 0x8:mylabel
-    jmp 0x8:protected_mode_setup
-
 .code32
-protected_mode_setup:
-    jmp protected_mode_setup
-    mov bx, 0x10
-    mov ds, bx
-
-# spin loop till stack is available
-wait_for_stack:
-    xor al, al
-    lock xchg byte ptr [stack_avail], al
-    test al, al
-    jz wait_for_stack
-
 _start_bootloader:
-    mov byte ptr [stack_avail], 0
     mov esp, offset __stack_start
     push ebx
     push eax
@@ -98,20 +57,6 @@ reset_state:
     mov rax, 16 # offset to 3rd entry in gdt_64
     mov ds, rax
     jmp rsi
-
-stack_avail: .byte 1
-
-.align 4
-gdt32:
-    .quad 0x0000000000000000          # Null Descriptor - should be present.
-    .quad 0xffff0000009acf00          # 32-bit code descriptor (exec/read).
-    .quad 0xffff00000092cf00          # 32-bit data descriptor (read/write)
-gdt32_end:
-
-.align 4
-gdt32_pointer:
-   .word gdt32_end - gdt32 - 1  # 16-bit Size (Limit) of GDT.
-   .long gdt32                  # 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)
 
 .align 4
 gdt_64:

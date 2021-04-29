@@ -37,6 +37,8 @@ pub mod print;
 pub mod serial;
 #[cfg(target_arch = "x86")]
 pub mod vga;
+#[cfg(target_arch = "x86")]
+pub mod mmu;
 
 global_asm!(include_str!("multiboot2_header.s"));
 
