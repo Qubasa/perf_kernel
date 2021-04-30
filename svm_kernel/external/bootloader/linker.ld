@@ -2,10 +2,14 @@ ENTRY(_start_bootloader)
 
 SECTIONS {
     . = 0x4000;
+    . = ALIGN(0x1000);
+    __smp_trampoline_start = .;
     .smp_trampoline :
     {
         *(.smp_trampoline)
     }
+    . = ALIGN(0x1000);
+    __smp_trampoline_end = .;
     . = 1M;
     __stack_guard = .;
     . += 0x1000;

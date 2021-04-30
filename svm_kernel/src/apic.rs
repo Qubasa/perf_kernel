@@ -65,7 +65,11 @@ impl Apic {
         // Convert trampoline func pointer to u8
         let to_vec = (trampoline >> 12) as u8;
 
-        // // Send STARTUP ipi
+        if to_vec >= 0xA0 && to_vec <= 0xBF {
+            panic!("Trampoline vector can't use 0xA0-0xBF. Reserved by spec.");
+        }
+
+        // Send STARTUP ipi
         let low = InterCmdRegLow::new()
             .with_vec(to_vec) // Core execute code at 0x000VV000
             .with_trigger_mode(0) // level-sensitive

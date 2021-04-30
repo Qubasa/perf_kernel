@@ -12,6 +12,7 @@
 #![feature(const_generics)]
 #![feature(abi_x86_interrupt)]
 #![feature(naked_functions)]
+#![feature(test)]
 
 // The dependencies here are set to target_arch = x86 because
 // the 'bootimage' command first builds this crate as dependencie of the kernel

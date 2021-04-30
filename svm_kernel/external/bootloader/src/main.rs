@@ -36,12 +36,13 @@ extern "C" {
         stack_addr: u32,
     ) -> !;
     static __bootloader_start: usize;
+    static __smp_trampoline_start: usize;
+    static __smp_trampoline_end: usize;
     static __identity_map_offset: usize;
     static __stack_guard: usize;
     static __stack_end: usize;
     static __stack_start: usize;
     static _start_bootloader: usize;
-    static _smp_trampoline: usize;
     static __bootloader_end: usize;
     static __kernel_start: usize;
     static _kernel_size: usize;
@@ -105,7 +106,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     BOOT_INFO.cores.num_cores = smp::num_cores();
 
     // Set smp trampoline
-    BOOT_INFO.smp_trampoline = &_smp_trampoline as *const usize as u32;
+    BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
 
     log::info!("smp trampoline function: {:#x}", BOOT_INFO.smp_trampoline);
 
@@ -176,6 +177,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Checks that the current loaded image lies in available (good) physical memory
     {
         for i in BOOT_INFO.memory_map.iter() {
+            check(&i, &__smp_trampoline_start as *const usize as u64);
+            check(&i, &__smp_trampoline_end as *const usize as u64);
             check(&i, &__stack_start as *const usize as u64);
             check(&i, &__stack_end as *const usize as u64);
             check(&i, &__bootloader_start as *const usize as u64);
@@ -239,6 +242,15 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Update MEM_MAP
     {
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__smp_trampoline_start as *const _ as u64,
+                &__smp_trampoline_end as *const _ as u64,
+                bootinfo::MemoryRegionType::Bootloader,
+            )
+            .unwrap();
+
         BOOT_INFO
             .memory_map
             .partition_memory_region(

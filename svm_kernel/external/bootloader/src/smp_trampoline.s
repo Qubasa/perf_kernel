@@ -32,9 +32,12 @@ _smp_trampoline:
 
 .code32
 protected_mode_setup:
-  jmp smp_main
   mov bx, 0x10
   mov ds, bx
+  mov es, bx
+  mov fs, bx
+  mov gs, bx
+  mov ss, bx
 
 # spin loop till stack is available
 wait_for_stack:
@@ -43,16 +46,20 @@ wait_for_stack:
   test al, al
   jz wait_for_stack
   mov byte ptr [stack_avail], 0
-  jmp smp_main
+  mov esp, offset __stack_start
+  call smp_main
 
+spin:
+  jmp spin
 
+.align 2
 stack_avail: .byte 1
 
 .align 4
 gdt32:
   .quad 0x0000000000000000          # Null Descriptor - should be present.
-  .quad 0xffff0000009acf00          # 32-bit code descriptor (exec/read).
-  .quad 0xffff00000092cf00          # 32-bit data descriptor (read/write)
+  .quad 0x00cf9a000000ffff          # 32-bit code descriptor (exec/read).
+  .quad 0x00cf92000000ffff          # 32-bit data descriptor (read/write)
 gdt32_end:
 
 .align 4
