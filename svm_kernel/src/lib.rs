@@ -134,7 +134,7 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
             device.init(&mut mapper, &mut frame_allocator);
         };
     }
-    exit_qemu(QemuExitCode::Success);
+    // exit_qemu(QemuExitCode::Success);
 }
 
 /*

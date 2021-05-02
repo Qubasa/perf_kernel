@@ -1,23 +1,17 @@
 use crate::pci::{Device, PciDevice, PCI_CONFIG_ADDRESS, PCI_CONFIG_DATA};
 use alloc::sync::Arc;
+use core::convert::TryFrom;
 use core::convert::TryInto;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering;
 use x86_64::instructions::port::Port;
-use x86_64::{
-    structures::paging::{
-       FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
-    },
-    VirtAddr,
-};
+use x86_64::structures::paging::Translate;
+use x86_64::structures::paging::{FrameAllocator, Mapper, Size2MiB};
 #[derive(Debug, Copy, Clone)]
 pub struct Rtl8139 {
     dev: PciDevice,
     addr: u32,
 }
-
-pub const BUF_START: usize = 0x_3333_3333_0000;
-pub const BUF_SIZE: usize = 4096 * 3; // 100 KiB
 
 impl Rtl8139 {
     pub fn new(dev: &PciDevice, addr: u32) -> Self {
@@ -28,8 +22,9 @@ impl Rtl8139 {
     }
     pub unsafe fn init(
         &self,
-        mapper: &mut impl Mapper<Size4KiB>,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+        mapper: &mut (impl Mapper<Size2MiB> + Translate),
+        frame_allocator: &mut (impl FrameAllocator<Size2MiB>
+                  + FrameAllocator<x86_64::structures::paging::Size4KiB>),
     ) {
         let mut config_port: Port<u32> = Port::new(PCI_CONFIG_ADDRESS);
         let mut config_data_port: Port<u32> = Port::new(PCI_CONFIG_DATA);
@@ -73,27 +68,24 @@ impl Rtl8139 {
             data = cmd.read();
         }
 
-        let page_range = {
-            let heap_start = VirtAddr::new(BUF_START as u64);
-            let heap_end = heap_start + BUF_SIZE - 1u64;
-            let heap_start_page = Page::containing_address(heap_start);
-            let heap_end_page = Page::containing_address(heap_end);
-
-            Page::range_inclusive(heap_start_page, heap_end_page)
-        };
-
-        for page in page_range {
-            let frame = frame_allocator
-                .allocate_frame()
-                .unwrap();
-            let flags =
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE;
-                mapper
-                    .map_to(page, frame, flags, frame_allocator)
-                    .unwrap()
-                    .flush();
-        }
+        let frame = frame_allocator.allocate_frame().unwrap();
+        crate::memory::id_map_nocache_update_flags(mapper, frame_allocator, frame, None).unwrap();
         log::info!("Reset succeeded");
+
+        let mut rbstart: Port<u32> = Port::new((iobase + 0x30).try_into().unwrap());
+        rbstart.write(
+            u32::try_from(frame.start_address().as_u64())
+                .expect("Frame allocator allocated frame outside of 4Gb range"),
+        );
+
+        let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
+        imr.write(0x5);  // Sets the TOK and ROK bits high
+
+        let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
+        rcr.write(0xf | (1<<7)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+
+        // Enable receiver and transmitter
+        cmd.write(0xc);
     }
 }
 
