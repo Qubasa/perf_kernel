@@ -27,6 +27,9 @@ pub mod serial;
 pub mod smp;
 pub mod time;
 pub mod vga;
+pub mod networking;
+pub mod pci;
+pub mod rtl8139;
 
 extern crate alloc;
 
@@ -107,6 +110,11 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
+
+    // Search for pci devices
+    unsafe {
+        pci::init();
+    };
     // unsafe {
     //     let apic = interrupts::APIC.lock();
     //     smp::init(&apic, &acpi);
@@ -121,6 +129,13 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     //     mem_mb += 1;
     // }
     // log::info!("Max physical memory: {} Gb", mem_mb / 1024);
+    use crate::pci::AsAny;
+    for device in pci::DEVICES.lock().iter() {
+        unsafe {
+            device.as_any().downcast::<rtl8139::Rtl8139>().init();
+        };
+    }
+    exit_qemu(QemuExitCode::Success);
 }
 
 /*
