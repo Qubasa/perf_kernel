@@ -26,7 +26,7 @@ impl Rtl8139 {
             addr: addr,
         }
     }
-    unsafe fn init(
+    pub unsafe fn init(
         &self,
         mapper: &mut impl Mapper<Size4KiB>,
         frame_allocator: &mut impl FrameAllocator<Size4KiB>,
@@ -88,12 +88,10 @@ impl Rtl8139 {
                 .unwrap();
             let flags =
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_CACHE;
-            unsafe {
                 mapper
                     .map_to(page, frame, flags, frame_allocator)
                     .unwrap()
-                    .flush()
-            };
+                    .flush();
         }
         log::info!("Reset succeeded");
     }
@@ -103,7 +101,7 @@ impl Device for Rtl8139 {
     unsafe fn purge(&self) {}
 }
 
-pub fn probe(dev: &PciDevice, addr: u32) -> Option<Arc<dyn Device>> {
+pub fn probe(dev: &PciDevice, addr: u32) -> Option<Arc<Rtl8139>> {
     if dev.header.vendor_id == 0x10EC && dev.header.device_id == 0x8139 {
         log::info!("Found pci device RTL8139");
         let device = Arc::new(Rtl8139::new(dev, addr));

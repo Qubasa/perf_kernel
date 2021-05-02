@@ -26,7 +26,7 @@ impl<T: Device + 'static> AsAny for T {
 
 /// An driver for a device. There are multiple instances of a driver for each
 /// device the driver handled during the probe process.
-pub trait Device: Send + Sync {
+pub trait Device: Send + Sync  {
     /// Invoked on a device when we're doing a soft reboot. This may be called
     /// from an exceptionally hostile environment (eg. inside of a panic inside
     /// of an NMI exception). The goal of this function for a driver is to
@@ -44,7 +44,7 @@ pub trait Device: Send + Sync {
     /// may have been interrupted mid-use.
     unsafe fn purge(&self);
 }
-type ProbeFunction = fn(&PciDevice, addr: u32) -> Option<Arc<dyn Device>>;
+type ProbeFunction = fn(&PciDevice, addr: u32) -> Option<Arc<crate::rtl8139::Rtl8139>>;
 
 /// List of all driver probe routines on the system. If they return `Some` then
 /// we successfully found a driver and thus we'll register it in the
@@ -63,7 +63,7 @@ pub const PCI_CONFIG_DATA: u16 = 0xcfc;
 /// Enable bit for accessing the `0xcf8` I/O port
 const PCI_ADDRESS_ENABLE: u32 = 1 << 31;
 
-pub static DEVICES: spin::Mutex<Vec<Arc<dyn Device>>> = spin::Mutex::new(Vec::new());
+pub static DEVICES: spin::Mutex<Vec<Arc<crate::rtl8139::Rtl8139>>> = spin::Mutex::new(Vec::new());
 
 /// Common PCI header for the PCI configuration space of any device or bridge
 #[derive(Clone, Copy, Debug)]

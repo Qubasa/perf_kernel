@@ -129,10 +129,9 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     //     mem_mb += 1;
     // }
     // log::info!("Max physical memory: {} Gb", mem_mb / 1024);
-    use crate::pci::AsAny;
     for device in pci::DEVICES.lock().iter() {
         unsafe {
-            device.as_any().downcast::<rtl8139::Rtl8139>().init();
+            device.init(&mut mapper, &mut frame_allocator);
         };
     }
     exit_qemu(QemuExitCode::Success);
