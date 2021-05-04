@@ -56,8 +56,6 @@ impl Rtl8139 {
             panic!("I/O space is disabled");
         }
 
-        // if test >> 16)
-
         let bar0 = self.dev.bar0;
         if bar0 & 1 == 0 {
             panic!("This driver should map to I/O space not to memory");
@@ -104,7 +102,17 @@ impl Rtl8139 {
             panic!("The interrupt line has been hardcoded for this CTF, please do not use more then one pci device");
         }
     }
+
+
+    pub fn receive_packet(&self){
+        let iobase = self.dev.bar0 & (!0b11);
+        let mut intr: Port<u16> = Port::new((iobase + 0x3E).try_into().unwrap());
+        unsafe {
+            intr.write(0x1); // clears the Rx OK bit
+        };
+    }
 }
+
 
 impl Device for Rtl8139 {
     unsafe fn purge(&self) {}

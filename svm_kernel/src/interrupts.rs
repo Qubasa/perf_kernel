@@ -1,6 +1,7 @@
 use crate::apic;
 use crate::gdt;
 use crate::print;
+use crate::pci;
 
 use pic8259_simple::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -128,7 +129,12 @@ use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
     log::info!("Received packet");
-    hlt_loop();
+    pci::DEVICES.lock()[0].receive_packet();
+
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Rtl8139.as_u8());
+    }
 }
 
 extern "x86-interrupt" fn page_fault_handler(
