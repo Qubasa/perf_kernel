@@ -11,25 +11,30 @@ pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
 // IDT index numbers
+// IMPORTANT: Fix to be migrated
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
     LegacyTimer = PIC_1_OFFSET,
     Keyboard, // 33
-    Reserved0,
+    Pic2,     // Secondary interrupt controller
     COM2,
     COM1,
     IRQ5, // 37
     FloppyController,
     MasterPicSpurious, // or parallel port interrupt
+
+    // Pic2
     RtcTimer,
     ACPI,
     ScsiNic1,
-    ScsiNic2,
+    Rtl8139,
     Mouse,
     MathCoProcessor,
     AtaChannel1,
     AtaChannel2,
+
+    // ??
     IRQ16,
     SlavePicSpurious,
     Timer = 0xe0,
@@ -44,8 +49,12 @@ impl InterruptIndex {
     pub fn as_usize(self) -> usize {
         usize::from(self.as_u8())
     }
+    //IMPORTAT: Fix to be migrated
     pub fn as_pic_enable_mask(self) -> u8 {
-        let diff = self.as_usize() - InterruptIndex::LegacyTimer.as_usize();
+        let mut diff = self.as_usize() - InterruptIndex::LegacyTimer.as_usize();
+        if diff > 7 {
+            diff -= 8;
+        }
         let mask = 0xff & !(1 << diff);
         mask as u8
     }
@@ -104,6 +113,8 @@ lazy_static::lazy_static! {
             .set_handler_fn(spurious_handler);
         idt[InterruptIndex::MasterPicSpurious.as_usize()]
             .set_handler_fn(spurious_handler);
+        idt[InterruptIndex::Rtl8139.as_usize()]
+            .set_handler_fn(received_packet);
         idt
     };
 }
@@ -114,6 +125,11 @@ pub fn load_idt() {
 
 use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
+
+extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
+    log::info!("Received packet");
+    hlt_loop();
+}
 
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,

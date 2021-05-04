@@ -39,7 +39,7 @@ impl Rtl8139 {
         if self.dev.header.command & (1 << 2) == 0 {
             log::info!("Making device to bus master...");
             let command = self.dev.header.command | (1 << 2);
-            let data: u32 = (self.dev.header.status as u32) << 16 | command as u32;
+            let data: u32 = command as u32;
             config_data_port.write(data);
         }
 
@@ -47,6 +47,16 @@ impl Rtl8139 {
         if (test as u16) != self.dev.header.command | (1 << 2) {
             panic!("This should be the same");
         }
+
+        if self.dev.header.command & (1 << 10) != 0 {
+            panic!("Interrupts are disabled");
+        }
+
+        if self.dev.header.command & (1 << 0) == 0 {
+            panic!("I/O space is disabled");
+        }
+
+        // if test >> 16)
 
         let bar0 = self.dev.bar0;
         if bar0 & 1 == 0 {
@@ -79,13 +89,20 @@ impl Rtl8139 {
         );
 
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
-        imr.write(0x5);  // Sets the TOK and ROK bits high
+        imr.write(0x5); // Sets the TOK and ROK bits high
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
-        rcr.write(0xf | (1<<7)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+        rcr.write(0xf | (1 << 7)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
 
         // Enable receiver and transmitter
         cmd.write(0xc);
+
+        log::info!("Interrupt line is: {}", self.dev.interrupt_line);
+        log::info!("Interrupt pin: {}", self.dev.interrupt_pin);
+
+        if self.dev.interrupt_line != 11 {
+            panic!("The interrupt line has been hardcoded for this CTF, please do not use more then one pci device");
+        }
     }
 }
 

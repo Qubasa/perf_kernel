@@ -7,6 +7,8 @@
       bridge-utils
       tunctl
       dhcp
+      gitAndTools.git-extras
+      arp-scan
       zlib.out
       rustup
       xorriso
