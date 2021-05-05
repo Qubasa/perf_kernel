@@ -115,25 +115,16 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     unsafe {
         pci::init();
     };
-    // unsafe {
-    //     let apic = interrupts::APIC.lock();
-    //     smp::init(&apic, &acpi);
-    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-    //         apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
-    //     }
-    // }
 
-    // let mut mem_mb = boot_info.max_phys_memory / 1024 / 1024;
-
-    // if mem_mb % 1024 == 1023 {
-    //     mem_mb += 1;
-    // }
-    // log::info!("Max physical memory: {} Gb", mem_mb / 1024);
-    for device in pci::DEVICES.lock().iter() {
-        unsafe {
+    x86_64::instructions::interrupts::without_interrupts(|| unsafe {
+        for device in pci::DEVICES.lock().iter() {
             device.init(&mut mapper, &mut frame_allocator);
-        };
-    }
+        }
+
+        for i in 0..20 {
+            pci::DEVICES.lock()[0].send(b"========= Hello World ==========");
+        }
+    });
     // exit_qemu(QemuExitCode::Success);
 }
 

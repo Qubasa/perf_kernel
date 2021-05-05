@@ -4,11 +4,12 @@ use core::convert::TryFrom;
 use core::convert::TryInto;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering;
+use modular_bitfield::prelude::*;
 use x86_64::addr::VirtAddr;
 use x86_64::instructions::port::Port;
+use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size2MiB};
-use modular_bitfield::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Rtl8139 {
@@ -29,7 +30,7 @@ pub struct TransmitStatusReg {
     pub cdh: B1,
     pub owc: B1,
     pub tabt: B1,
-    pub crs: B1
+    pub crs: B1,
 }
 
 static mut CURR_REG: usize = 0;
@@ -104,7 +105,14 @@ impl Rtl8139 {
         }
 
         let frame = frame_allocator.allocate_frame().unwrap();
-        crate::memory::id_map_nocache_update_flags(mapper, frame_allocator, frame, None).unwrap();
+        log::info!("Base frame allocated: {:?}", frame);
+        crate::memory::id_map_nocache_update_flags(
+            mapper,
+            frame_allocator,
+            frame,
+            Some(PageTableFlags::WRITABLE),
+        )
+        .unwrap();
         log::info!("Reset succeeded");
 
         let mut rbstart: Port<u32> = Port::new((iobase + 0x30).try_into().unwrap());
@@ -175,14 +183,14 @@ impl Rtl8139 {
         compiler_fence(Ordering::SeqCst);
 
         let mut done = status_reg.read();
-        while done & (1<<15) == 0 {
+        while done & (1 << 15) == 0 {
             done = status_reg.read();
         }
         log::info!("Successfully send packet");
 
         if CURR_REG >= 3 {
             CURR_REG = 0;
-        }else {
+        } else {
             CURR_REG += 1;
         }
     }
