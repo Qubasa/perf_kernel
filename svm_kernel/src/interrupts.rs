@@ -129,7 +129,7 @@ use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
     log::info!("Received packet");
-    pci::DEVICES.lock()[0].receive_packet();
+    pci::DEVICES.lock()[0].enable_receive_packet();
 
     unsafe {
         PICS.lock()

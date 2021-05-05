@@ -4,14 +4,41 @@ use core::convert::TryFrom;
 use core::convert::TryInto;
 use core::sync::atomic::compiler_fence;
 use core::sync::atomic::Ordering;
+use x86_64::addr::VirtAddr;
 use x86_64::instructions::port::Port;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size2MiB};
-#[derive(Debug, Copy, Clone)]
+use modular_bitfield::prelude::*;
+
+#[derive(Debug, Clone)]
 pub struct Rtl8139 {
     dev: PciDevice,
     addr: u32,
 }
+
+#[bitfield]
+#[derive(Debug, Clone, Copy)]
+pub struct TransmitStatusReg {
+    pub size: B13,
+    pub own: B1,
+    pub tun: B1,
+    pub tok: B1,
+    pub ertxth: B6,
+    pub resv0: B2,
+    pub ncc: B4,
+    pub cdh: B1,
+    pub owc: B1,
+    pub tabt: B1,
+    pub crs: B1
+}
+
+static mut CURR_REG: usize = 0;
+static mut TRANSMIT_REGS: [Option<Port<u32>>; 4] = [None; 4];
+static mut TRANSMIT_ADDR: [Option<VirtAddr>; 4] = [None; 4];
+static mut STATUS_REGS: [Option<Port<u32>>; 4] = [None; 4];
+
+const MAX_RECV_BUFFER: u64 = 4096 * 3; // Required are only 9708 but for alignment reasons
+const MAX_TRANS_BUFFER: u64 = 4096; // Required are only 1792
 
 impl Rtl8139 {
     pub fn new(dev: &PciDevice, addr: u32) -> Self {
@@ -86,6 +113,26 @@ impl Rtl8139 {
                 .expect("Frame allocator allocated frame outside of 4Gb range"),
         );
 
+        STATUS_REGS[0] = Some(Port::new((iobase + 0x10).try_into().unwrap()));
+        STATUS_REGS[1] = Some(Port::new((iobase + 0x14).try_into().unwrap()));
+        STATUS_REGS[2] = Some(Port::new((iobase + 0x18).try_into().unwrap()));
+        STATUS_REGS[3] = Some(Port::new((iobase + 0x1C).try_into().unwrap()));
+
+        TRANSMIT_REGS[0] = Some(Port::new((iobase + 0x20).try_into().unwrap()));
+        TRANSMIT_REGS[1] = Some(Port::new((iobase + 0x24).try_into().unwrap()));
+        TRANSMIT_REGS[2] = Some(Port::new((iobase + 0x28).try_into().unwrap()));
+        TRANSMIT_REGS[3] = Some(Port::new((iobase + 0x2C).try_into().unwrap()));
+
+        for (i, reg) in TRANSMIT_REGS.iter_mut().enumerate() {
+            let port = reg.as_mut().unwrap();
+            let addr: u32 =
+                (frame.start_address().as_u64() + MAX_RECV_BUFFER + (i as u64 * MAX_TRANS_BUFFER))
+                    .try_into()
+                    .unwrap();
+            TRANSMIT_ADDR[i] = Some(VirtAddr::new(addr as u64));
+            port.write(addr);
+        }
+
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
         imr.write(0x5); // Sets the TOK and ROK bits high
 
@@ -103,16 +150,43 @@ impl Rtl8139 {
         }
     }
 
-
-    pub fn receive_packet(&self){
+    pub fn enable_receive_packet(&self) {
         let iobase = self.dev.bar0 & (!0b11);
         let mut intr: Port<u16> = Port::new((iobase + 0x3E).try_into().unwrap());
         unsafe {
             intr.write(0x1); // clears the Rx OK bit
         };
     }
-}
 
+    pub unsafe fn send(&self, data: &[u8]) {
+        let status_reg = STATUS_REGS[CURR_REG].as_mut().unwrap();
+        let addr = TRANSMIT_ADDR[CURR_REG].unwrap();
+
+        log::info!("Copying to buffer {:#x} curr reg: {}", addr, CURR_REG);
+        core::ptr::copy_nonoverlapping(data.as_ptr(), addr.as_u64() as *mut u8, data.len());
+
+        compiler_fence(Ordering::SeqCst);
+
+        let status = TransmitStatusReg::new()
+            .with_own(0)
+            .with_size(data.len().try_into().unwrap());
+        status_reg.write(u32::from_le_bytes(status.into_bytes()));
+
+        compiler_fence(Ordering::SeqCst);
+
+        let mut done = status_reg.read();
+        while done & (1<<15) == 0 {
+            done = status_reg.read();
+        }
+        log::info!("Successfully send packet");
+
+        if CURR_REG >= 3 {
+            CURR_REG = 0;
+        }else {
+            CURR_REG += 1;
+        }
+    }
+}
 
 impl Device for Rtl8139 {
     unsafe fn purge(&self) {}
