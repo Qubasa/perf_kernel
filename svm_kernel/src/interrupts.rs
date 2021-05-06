@@ -128,11 +128,8 @@ use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
-    log::info!("Received packet");
-
     unsafe {
-        let packet = pci::DEVICES.lock()[0].receive_packet();
-        // log::info!("First 20 bytes: {:#x}", packet[0..20]);
+        pci::DEVICES.lock()[0].receive_packet();
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Rtl8139.as_u8());
     }

@@ -1,30 +1,8 @@
-use smoltcp::Result;
-use smoltcp::phy::{self, DeviceCapabilities, Device};
+use smoltcp::phy::{self, DeviceCapabilities};
 use smoltcp::time::Instant;
-use core::fmt;
+use smoltcp::Result;
 
 pub const MAX_ETHERNET_SIZE: usize = 1500;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum EtherType {
-    PacketLen = 1500,
-    Ipv4 = 0x0800,
-    Ipv6 = 0x86dd,
-    Arp = 0x0806,
-    WakeOnLan = 0x0842,
-    VlanTaggedFrame = 0x8100,
-    ProviderBridging = 0x88A8,
-    VlanDoubleTaggedFrame = 0x9100
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-pub struct EtherIIHeader {
-    pub source: [u8;6],
-    pub dest: [u8;6],
-    pub ether_type: u16
-}
-
 
 struct StmPhy {
     rx_buffer: [u8; 1536],
@@ -45,8 +23,10 @@ impl<'a> phy::Device<'a> for StmPhy {
     type TxToken = StmPhyTxToken<'a>;
 
     fn receive(&'a mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        Some((StmPhyRxToken(&mut self.rx_buffer[..]),
-              StmPhyTxToken(&mut self.tx_buffer[..])))
+        Some((
+            StmPhyRxToken(&mut self.rx_buffer[..]),
+            StmPhyTxToken(&mut self.tx_buffer[..]),
+        ))
     }
 
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
@@ -65,9 +45,21 @@ struct StmPhyRxToken<'a>(&'a mut [u8]);
 
 impl<'a> phy::RxToken for StmPhyRxToken<'a> {
     fn consume<R, F>(mut self, _timestamp: Instant, f: F) -> Result<R>
-        where F: FnOnce(&mut [u8]) -> Result<R>
+    where
+        F: FnOnce(&mut [u8]) -> Result<R>,
     {
-        // TODO: receive packet into buffer
+        let packet = unsafe {
+            x86_64::instructions::interrupts::without_interrupts(|| {
+                crate::rtl8139::PACKET_BUF
+                    .as_mut()
+                    .unwrap()
+                    .lock()
+                    .pop()
+                    .unwrap()
+            })
+        };
+        self.0.copy_from_slice(&packet);
+
         let result = f(&mut self.0);
         log::info!("rx called");
         result
@@ -78,11 +70,17 @@ struct StmPhyTxToken<'a>(&'a mut [u8]);
 
 impl<'a> phy::TxToken for StmPhyTxToken<'a> {
     fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> Result<R>
-        where F: FnOnce(&mut [u8]) -> Result<R>
+    where
+        F: FnOnce(&mut [u8]) -> Result<R>,
     {
         let result = f(&mut self.0[..len]);
         log::info!("tx called {}", len);
-        // TODO: send packet out
+
+        unsafe {
+            x86_64::instructions::interrupts::without_interrupts(|| {
+                crate::pci::DEVICES.lock()[0].send(&self.0[..len]);
+            });
+        };
         result
     }
 }

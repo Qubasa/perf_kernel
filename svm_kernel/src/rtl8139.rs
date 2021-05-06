@@ -1,5 +1,6 @@
 use crate::pci::{Device, PciDevice, PCI_CONFIG_ADDRESS, PCI_CONFIG_DATA};
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::convert::TryInto;
 use core::sync::atomic::compiler_fence;
@@ -10,7 +11,6 @@ use x86_64::instructions::port::Port;
 use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{FrameAllocator, Mapper, Size2MiB};
-
 #[derive(Debug, Clone)]
 pub struct Rtl8139 {
     dev: PciDevice,
@@ -42,6 +42,7 @@ static mut CAPR: Option<Port<u16>> = None;
 static mut CMD: Option<Port<u8>> = None;
 static mut RECV_BUF: Option<&[u8; MAX_RECV_BUFFER_SIZE]> = None;
 static mut READ_OFF: usize = 0;
+pub static mut PACKET_BUF: Option<spin::Mutex<Vec<Vec<u8>>>> = None;
 
 const MAX_RECV_BUFFER_SIZE: usize = 9708;
 const MAX_TRANS_BUFFER_SIZE: usize = 1792;
@@ -63,6 +64,8 @@ impl Rtl8139 {
     ) {
         let mut config_port: Port<u32> = Port::new(PCI_CONFIG_ADDRESS);
         let mut config_data_port: Port<u32> = Port::new(PCI_CONFIG_DATA);
+
+        PACKET_BUF = Some(spin::Mutex::new(Vec::new()));
 
         config_port.write(self.addr | 0x4);
 
@@ -174,7 +177,7 @@ impl Rtl8139 {
         }
     }
 
-    pub unsafe fn receive_packet(&self) -> [u8; MAX_RECV_BUFFER_SIZE] {
+    pub unsafe fn receive_packet(&self) {
         let intr: &mut Port<u16> = if let Some(i) = &mut INTR {
             i
         } else {
@@ -194,19 +197,18 @@ impl Rtl8139 {
         }
 
         let cmd = CMD.as_mut().unwrap();
-        let mut cmd_data = cmd.read();
 
         while cmd.read() & 1 == 0 {
-            log::info!("CAPR: {}", CAPR.as_mut().unwrap().read());
             let buf = &RECV_BUF.unwrap();
 
-            let mut size =
+            let size =
                 u16::from_le_bytes(buf[READ_OFF + 2..READ_OFF + 4].try_into().unwrap()) as usize;
-            log::info!("Packet size: {} bytes", size);
+
+            let buf = &buf[READ_OFF + 4..READ_OFF + size];
+            PACKET_BUF.as_mut().unwrap().lock().push(buf.to_vec());
 
             if size < 64 {
                 panic!("Packet size is smaller then 64");
-                break;
             }
 
             READ_OFF = (READ_OFF + size + 4 + 3) & !3;
@@ -223,7 +225,6 @@ impl Rtl8139 {
         }
 
         intr.write(1); // clears the Rx OK bit
-        [0; MAX_RECV_BUFFER_SIZE]
     }
 
     pub unsafe fn send(&self, data: &[u8]) {
