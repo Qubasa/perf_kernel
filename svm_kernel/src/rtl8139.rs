@@ -37,9 +37,16 @@ static mut CURR_REG: usize = 0;
 static mut TRANSMIT_REGS: [Option<Port<u32>>; 4] = [None; 4];
 static mut TRANSMIT_ADDR: [Option<VirtAddr>; 4] = [None; 4];
 static mut STATUS_REGS: [Option<Port<u32>>; 4] = [None; 4];
+static mut INTR: Option<Port<u16>> = None;
+static mut CAPR: Option<Port<u16>> = None;
+static mut CMD: Option<Port<u8>> = None;
+static mut RECV_BUF: Option<&[u8; MAX_RECV_BUFFER_SIZE]> = None;
+static mut READ_OFF: usize = 0;
 
-const MAX_RECV_BUFFER: u64 = 4096 * 3; // Required are only 9708 but for alignment reasons
-const MAX_TRANS_BUFFER: u64 = 4096; // Required are only 1792
+const MAX_RECV_BUFFER_SIZE: usize = 9708;
+const MAX_TRANS_BUFFER_SIZE: usize = 1792;
+const RECV_BUFFER_SIZE: u64 = 4096 * 3; // Required are only 9708 but for alignment reasons
+const TRANS_BUFFER_SIZE: u64 = 4096; // Required are only 1792
 
 impl Rtl8139 {
     pub fn new(dev: &PciDevice, addr: u32) -> Self {
@@ -99,6 +106,7 @@ impl Rtl8139 {
 
         let mut cmd: Port<u8> = Port::new((iobase + 0x37).try_into().unwrap());
         cmd.write(0x10); // reset
+        CMD = Some(cmd.clone());
         let mut data = cmd.read();
         while (data & 0x10) != 0 {
             data = cmd.read();
@@ -120,6 +128,11 @@ impl Rtl8139 {
             u32::try_from(frame.start_address().as_u64())
                 .expect("Frame allocator allocated frame outside of 4Gb range"),
         );
+        RECV_BUF = Some(
+            core::mem::transmute::<*const u8, &[u8; MAX_RECV_BUFFER_SIZE]>(
+                frame.start_address().as_u64() as *const u8,
+            ),
+        );
 
         STATUS_REGS[0] = Some(Port::new((iobase + 0x10).try_into().unwrap()));
         STATUS_REGS[1] = Some(Port::new((iobase + 0x14).try_into().unwrap()));
@@ -130,22 +143,25 @@ impl Rtl8139 {
         TRANSMIT_REGS[1] = Some(Port::new((iobase + 0x24).try_into().unwrap()));
         TRANSMIT_REGS[2] = Some(Port::new((iobase + 0x28).try_into().unwrap()));
         TRANSMIT_REGS[3] = Some(Port::new((iobase + 0x2C).try_into().unwrap()));
+        CAPR = Some(Port::new((iobase + 0x38).try_into().unwrap()));
 
         for (i, reg) in TRANSMIT_REGS.iter_mut().enumerate() {
             let port = reg.as_mut().unwrap();
-            let addr: u32 =
-                (frame.start_address().as_u64() + MAX_RECV_BUFFER + (i as u64 * MAX_TRANS_BUFFER))
-                    .try_into()
-                    .unwrap();
+            let addr: u32 = (frame.start_address().as_u64()
+                + RECV_BUFFER_SIZE
+                + (i as u64 * TRANS_BUFFER_SIZE))
+                .try_into()
+                .unwrap();
             TRANSMIT_ADDR[i] = Some(VirtAddr::new(addr as u64));
             port.write(addr);
         }
 
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
-        imr.write(0x5); // Sets the TOK and ROK bits high
+        imr.write(0x5 | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
-        rcr.write(0xf | (1 << 7)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+        let size = 0b00;
+        rcr.write((1 << 1) | (1 << 7) | (size << 11)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
 
         // Enable receiver and transmitter
         cmd.write(0xc);
@@ -158,17 +174,65 @@ impl Rtl8139 {
         }
     }
 
-    pub fn enable_receive_packet(&self) {
-        let iobase = self.dev.bar0 & (!0b11);
-        let mut intr: Port<u16> = Port::new((iobase + 0x3E).try_into().unwrap());
-        unsafe {
-            intr.write(0x1); // clears the Rx OK bit
+    pub unsafe fn receive_packet(&self) -> [u8; MAX_RECV_BUFFER_SIZE] {
+        let intr: &mut Port<u16> = if let Some(i) = &mut INTR {
+            i
+        } else {
+            let iobase = self.dev.bar0 & (!0b11);
+            let port = Port::new((iobase + 0x3E).try_into().unwrap());
+            INTR = Some(port.clone());
+            INTR.as_mut().unwrap()
         };
+
+        let status = intr.read();
+
+        if status & (1 << 6) != 0 {
+            panic!("RxFifo Overflow");
+        }
+        if status & (1 << 4) != 0 {
+            panic!("== Rx buffer overflow ==");
+        }
+
+        let cmd = CMD.as_mut().unwrap();
+        let mut cmd_data = cmd.read();
+
+        while cmd.read() & 1 == 0 {
+            log::info!("CAPR: {}", CAPR.as_mut().unwrap().read());
+            let buf = &RECV_BUF.unwrap();
+
+            let mut size =
+                u16::from_le_bytes(buf[READ_OFF + 2..READ_OFF + 4].try_into().unwrap()) as usize;
+            log::info!("Packet size: {} bytes", size);
+
+            if size < 64 {
+                panic!("Packet size is smaller then 64");
+                break;
+            }
+
+            READ_OFF = (READ_OFF + size + 4 + 3) & !3;
+
+            if READ_OFF > 8192 {
+                READ_OFF -= 8192;
+            }
+
+            if READ_OFF < 0x10 {
+                CAPR.as_mut().unwrap().write((READ_OFF) as u16);
+            } else {
+                CAPR.as_mut().unwrap().write((READ_OFF - 0x10) as u16);
+            }
+        }
+
+        intr.write(1); // clears the Rx OK bit
+        [0; MAX_RECV_BUFFER_SIZE]
     }
 
     pub unsafe fn send(&self, data: &[u8]) {
         let status_reg = STATUS_REGS[CURR_REG].as_mut().unwrap();
         let addr = TRANSMIT_ADDR[CURR_REG].unwrap();
+
+        if data.len() > MAX_TRANS_BUFFER_SIZE {
+            panic!("Trying to send packet that is bigger then 1792 bytes");
+        }
 
         log::info!("Copying to buffer {:#x} curr reg: {}", addr, CURR_REG);
         core::ptr::copy_nonoverlapping(data.as_ptr(), addr.as_u64() as *mut u8, data.len());

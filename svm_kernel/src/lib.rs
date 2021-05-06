@@ -121,9 +121,9 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
             device.init(&mut mapper, &mut frame_allocator);
         }
 
-        for i in 0..20 {
-            pci::DEVICES.lock()[0].send(b"========= Hello World ==========");
-        }
+        // for _ in 0..20 {
+        //     pci::DEVICES.lock()[0].send(b"========= Hello World ==========");
+        // }
     });
     // exit_qemu(QemuExitCode::Success);
 }

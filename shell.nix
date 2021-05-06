@@ -15,6 +15,8 @@
       grub2
       entr
       llvmPackages.lld
+      python38Packages.scapy
+      python38Packages.ipython
     ];
     shellHook = ''
       export HISTFILE=${toString ./.history}
