@@ -116,11 +116,15 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         pci::init();
     };
 
+    // Init pci devices
     x86_64::instructions::interrupts::without_interrupts(|| unsafe {
         for device in pci::DEVICES.lock().iter() {
             device.init(&mut mapper, &mut frame_allocator);
         }
     });
+
+    // Init networking
+    networking::init();
     // exit_qemu(QemuExitCode::Success);
 }
 

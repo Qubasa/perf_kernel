@@ -518,8 +518,21 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             apply_type_mut::<Elf64_Shdr>(header.e_shoff, header.e_shnum.into(), &mut buf).unwrap();
 
         for section in sections {
-            //TODO: If section does not map to load_segment what should we do?
-            let idx = addr_to_seg_map(section.sh_offset, &load_segments).unwrap();
+            // If section does not map to load_segment what should we do?
+            let idx = if let Some(idx) = addr_to_seg_map(section.sh_offset, &load_segments) {
+                idx
+            } else {
+                // Assume that it is at the end of the file
+                eprintln!("Section: {:#x?}", section);
+                eprintln!("Section does not map to load segment");
+                if section.sh_offset > load_segments.last().unwrap().p_offset {
+                    load_segments.len() - 1
+                } else {
+                    panic!(
+                        "Section is before last load segment but does not map to any load segment"
+                    );
+                }
+            };
             let already_padded = already_padded_vec[..idx].iter().sum::<usize>();
 
             section.sh_offset += already_padded as u64;
