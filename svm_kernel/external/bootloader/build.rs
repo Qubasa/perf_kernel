@@ -79,23 +79,23 @@ fn main() {
     // Strip debug symbols from kernel for faster loading
     let stripped_kernel_file_name = format!("kernel_stripped-{}", kernel_file_name);
     let stripped_kernel = out_dir.join(&stripped_kernel_file_name);
-    std::fs::copy(&Path::new(&kernel), &Path::new(&stripped_kernel)).unwrap();
+    // std::fs::copy(&Path::new(&kernel), &Path::new(&stripped_kernel)).unwrap();
     let objcopy = llvm_tools
         .tool(&llvm_tools::exe("llvm-objcopy"))
         .expect("llvm-objcopy not found in llvm-tools");
-    // {
-    //     let mut cmd = Command::new(&objcopy);
-    //     cmd.arg("--strip-debug");
-    //     cmd.arg(&kernel);
-    //     cmd.arg(&stripped_kernel);
-    //     let exit_status = cmd
-    //         .status()
-    //         .expect("failed to run objcopy to strip debug symbols");
-    //     if !exit_status.success() {
-    //         eprintln!("Error: Stripping debug symbols failed");
-    //         process::exit(1);
-    //     }
-    // }
+    {
+        let mut cmd = Command::new(&objcopy);
+        cmd.arg("--strip-debug");
+        cmd.arg(&kernel);
+        cmd.arg(&stripped_kernel);
+        let exit_status = cmd
+            .status()
+            .expect("failed to run objcopy to strip debug symbols");
+        if !exit_status.success() {
+            eprintln!("Error: Stripping debug symbols failed");
+            process::exit(1);
+        }
+    }
 
     pad_kernel(&stripped_kernel);
 

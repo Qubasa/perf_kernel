@@ -59,7 +59,9 @@ impl<'a> phy::RxToken for StmPhyRxToken<'a> {
             })
         }
         .ok_or(Error::Exhausted)?;
-        self.0.copy_from_slice(&packet);
+
+        let (one, _) = self.0.split_at_mut(packet.len());
+        one.copy_from_slice(&packet);
 
         let result = f(&mut self.0);
         log::info!("rx returned");

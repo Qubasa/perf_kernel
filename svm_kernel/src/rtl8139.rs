@@ -165,8 +165,12 @@ impl Rtl8139 {
         imr.write(0x5 | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
-        let size = 0b00;
-        rcr.write((1 << 1) | (1 << 7) | (size << 11)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+        let size = 0b00; // 8k buffer
+        rcr.write((1 << 1) // mac match
+            | (1 << 3) // broadcast
+            | (1 << 7) // wrap
+            | (size << 11) // buf size
+            );
 
         let mac_addr = self.read_mac_addr();
         log::info!(
