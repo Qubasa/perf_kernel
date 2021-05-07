@@ -52,7 +52,7 @@ SECTIONS {
         _p3 = .;
         . += 0x1000;
         _p2_tables_start = .;
-            . = (8M - 0x2000);
+            . += 0x4000; /* One p2 table equals 1Gb memory mapped */
         _p2_tables_end = .;
         . += 0x1000; /* First p1 table to map 0-2Mb with 4Kb pages*/
         _p1 = .;
