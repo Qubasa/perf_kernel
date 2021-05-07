@@ -1,7 +1,8 @@
-use log::{debug, error, info};
+use alloc::vec;
+use log::{error, info};
 use smoltcp::phy::{self, DeviceCapabilities};
+use smoltcp::Error;
 use smoltcp::Result;
-
 pub const MAX_ETHERNET_SIZE: usize = 1500;
 
 pub struct StmPhy {
@@ -55,13 +56,13 @@ impl<'a> phy::RxToken for StmPhyRxToken<'a> {
                     .unwrap()
                     .lock()
                     .pop_front()
-                    .unwrap()
             })
-        };
+        }
+        .ok_or(Error::Exhausted)?;
         self.0.copy_from_slice(&packet);
 
         let result = f(&mut self.0);
-        log::info!("rx called");
+        log::info!("rx returned");
         result
     }
 }
@@ -85,11 +86,12 @@ impl<'a> phy::TxToken for StmPhyTxToken<'a> {
     }
 }
 
-use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
-use smoltcp::phy::Loopback;
-use smoltcp::socket::{SocketSet, TcpSocket, TcpSocketBuffer};
+use smoltcp::dhcp::Dhcpv4Client;
+use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache, Routes};
+use smoltcp::socket::{RawPacketMetadata, RawSocketBuffer, SocketSet};
+use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
 use smoltcp::time::{Duration, Instant};
-use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr};
+use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address, Ipv4Cidr};
 
 mod mock {
     use core::cell::Cell;
@@ -115,110 +117,89 @@ mod mock {
 
 pub fn init() {
     let clock = mock::Clock::new();
-    let device = Loopback::new();
-    let mut ip_addrs = [IpCidr::new(IpAddress::v4(127, 0, 0, 1), 8)];
+    let device = StmPhy::new();
 
     let mut neighbor_cache_entries = [None; 8];
     let mut neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
 
-    let mut ip_addrs = [IpCidr::new(IpAddress::v4(127, 0, 0, 1), 8)];
+    let mut routes_storage = [None; 1];
+    let routes = Routes::new(&mut routes_storage[..]);
+
+    let ethernet_addr = unsafe { EthernetAddress(crate::rtl8139::MAC_ADDR.unwrap()) };
+    let mut ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
     let mut iface = EthernetInterfaceBuilder::new(device)
-        .ethernet_addr(EthernetAddress::default())
+        .ethernet_addr(ethernet_addr)
         .neighbor_cache(neighbor_cache)
         .ip_addrs(ip_addrs)
+        .routes(routes)
         .finalize();
 
-    let server_socket = {
-        // It is not strictly necessary to use a `static mut` and unsafe code here, but
-        // on embedded systems that smoltcp targets it is far better to allocate the data
-        // statically to verify that it fits into RAM rather than get undefined behavior
-        // when stack overflows.
-        static mut TCP_SERVER_RX_DATA: [u8; 1024] = [0; 1024];
-        static mut TCP_SERVER_TX_DATA: [u8; 1024] = [0; 1024];
-        let tcp_rx_buffer = TcpSocketBuffer::new(unsafe { &mut TCP_SERVER_RX_DATA[..] });
-        let tcp_tx_buffer = TcpSocketBuffer::new(unsafe { &mut TCP_SERVER_TX_DATA[..] });
-        TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer)
-    };
+    let mut sockets = SocketSet::new(vec![]);
+    let dhcp_rx_buffer = RawSocketBuffer::new([RawPacketMetadata::EMPTY; 1], vec![0; 900]);
+    let dhcp_tx_buffer = RawSocketBuffer::new([RawPacketMetadata::EMPTY; 1], vec![0; 600]);
+    let mut dhcp = Dhcpv4Client::new(
+        &mut sockets,
+        dhcp_rx_buffer,
+        dhcp_tx_buffer,
+        clock.elapsed(),
+    );
+    let mut prev_cidr = Ipv4Cidr::new(Ipv4Address::UNSPECIFIED, 0);
 
-    let client_socket = {
-        static mut TCP_CLIENT_RX_DATA: [u8; 1024] = [0; 1024];
-        static mut TCP_CLIENT_TX_DATA: [u8; 1024] = [0; 1024];
-        let tcp_rx_buffer = TcpSocketBuffer::new(unsafe { &mut TCP_CLIENT_RX_DATA[..] });
-        let tcp_tx_buffer = TcpSocketBuffer::new(unsafe { &mut TCP_CLIENT_TX_DATA[..] });
-        TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer)
-    };
+    loop {
+        let timestamp = clock.elapsed();
+        iface
+            .poll(&mut sockets, timestamp)
+            .map(|_| ())
+            .unwrap_or_else(|e| ());
 
-    let mut socket_set_entries: [_; 2] = Default::default();
-    let mut socket_set = SocketSet::new(&mut socket_set_entries[..]);
-    let server_handle = socket_set.add(server_socket);
-    let client_handle = socket_set.add(client_socket);
-
-    let mut did_listen = false;
-    let mut did_connect = false;
-    let mut done = false;
-    while !done && clock.elapsed() < Instant::from_millis(10_000) {
-        match iface.poll(&mut socket_set, clock.elapsed()) {
-            Ok(_) => {}
-            Err(e) => {
-                debug!("poll error: {}", e);
-            }
-        }
-
-        {
-            let mut socket = socket_set.get::<TcpSocket>(server_handle);
-            if !socket.is_active() && !socket.is_listening() {
-                if !did_listen {
-                    debug!("listening");
-                    socket.listen(1234).unwrap();
-                    did_listen = true;
+        let config = dhcp
+            .poll(&mut iface, &mut sockets, timestamp)
+            .unwrap_or_else(|e| {
+                info!("DHCP: {:?}", e);
+                None
+            });
+        config.map(|config| {
+            log::info!("DHCP config: {:?}", config);
+            if let Some(cidr) = config.address {
+                if cidr != prev_cidr {
+                    iface.update_ip_addrs(|addrs| {
+                        addrs.iter_mut().next().map(|addr| {
+                            *addr = IpCidr::Ipv4(cidr);
+                        });
+                    });
+                    prev_cidr = cidr;
+                    log::info!("Assigned a new IPv4 address: {}", cidr);
                 }
             }
 
-            if socket.can_recv() {
-                debug!(
-                    "got {:?}",
-                    socket.recv(|buffer| { (buffer.len(), core::str::from_utf8(buffer).unwrap()) })
-                );
-                socket.close();
-                done = true;
-            }
-        }
+            config
+                .router
+                .map(|router| iface.routes_mut().add_default_ipv4_route(router).unwrap());
+            iface.routes_mut().update(|routes_map| {
+                routes_map
+                    .get(&IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0))
+                    .map(|default_route| {
+                        log::info!("Default gateway: {}", default_route.via_router);
+                    });
+            });
 
-        {
-            let mut socket = socket_set.get::<TcpSocket>(client_handle);
-            if !socket.is_open() {
-                if !did_connect {
-                    debug!("connecting");
-                    socket
-                        .connect(
-                            (IpAddress::v4(127, 0, 0, 1), 1234),
-                            (IpAddress::Unspecified, 65000),
-                        )
-                        .unwrap();
-                    did_connect = true;
+            if config.dns_servers.iter().any(|s| s.is_some()) {
+                log::info!("DNS servers:");
+                for dns_server in config.dns_servers.iter().filter_map(|s| *s) {
+                    log::info!("- {}", dns_server);
                 }
             }
+        });
 
-            if socket.can_send() {
-                debug!("sending");
-                socket.send_slice(b"0123456789abcdef").unwrap();
-                socket.close();
-            }
-        }
-
-        match iface.poll_delay(&socket_set, clock.elapsed()) {
-            Some(Duration { millis: 0 }) => debug!("resuming"),
+        let mut timeout = dhcp.next_poll(timestamp);
+        //TODO: Missing delay?
+        match iface.poll_delay(&sockets, timestamp) {
+            Some(Duration { millis: 0 }) => (),
             Some(delay) => {
-                debug!("sleeping for {} ms", delay);
+                info!("sleeping for {} ms", delay);
                 clock.advance(delay)
             }
             None => clock.advance(Duration::from_millis(1)),
         }
-    }
-
-    if done {
-        info!("done")
-    } else {
-        error!("this is taking too long, bailing out")
-    }
+    } // end loop
 }

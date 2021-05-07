@@ -5,6 +5,7 @@ fn main() {}
 fn main() {
     use std::{
         env,
+        path::Path,
         path::PathBuf,
         process::{self, Command},
     };
@@ -78,22 +79,23 @@ fn main() {
     // Strip debug symbols from kernel for faster loading
     let stripped_kernel_file_name = format!("kernel_stripped-{}", kernel_file_name);
     let stripped_kernel = out_dir.join(&stripped_kernel_file_name);
+    std::fs::copy(&Path::new(&kernel), &Path::new(&stripped_kernel)).unwrap();
     let objcopy = llvm_tools
         .tool(&llvm_tools::exe("llvm-objcopy"))
         .expect("llvm-objcopy not found in llvm-tools");
-    {
-        let mut cmd = Command::new(&objcopy);
-        cmd.arg("--strip-debug");
-        cmd.arg(&kernel);
-        cmd.arg(&stripped_kernel);
-        let exit_status = cmd
-            .status()
-            .expect("failed to run objcopy to strip debug symbols");
-        if !exit_status.success() {
-            eprintln!("Error: Stripping debug symbols failed");
-            process::exit(1);
-        }
-    }
+    // {
+    //     let mut cmd = Command::new(&objcopy);
+    //     cmd.arg("--strip-debug");
+    //     cmd.arg(&kernel);
+    //     cmd.arg(&stripped_kernel);
+    //     let exit_status = cmd
+    //         .status()
+    //         .expect("failed to run objcopy to strip debug symbols");
+    //     if !exit_status.success() {
+    //         eprintln!("Error: Stripping debug symbols failed");
+    //         process::exit(1);
+    //     }
+    // }
 
     pad_kernel(&stripped_kernel);
 
@@ -444,9 +446,11 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + already_padded
             + 1;
 
-        for _ in 0..pad_size {
-            buf.insert(index, 0); // TODO: Make more efficient
-        }
+        let zero = std::iter::repeat(0).take(pad_size);
+        buf.splice(index..index, zero);
+        // for _ in 0..pad_size {
+        //     buf.insert(index, 0); // TODO: Make more efficient
+        // }
         // Sum of all applied pad sizes
         already_padded_vec.push(pad_size);
     }
@@ -461,9 +465,12 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + already_padded;
 
         eprintln!("Padding last load segment by: {:#x} bytes", pad_size);
-        for _ in 0..pad_size {
-            buf.insert(index, 0); // TODO: Make more efficient
-        }
+
+        let zero = std::iter::repeat(0).take(pad_size);
+        buf.splice(index..index, zero);
+        // for _ in 0..pad_size {
+        //     buf.insert(index, 0); // TODO: Make more efficient
+        // }
 
         already_padded_vec.push(pad_size);
     }
@@ -575,9 +582,13 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             let offset = section.sh_offset as usize;
             // Edge case: bss section lies outside of the padded file
             if offset + section.sh_size as usize > buf.len() {
-                for _ in 0..(offset + section.sh_size as usize - buf.len()) {
-                    buf.push(0); // TODO: Make more efficient
-                }
+                let pad_size = offset + section.sh_size as usize - buf.len();
+                let buf_len = buf.len();
+                let zero = std::iter::repeat(0).take(pad_size);
+                buf.resize(buf_len + pad_size, 0);
+                // for _ in 0..(offset + section.sh_size as usize - buf.len()) {
+                //     buf.push(0); // TODO: Make more efficient
+                // }
             }
             let bss = &mut buf[offset..offset + section.sh_size as usize];
             for i in bss {

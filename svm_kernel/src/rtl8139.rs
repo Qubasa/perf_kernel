@@ -1,7 +1,7 @@
 use crate::pci::{Device, PciDevice, PCI_CONFIG_ADDRESS, PCI_CONFIG_DATA};
+use alloc::collections::vec_deque::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use alloc::collections::vec_deque::VecDeque;
 use core::convert::TryFrom;
 use core::convert::TryInto;
 use core::sync::atomic::compiler_fence;
@@ -44,6 +44,7 @@ static mut CMD: Option<Port<u8>> = None;
 static mut RECV_BUF: Option<&[u8; MAX_RECV_BUFFER_SIZE]> = None;
 static mut READ_OFF: usize = 0;
 pub static mut PACKET_BUF: Option<spin::Mutex<VecDeque<Vec<u8>>>> = None;
+pub static mut MAC_ADDR: Option<[u8; 6]> = None;
 
 const MAX_RECV_BUFFER_SIZE: usize = 9708;
 const MAX_TRANS_BUFFER_SIZE: usize = 1792;
@@ -167,6 +168,18 @@ impl Rtl8139 {
         let size = 0b00;
         rcr.write((1 << 1) | (1 << 7) | (size << 11)); // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
 
+        let mac_addr = self.read_mac_addr();
+        log::info!(
+            "MAC addr is: {:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
+            mac_addr[0],
+            mac_addr[1],
+            mac_addr[2],
+            mac_addr[3],
+            mac_addr[4],
+            mac_addr[5]
+        );
+        MAC_ADDR = Some(mac_addr);
+
         // Enable receiver and transmitter
         cmd.write(0xc);
 
@@ -176,6 +189,19 @@ impl Rtl8139 {
         if self.dev.interrupt_line != 11 {
             panic!("The interrupt line has been hardcoded for this CTF, please do not use more then one pci device");
         }
+    }
+
+    pub unsafe fn read_mac_addr(&self) -> [u8; 6] {
+        let iobase = self.dev.bar0 & (!0b11);
+        let mut idr0: Port<u32> = Port::new((iobase + 0x0).try_into().unwrap());
+        let mut idr1: Port<u16> = Port::new((iobase + 0x4).try_into().unwrap());
+        let mac1 = idr0.read().to_le_bytes();
+        let mac2 = idr1.read().to_le_bytes();
+        let mut res = [0u8; 6];
+        let (one, two) = res.split_at_mut(mac1.len());
+        one.copy_from_slice(&mac1);
+        two.copy_from_slice(&mac2);
+        res
     }
 
     pub unsafe fn receive_packet(&self) {
