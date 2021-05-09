@@ -23,7 +23,7 @@ spin = "0.6.0"
 x86_64 = {path= "external/x86_64"}
 modular-bitfield = "0.10.0"
 bootloader = { path="external/bootloader" }
-smoltcp = {version = "0.7.1", default-features = false, features= [ "log", "alloc", "proto-ipv4",
+smoltcp = {path="external/smoltcp", default-features = false, features= [ "log", "alloc", "proto-ipv4",
 "proto-igmp", "proto-dhcpv4", "proto-ipv6", "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"]}
 
 [dependencies.lazy_static]

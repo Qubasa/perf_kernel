@@ -121,10 +121,13 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         for device in pci::DEVICES.lock().iter() {
             device.init(&mut mapper, &mut frame_allocator);
         }
+        loop {
+            crate::pci::DEVICES.lock()[0].send(b"Hello World");
+        }
     });
 
     // Init networking
-    networking::init();
+    // networking::init();
     // exit_qemu(QemuExitCode::Success);
 }
 

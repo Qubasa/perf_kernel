@@ -17,6 +17,7 @@
       llvmPackages.lld
       python38Packages.scapy
       python38Packages.ipython
+      dnsmasq
     ];
     shellHook = ''
       export HISTFILE=${toString ./.history}
