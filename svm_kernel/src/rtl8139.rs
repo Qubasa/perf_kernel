@@ -110,8 +110,8 @@ impl Rtl8139 {
         compiler_fence(Ordering::SeqCst);
 
         let mut cmd: Port<u8> = Port::new((iobase + 0x37).try_into().unwrap());
-        cmd.write(0x10); // reset
         CMD = Some(cmd.clone());
+        cmd.write(0x10); // reset
         let mut data = cmd.read();
         while (data & 0x10) != 0 {
             data = cmd.read();
@@ -163,6 +163,7 @@ impl Rtl8139 {
 
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
         imr.write((1<<0) | (1<<3) | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
+        // imr.write(0x5);
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
         let size = 0b00; // 8k buffer
@@ -232,7 +233,7 @@ impl Rtl8139 {
         if status & (1 << 3) != 0 {
             panic!("Transmit error");
         }
-        log::info!("Status: {:#x}", status);
+        // log::info!("Status: {:#x}", status);
         let cmd = CMD.as_mut().unwrap();
 
         while cmd.read() & 1 == 0 {
