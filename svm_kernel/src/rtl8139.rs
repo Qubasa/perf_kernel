@@ -162,7 +162,7 @@ impl Rtl8139 {
         }
 
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
-        imr.write((1<<0) | (1<<3) | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
+        imr.write((1 << 0) | (1 << 3) | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
         let size = 0b00; // 8k buffer
@@ -283,7 +283,6 @@ impl Rtl8139 {
         compiler_fence(Ordering::SeqCst);
 
         while status_reg.read() & (1 << 15) == 0 {}
-        // log::info!("Successfully send packet");
 
         if CURR_REG >= 3 {
             CURR_REG = 0;

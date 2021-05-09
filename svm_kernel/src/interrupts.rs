@@ -128,7 +128,6 @@ use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
 
 extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
-    log::info!("receive packet interrupt");
     unsafe {
         pci::DEVICES.lock()[0].receive_packet();
         PICS.lock()
