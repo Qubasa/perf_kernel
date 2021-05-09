@@ -163,7 +163,6 @@ impl Rtl8139 {
 
         let mut imr: Port<u16> = Port::new((iobase + 0x3C).try_into().unwrap());
         imr.write((1<<0) | (1<<3) | (1 << 6) | (1 << 4)); // Sets the TOK and ROK bits high
-        // imr.write(0x5);
 
         let mut rcr: Port<u32> = Port::new((iobase + 0x44).try_into().unwrap());
         let size = 0b00; // 8k buffer
@@ -174,7 +173,6 @@ impl Rtl8139 {
             | (1 << 7) // wrap
             | (size << 11), // buf size
         );
-        // rcr.write(0xf | (1<<7));
 
         let mac_addr = self.read_mac_addr();
         log::info!(
@@ -233,7 +231,6 @@ impl Rtl8139 {
         if status & (1 << 3) != 0 {
             panic!("Transmit error");
         }
-        // log::info!("Status: {:#x}", status);
         let cmd = CMD.as_mut().unwrap();
 
         while cmd.read() & 1 == 0 {

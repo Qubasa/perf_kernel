@@ -122,7 +122,7 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
             device.init(&mut mapper, &mut frame_allocator);
         }
         for _ in 0..10 {
-            crate::pci::DEVICES.lock()[0].send(b"Hello World");
+            crate::pci::DEVICES.lock()[0].send(b"========= Hello World ==========");
         }
     });
 
