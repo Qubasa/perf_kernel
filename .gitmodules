@@ -7,6 +7,3 @@
 [submodule "svm_kernel/external/x86"]
 	path = svm_kernel/external/x86
 	url = git@github.com:Luis-Hebendanz/x86_64.git
-[submodule "svm_kernel/external/smoltcp"]
-	path = svm_kernel/external/smoltcp
-	url = git@github.com:smoltcp-rs/smoltcp.git
