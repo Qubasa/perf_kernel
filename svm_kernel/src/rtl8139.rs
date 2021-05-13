@@ -270,7 +270,7 @@ impl Rtl8139 {
             panic!("Trying to send packet that is bigger then 1792 bytes");
         }
 
-        log::info!("Copying to buffer {:#x} curr reg: {}", addr, CURR_REG);
+        // log::info!("Copying to buffer {:#x} curr reg: {}", addr, CURR_REG);
         core::ptr::copy_nonoverlapping(data.as_ptr(), addr.as_u64() as *mut u8, data.len());
 
         compiler_fence(Ordering::SeqCst);

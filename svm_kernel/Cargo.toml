@@ -32,8 +32,8 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-# run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-s", "-S"]
-run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "tap,id=mynet0,ifname=tap0,script=no,downscript=no", "-device", "rtl8139,netdev=mynet0,mac=52:55:00:d1:55:01"]
+run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "tap,id=mynet0,ifname=tap0,script=no,downscript=no", "-device", "rtl8139,netdev=mynet0,mac=52:55:00:d1:55:01"]
+# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "tap,id=mynet0,ifname=tap0,script=no,downscript=no", "-device", "rtl8139,netdev=mynet0,mac=52:55:00:d1:55:01"]
 # run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "user,id=mynet0,hostfwd=tcp::8080-:80", "-device", "rtl8139,netdev=mynet0"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "4G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
 # build-command = ["build", "--release"]

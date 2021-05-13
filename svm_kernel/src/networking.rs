@@ -1,5 +1,5 @@
 use alloc::vec;
-use log::{error, info};
+use log::info;
 use smoltcp::phy::{self, DeviceCapabilities};
 use smoltcp::Error;
 use smoltcp::Result;
@@ -64,7 +64,6 @@ impl<'a> phy::RxToken for StmPhyRxToken<'a> {
         one.copy_from_slice(&packet);
 
         let result = f(&mut self.0);
-        log::info!("rx returned len: {}", packet.len());
         result
     }
 }
@@ -77,14 +76,12 @@ impl<'a> phy::TxToken for StmPhyTxToken<'a> {
         F: FnOnce(&mut [u8]) -> Result<R>,
     {
         let result = f(&mut self.0[..len]);
-        log::info!("========== tx called {} ===========", len);
 
         unsafe {
             x86_64::instructions::interrupts::without_interrupts(|| {
                 crate::pci::DEVICES.lock()[0].send(&self.0[..len]);
             });
         };
-        log::info!("Done sending");
         result
     }
 }
@@ -92,9 +89,8 @@ impl<'a> phy::TxToken for StmPhyTxToken<'a> {
 use smoltcp::dhcp::Dhcpv4Client;
 use smoltcp::iface::{InterfaceBuilder, NeighborCache, Routes};
 use smoltcp::socket::{RawPacketMetadata, RawSocketBuffer, SocketSet};
-use smoltcp::socket::{TcpSocket, TcpSocketBuffer};
 use smoltcp::time::{Duration, Instant};
-use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr, Ipv4Address, Ipv4Cidr};
+use smoltcp::wire::{EthernetAddress, IpCidr, Ipv4Address, Ipv4Cidr};
 
 mod mock {
     use core::cell::Cell;
@@ -118,19 +114,18 @@ mod mock {
     }
 }
 
-pub fn init() {
+pub fn init() -> Ipv4Cidr {
     let clock = mock::Clock::new();
     let device = StmPhy::new();
 
-
     let mut neighbor_cache_entries = [None; 8];
-    let mut neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
+    let neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
 
     let mut routes_storage = [None; 1];
     let routes = Routes::new(&mut routes_storage[..]);
 
     let ethernet_addr = unsafe { EthernetAddress(crate::rtl8139::MAC_ADDR.unwrap()) };
-    let mut ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
+    let ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
     let mut iface = InterfaceBuilder::new(device)
         .ethernet_addr(ethernet_addr)
         .neighbor_cache(neighbor_cache)
@@ -148,20 +143,25 @@ pub fn init() {
         clock.elapsed(),
     );
     let mut prev_cidr = Ipv4Cidr::new(Ipv4Address::UNSPECIFIED, 0);
-    let mut last_timestamp  = 0;
+    let mut last_timestamp = 0;
 
     loop {
         let timestamp = clock.elapsed();
 
         if last_timestamp != timestamp.millis {
-            log::info!("timestamp: {}", timestamp.millis);
+            log::debug!("timestamp: {}", timestamp.millis);
             last_timestamp = timestamp.millis;
         }
 
-        iface
-            .poll(&mut sockets, timestamp)
-            .map(|_| ())
-            .unwrap_or_else(|e| ( log::error!("Poll err: {}", e)));
+        loop {
+            match iface.poll(&mut sockets, timestamp) {
+                Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
+                Err(err) => panic!("Iface error: {}", err),
+                Ok(_) => break,
+            }
+            crate::time::sleep(1000);
+            clock.advance(Duration { millis: 1 });
+        }
 
         let config = dhcp
             .poll(&mut iface, &mut sockets, timestamp)
@@ -201,25 +201,5 @@ pub fn init() {
                 }
             }
         });
-
-        let mut timeout = dhcp.next_poll(timestamp);
-        if timeout.millis > 0 {
-            log::info!("timeout: {:#?}", timeout.millis);
-            crate::time::sleep(timeout.millis * 1000 / 3);
-            clock.advance(timeout);
-        } else {
-            // log::info!("sleeping");
-            crate::time::sleep(1000);
-            clock.advance(Duration { millis: 1 });
-        }
-        //TODO: Missing delay?
-        // match iface.poll_delay(&sockets, timestamp) {
-        //     Some(Duration { millis: 0 }) => (),
-        //     Some(delay) => {
-        //         info!("sleeping for {} ms", delay);
-        //         clock.advance(delay)
-        //     }
-        //     None => clock.advance(Duration::from_millis(1)),
-        // }
     } // end loop
 }

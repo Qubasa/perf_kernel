@@ -38,7 +38,7 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Debug);
+    log::set_max_level(log::LevelFilter::Info);
 
     let rsp: u64;
     unsafe {

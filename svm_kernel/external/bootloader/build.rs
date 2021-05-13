@@ -5,7 +5,6 @@ fn main() {}
 fn main() {
     use std::{
         env,
-        path::Path,
         path::PathBuf,
         process::{self, Command},
     };
@@ -79,6 +78,7 @@ fn main() {
     // Strip debug symbols from kernel for faster loading
     let stripped_kernel_file_name = format!("kernel_stripped-{}", kernel_file_name);
     let stripped_kernel = out_dir.join(&stripped_kernel_file_name);
+    // use std::path::Path;
     // std::fs::copy(&Path::new(&kernel), &Path::new(&stripped_kernel)).unwrap();
     let objcopy = llvm_tools
         .tool(&llvm_tools::exe("llvm-objcopy"))
@@ -584,7 +584,6 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             if offset + section.sh_size as usize > buf.len() {
                 let pad_size = offset + section.sh_size as usize - buf.len();
                 let buf_len = buf.len();
-                let zero = std::iter::repeat(0).take(pad_size);
                 buf.resize(buf_len + pad_size, 0);
                 // for _ in 0..(offset + section.sh_size as usize - buf.len()) {
                 //     buf.push(0); // TODO: Make more efficient
