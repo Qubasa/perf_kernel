@@ -114,7 +114,7 @@ mod mock {
     }
 }
 
-pub fn init() -> Ipv4Cidr {
+pub fn init() {
     let clock = mock::Clock::new();
     let device = StmPhy::new();
 
@@ -145,6 +145,7 @@ pub fn init() -> Ipv4Cidr {
     let mut prev_cidr = Ipv4Cidr::new(Ipv4Address::UNSPECIFIED, 0);
     let mut last_timestamp = 0;
 
+    log::info!("Trying to get an IP through DHCP...");
     loop {
         let timestamp = clock.elapsed();
 
@@ -153,14 +154,16 @@ pub fn init() -> Ipv4Cidr {
             last_timestamp = timestamp.millis;
         }
 
-        loop {
-            match iface.poll(&mut sockets, timestamp) {
-                Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
-                Err(err) => panic!("Iface error: {}", err),
-                Ok(_) => break,
-            }
-            crate::time::sleep(1000);
-            clock.advance(Duration { millis: 1 });
+        if timestamp.millis > 60000 * 2 {
+            panic!("More or equal to 1/ms unrecognized packets since 2 minute");
+        }
+
+        // NOTE: If more then 1 unrecognized packet per millisecond in the network
+        // we will be trapped in here
+        match iface.poll(&mut sockets, timestamp) {
+            Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
+            Err(err) => panic!("Iface error: {}", err),
+            Ok(_) => (),
         }
 
         let config = dhcp
@@ -169,7 +172,7 @@ pub fn init() -> Ipv4Cidr {
                 info!("DHCP ERROR: {:?}", e);
                 None
             });
-        config.map(|config| {
+        if let Some(config) = config {
             log::info!("DHCP config: {:?}", config);
             if let Some(cidr) = config.address {
                 if cidr != prev_cidr {
@@ -200,6 +203,17 @@ pub fn init() -> Ipv4Cidr {
                     log::info!("- {}", dns_server);
                 }
             }
-        });
+            break;
+        };
+
+        let mut timeout = Duration { millis: 0 };
+        iface
+            .poll_delay(&sockets, timestamp)
+            .map(|sockets_timeout| timeout = sockets_timeout);
+        if timeout.millis == 0 {
+            timeout = Duration { millis: 1 };
+        }
+        crate::time::sleep(timeout.millis * 1000);
+        clock.advance(timeout);
     } // end loop
 }

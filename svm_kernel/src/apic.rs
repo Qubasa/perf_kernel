@@ -114,14 +114,14 @@ impl Apic {
     unsafe fn init_chained_pics(&self, acpi: &Acpi) {
         PICS.lock().initialize();
         if !acpi.mask_pics {
-            log::info!("Virtual wire mode is active");
+            // log::info!("Virtual wire mode is active");
             let keyboard_enable = InterruptIndex::Keyboard.as_pic_enable_mask();
             let serial_enable = InterruptIndex::COM1.as_pic_enable_mask()
                 & InterruptIndex::COM2.as_pic_enable_mask();
             //TODO: hardcoded should be dynamic throug pci table
             let rtl8139 = InterruptIndex::Rtl8139.as_pic_enable_mask();
             let pic2 = InterruptIndex::Pic2.as_pic_enable_mask();
-            log::info!("rtl8139 mask: {:#x}", rtl8139);
+            // log::info!("rtl8139 mask: {:#x}", rtl8139);
             PICS.lock().mask(keyboard_enable & serial_enable & pic2, rtl8139);
             // PICS.lock().mask(0, 0);
         } else {

@@ -77,7 +77,7 @@ impl Rtl8139 {
         }
 
         if self.dev.header.command & (1 << 2) == 0 {
-            log::info!("Making device to bus master...");
+            log::debug!("Making device to bus master...");
             let command = self.dev.header.command | (1 << 2);
             let data: u32 = command as u32;
             config_data_port.write(data);
@@ -118,7 +118,7 @@ impl Rtl8139 {
         }
 
         let frame = frame_allocator.allocate_frame().unwrap();
-        log::info!("Base frame allocated: {:?}", frame);
+        log::debug!("Base frame allocated: {:?}", frame);
         crate::memory::id_map_nocache_update_flags(
             mapper,
             frame_allocator,
@@ -126,7 +126,7 @@ impl Rtl8139 {
             Some(PageTableFlags::WRITABLE),
         )
         .unwrap();
-        log::info!("Reset succeeded");
+        log::debug!("Reset succeeded");
 
         let mut rbstart: Port<u32> = Port::new((iobase + 0x30).try_into().unwrap());
         rbstart.write(
@@ -189,8 +189,8 @@ impl Rtl8139 {
         // Enable receiver and transmitter
         cmd.write(0xc);
 
-        log::info!("Interrupt line is: {}", self.dev.interrupt_line);
-        log::info!("Interrupt pin: {}", self.dev.interrupt_pin);
+        log::debug!("Interrupt line is: {}", self.dev.interrupt_line);
+        log::debug!("Interrupt pin: {}", self.dev.interrupt_pin);
 
         if self.dev.interrupt_line != 11 {
             panic!("The interrupt line has been hardcoded for this CTF, please do not use more then one pci device");
