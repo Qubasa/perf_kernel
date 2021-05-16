@@ -231,6 +231,26 @@ pub fn init() {
     server(&mut iface);
 }
 
+pub static mut ADMN_CTRL: &str = "MySecretPassword";
+
+#[derive(Debug)]
+#[allow(dead_code)]
+#[repr(u8)]
+enum RemoteFunction {
+    Uknown(u8),
+    AdmnCtrl,
+}
+
+impl ::core::convert::From<u8> for RemoteFunction {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => RemoteFunction::Uknown(0),
+            1 => RemoteFunction::AdmnCtrl,
+            i => RemoteFunction::Uknown(i),
+        }
+    }
+}
+
 //TODO: Increase heap size
 //TODO: Somehow non icmp packets have to be discarded from the queue
 pub fn server(iface: &mut Interface<'_, StmPhy>) {
@@ -260,8 +280,32 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
 
             if socket.can_recv() {
                 let (payload, remote) = socket.recv().unwrap();
-                log::info!("Received packet from: {:?}", remote);
-                log::info!("With payload: {:#x?}", payload.iter());
+                let payload = &payload[8..];
+                log::info!("Received packet from: {}", remote);
+                log::debug!("With payload: {:#x?}", payload.iter());
+                if payload.len() < 1 {
+                    log::info!("Payload len is only: {}", payload.len());
+                    continue;
+                }
+                let id = payload[0];
+                match RemoteFunction::from(id) {
+                    RemoteFunction::Uknown(id) => {
+                        log::error!("Uknown remote function with id: {}", id);
+                    }
+                    RemoteFunction::AdmnCtrl => {
+                        log::info!("Executing admin control...");
+                        unsafe {
+                            if payload.len() < ADMN_CTRL.len() {
+                                log::info!("payload is too small");
+                                continue;
+                            }
+                            let pwd = &payload[1..ADMN_CTRL.len()];
+                            if pwd == ADMN_CTRL.as_bytes() {
+                                log::info!("==== Success!!!!! =====");
+                            }
+                        };
+                    }
+                }
             }
         }
 
