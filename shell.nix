@@ -18,6 +18,7 @@
       python38Packages.scapy
       python38Packages.ipython
       dnsmasq
+      docker-compose
     ];
     shellHook = ''
       export HISTFILE=${toString ./.history}

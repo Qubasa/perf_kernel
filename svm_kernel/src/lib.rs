@@ -1,4 +1,5 @@
 #![feature(result_contains_err)]
+#![feature(stmt_expr_attributes)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]

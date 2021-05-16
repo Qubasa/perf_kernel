@@ -233,23 +233,40 @@ impl Rtl8139 {
         }
         let cmd = CMD.as_mut().unwrap();
 
+        let mut prev_packet_size = 0;
+        let mut prev_read_off = 0;
         while cmd.read() & 1 == 0 {
             let buf = &RECV_BUF.unwrap();
 
             let size =
                 u16::from_le_bytes(buf[READ_OFF + 2..READ_OFF + 4].try_into().unwrap()) as usize;
 
+            if buf.len() < READ_OFF+size || size < 64 {
+                log::error!("Prev packet size: {}", prev_packet_size);
+                log::error!("Prev read offset: {}", prev_read_off);
+                log::error!("Received packet of size: {:#x}", size);
+                log::error!("Read offset is at: {}", READ_OFF);
+                log::error!("\n=== 100 Bytes Packet Dump ===: \n");
+                for (i, val) in buf[0..READ_OFF+20].iter().enumerate() {
+                    if i % 20 == 0 {
+                        crate::print!("\n{}: ",i);
+                    }
+                    crate::print!("{:#x} ", val);
+                }
+                log::error!("\n===== END OF DUMP ======");
+            }
+
+            //TODO: panic here sometimes
             let buf = &buf[READ_OFF + 4..READ_OFF + size];
             PACKET_BUF.as_mut().unwrap().lock().push_back(buf.to_vec());
 
-            if size < 64 {
-                panic!("Packet size is smaller then 64");
-            }
 
+            prev_packet_size = size;
+            prev_read_off = READ_OFF;
             READ_OFF = (READ_OFF + size + 4 + 3) & !3;
 
-            if READ_OFF > 8192 {
-                READ_OFF -= 8192;
+            if READ_OFF >= 8192 {
+                READ_OFF = 0;
             }
 
             if READ_OFF < 0x10 {

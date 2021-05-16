@@ -1,0 +1,23 @@
+version: '3'
+services:
+  # Give your container proper names!
+  n0t3b00k-checker:
+    build: .
+    # The checker runs a HTTP interfaces, so we need to map port 3031 to the outside (port 8000).
+    ports:
+      - 8000:3031
+    environment:
+     - MONGO_ENABLED=1
+     - MONGO_HOST=n0t3b00k-mongo
+     - MONGO_PORT=27017
+     - MONGO_USER=n0t3b00k_checker
+     - MONGO_PASSWORD=n0t3b00k_checker
+
+  # The python checkerlib requires a mongo db!
+  n0t3b00k-mongo:
+    image: mongo
+    volumes:
+      - ./data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: n0t3b00k_checker
+      MONGO_INITDB_ROOT_PASSWORD: n0t3b00k_checker

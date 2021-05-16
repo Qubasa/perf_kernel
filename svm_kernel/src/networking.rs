@@ -114,24 +114,8 @@ mod mock {
     }
 }
 
-pub fn init() {
+pub fn get_dhcp(iface: &mut Interface<'_, StmPhy>) {
     let clock = mock::Clock::new();
-    let device = StmPhy::new();
-
-    let mut neighbor_cache_entries = [None; 8];
-    let neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
-
-    let mut routes_storage = [None; 1];
-    let routes = Routes::new(&mut routes_storage[..]);
-
-    let ethernet_addr = unsafe { EthernetAddress(crate::rtl8139::MAC_ADDR.unwrap()) };
-    let ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
-    let mut iface = InterfaceBuilder::new(device)
-        .ethernet_addr(ethernet_addr)
-        .neighbor_cache(neighbor_cache)
-        .ip_addrs(ip_addrs)
-        .routes(routes)
-        .finalize();
 
     let mut sockets = SocketSet::new(vec![]);
     let dhcp_rx_buffer = RawSocketBuffer::new([RawPacketMetadata::EMPTY; 1], vec![0; 1200]);
@@ -142,6 +126,7 @@ pub fn init() {
         dhcp_tx_buffer,
         clock.elapsed(),
     );
+
     let mut prev_cidr = Ipv4Cidr::new(Ipv4Address::UNSPECIFIED, 0);
     let mut last_timestamp = 0;
 
@@ -167,7 +152,7 @@ pub fn init() {
         }
 
         let config = dhcp
-            .poll(&mut iface, &mut sockets, timestamp)
+            .poll(iface, &mut sockets, timestamp)
             .unwrap_or_else(|e| {
                 info!("DHCP ERROR: {:?}", e);
                 None
@@ -181,7 +166,10 @@ pub fn init() {
                             *addr = IpCidr::Ipv4(cidr);
                         });
                     });
+
+                    #[allow(unused_assignments)]
                     prev_cidr = cidr;
+
                     log::info!("Assigned a new IPv4 address: {}", cidr);
                 }
             }
@@ -216,4 +204,75 @@ pub fn init() {
         crate::time::sleep(timeout.millis * 1000);
         clock.advance(timeout);
     } // end loop
+}
+
+use smoltcp::iface::Interface;
+use smoltcp::socket::*;
+
+pub fn init() {
+    let device = StmPhy::new();
+
+    let mut neighbor_cache_entries = [None; 8];
+    let neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
+    let mut routes_storage = [None; 1];
+    let routes = Routes::new(&mut routes_storage[..]);
+
+    let ethernet_addr = unsafe { EthernetAddress(crate::rtl8139::MAC_ADDR.unwrap()) };
+    let ip_addrs = [IpCidr::new(Ipv4Address::UNSPECIFIED.into(), 0)];
+    let mut iface = InterfaceBuilder::new(device)
+        .ethernet_addr(ethernet_addr)
+        .neighbor_cache(neighbor_cache)
+        .ip_addrs(ip_addrs)
+        .routes(routes)
+        .finalize();
+
+    get_dhcp(&mut iface);
+
+    server(&mut iface);
+}
+
+//TODO: Increase heap size
+//TODO: Somehow non icmp packets have to be discarded from the queue
+pub fn server(iface: &mut Interface<'_, StmPhy>) {
+    let icmp_rx_buffer = IcmpSocketBuffer::new(vec![IcmpPacketMetadata::EMPTY], vec![0; 256]);
+    let icmp_tx_buffer = IcmpSocketBuffer::new(vec![IcmpPacketMetadata::EMPTY], vec![0; 256]);
+    let icmp_socket = IcmpSocket::new(icmp_rx_buffer, icmp_tx_buffer);
+    let mut sockets = SocketSet::new(vec![]);
+    let icmp_handle = sockets.add(icmp_socket);
+    let clock = mock::Clock::new();
+    let port = 34;
+
+    log::info!("Started icmp server");
+    loop {
+        let timestamp = clock.elapsed();
+        match iface.poll(&mut sockets, timestamp) {
+            Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
+            Err(err) => panic!("Iface error: {}", err),
+            Ok(_) => (),
+        }
+
+        {
+            let mut socket = sockets.get::<IcmpSocket>(icmp_handle);
+            if !socket.is_open() {
+                log::info!("Bound to icmp identifier {:#x}", port);
+                socket.bind(IcmpEndpoint::Ident(port)).unwrap();
+            }
+
+            if socket.can_recv() {
+                let (payload, remote) = socket.recv().unwrap();
+                log::info!("Received packet from: {:?}", remote);
+                log::info!("With payload: {:#x?}", payload.iter());
+            }
+        }
+
+        let mut timeout = Duration { millis: 0 };
+        iface
+            .poll_delay(&sockets, timestamp)
+            .map(|sockets_timeout| timeout = sockets_timeout);
+        if timeout.millis == 0 {
+            timeout = Duration { millis: 1 };
+        }
+        crate::time::sleep(timeout.millis * 1000);
+        clock.advance(timeout);
+    }
 }
