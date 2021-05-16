@@ -147,7 +147,7 @@ pub fn get_dhcp(iface: &mut Interface<'_, StmPhy>) {
         // we will be trapped in here
         match iface.poll(&mut sockets, timestamp) {
             Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
-            Err(err) => panic!("Iface error: {}", err),
+            Err(err) => log::error!("Iface error: {}", err),
             Ok(_) => (),
         }
 
@@ -267,7 +267,7 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
         let timestamp = clock.elapsed();
         match iface.poll(&mut sockets, timestamp) {
             Err(Error::Unrecognized) => (log::debug!("Unrecognized packet")),
-            Err(err) => panic!("Iface error: {}", err),
+            Err(err) => log::error!("Iface error: {}", err),
             Ok(_) => (),
         }
 

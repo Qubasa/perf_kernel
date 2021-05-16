@@ -43,6 +43,7 @@ static mut CAPR: Option<Port<u16>> = None;
 static mut CMD: Option<Port<u8>> = None;
 static mut RECV_BUF: Option<&[u8; MAX_RECV_BUFFER_SIZE]> = None;
 static mut READ_OFF: usize = 0;
+static mut ORIG_CAPR: u16 = 0;
 pub static mut PACKET_BUF: Option<spin::Mutex<VecDeque<Vec<u8>>>> = None;
 pub static mut MAC_ADDR: Option<[u8; 6]> = None;
 
@@ -150,6 +151,8 @@ impl Rtl8139 {
         TRANSMIT_REGS[3] = Some(Port::new((iobase + 0x2C).try_into().unwrap()));
         CAPR = Some(Port::new((iobase + 0x38).try_into().unwrap()));
 
+        ORIG_CAPR = CAPR.as_mut().unwrap().read();
+
         for (i, reg) in TRANSMIT_REGS.iter_mut().enumerate() {
             let port = reg.as_mut().unwrap();
             let addr: u32 = (frame.start_address().as_u64()
@@ -170,7 +173,6 @@ impl Rtl8139 {
             (1 << 1) // mac match
             | (1 << 2) // multicast
             | (1 << 3) // broadcast
-            | (1 << 7) // wrap
             | (size << 11), // buf size
         );
 
@@ -251,29 +253,36 @@ impl Rtl8139 {
                     if i % 20 == 0 {
                         crate::print!("\n{}: ",i);
                     }
+                    if i == READ_OFF {
+                        crate::print!("-->");
+                    }
                     crate::print!("{:#x} ", val);
                 }
                 log::error!("\n===== END OF DUMP ======");
             }
 
-            //TODO: panic here sometimes
-            let buf = &buf[READ_OFF + 4..READ_OFF + size];
-            PACKET_BUF.as_mut().unwrap().lock().push_back(buf.to_vec());
-
+            if READ_OFF + size > 8192 {
+                //TODO
+                // let mut part0:Vec<u8> = buf[READ_OFF+4..8192].to_vec();
+                // let diff = (READ_OFF + size) - 8192;
+                // let mut part1 = buf[0..diff].to_vec();
+                // part0.append(&mut part1);
+                // PACKET_BUF.as_mut().unwrap().lock().push_back(part0);
+            }else {
+                let buf = &buf[READ_OFF + 4..READ_OFF + size];
+                PACKET_BUF.as_mut().unwrap().lock().push_back(buf.to_vec());
+            }
 
             prev_packet_size = size;
             prev_read_off = READ_OFF;
             READ_OFF = (READ_OFF + size + 4 + 3) & !3;
 
-            if READ_OFF >= 8192 {
-                READ_OFF = 0;
+            CAPR.as_mut().unwrap().write((READ_OFF - 0x10) as u16);
+
+            if READ_OFF > 8192 {
+                READ_OFF -= 8192;
             }
 
-            if READ_OFF < 0x10 {
-                CAPR.as_mut().unwrap().write((READ_OFF) as u16);
-            } else {
-                CAPR.as_mut().unwrap().write((READ_OFF - 0x10) as u16);
-            }
         }
 
         intr.write(1); // clears the Rx OK bit
