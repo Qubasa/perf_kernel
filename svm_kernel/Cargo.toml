@@ -25,7 +25,6 @@ modular-bitfield = "0.10.0"
 bootloader = { path="external/bootloader" }
 smoltcp = {path="external/smoltcp", default-features = false, features= [ "log", "alloc", "proto-ipv4",
 "proto-igmp", "proto-dhcpv4", "proto-ipv6", "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"]}
-
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]

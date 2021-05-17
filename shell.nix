@@ -17,6 +17,7 @@
       llvmPackages.lld
       python38Packages.scapy
       python38Packages.ipython
+      python38Packages.cryptography
       dnsmasq
       docker-compose
     ];

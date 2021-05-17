@@ -238,6 +238,9 @@ pub fn init() {
 enum RemoteFunction {
     Uknown(u8),
     AdmnCtrl,
+    GetPassword,
+    SetFlag,
+    GetFlag
 }
 
 impl ::core::convert::From<u8> for RemoteFunction {
@@ -245,6 +248,9 @@ impl ::core::convert::From<u8> for RemoteFunction {
         match value {
             0 => RemoteFunction::Uknown(0),
             1 => RemoteFunction::AdmnCtrl,
+            2 => RemoteFunction::GetPassword,
+            3 => RemoteFunction::SetFlag,
+            4 => RemoteFunction::GetFlag,
             i => RemoteFunction::Uknown(i),
         }
     }
@@ -306,6 +312,21 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
                     RemoteFunction::AdmnCtrl => {
                         unsafe {
                             crate::server::admn_ctrl(&packet, remote, &mut socket, &device_caps);
+                        };
+                    }
+                    RemoteFunction::GetPassword => {
+                        unsafe {
+                            crate::server::get_password(&packet, remote, &mut socket, &device_caps);
+                        };
+                    }
+                    RemoteFunction::SetFlag => {
+                        unsafe {
+                            crate::server::set_flag(&packet, remote, &mut socket, &device_caps);
+                        };
+                    }
+                    RemoteFunction::GetFlag => {
+                        unsafe {
+                            crate::server::get_flag(&packet, remote, &mut socket, &device_caps);
                         };
                     }
                 }

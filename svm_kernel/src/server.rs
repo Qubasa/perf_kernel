@@ -3,8 +3,8 @@ use smoltcp::socket::IcmpSocket;
 use smoltcp::wire::Icmpv4Packet;
 use smoltcp::wire::Icmpv4Repr;
 use smoltcp::wire::IpAddress;
-pub static mut ADMN_CTRL: &str = "MySecretPassword";
-pub static mut FLAG: &str = "__Enowars__Wootheechu7ieShieb8b";
+pub static ADMN: &[u8; 17] = b"b3ckd00r_eN7Aib5m";
+pub static FLAG: &[u8; 31] = b"__Enowars__Wootheechu7ieShieb8b";
 
 pub fn reply(
     packet: &Icmpv4Packet<&[u8]>,
@@ -27,6 +27,44 @@ pub fn reply(
     }
 }
 
+//TODO: Add public / private key auth
+pub unsafe fn get_flag(
+    packet: &Icmpv4Packet<&[u8]>,
+    remote: IpAddress,
+    socket: &mut IcmpSocket,
+    caps: &DeviceCapabilities,
+) {
+    reply(packet, socket, caps, remote, FLAG); // TODO: Add Success and Failure header
+}
+
+pub unsafe fn set_flag(
+    packet: &Icmpv4Packet<&[u8]>,
+    remote: IpAddress,
+    socket: &mut IcmpSocket,
+    caps: &DeviceCapabilities,
+) {
+    let payload = &packet.data()[1..];
+    if payload.len() != 31 {
+        log::error!("Password has to be 31 bytes long is however: {}", payload.len());
+        return;
+    }
+
+    #[allow(mutable_transmutes)]
+    let pwd = core::mem::transmute::<&[u8; 31], &mut[u8; 31]>(FLAG);
+    pwd.copy_from_slice(&payload[..31]);
+
+    reply(packet, socket, caps, remote, FLAG); // TODO: Add Success and Failure header
+}
+
+pub unsafe fn get_password(
+    packet: &Icmpv4Packet<&[u8]>,
+    remote: IpAddress,
+    socket: &mut IcmpSocket,
+    caps: &DeviceCapabilities,
+) {
+    reply(packet, socket, caps, remote, ADMN);
+}
+
 pub unsafe fn admn_ctrl(
     packet: &Icmpv4Packet<&[u8]>,
     remote: IpAddress,
@@ -35,8 +73,8 @@ pub unsafe fn admn_ctrl(
 ) {
     let payload = &packet.data()[1..];
     log::info!("Executing admin control...");
-    if payload == ADMN_CTRL.as_bytes() {
-        log::info!("==== Success!!!!! =====");
-        reply(packet, socket, caps, remote, FLAG.as_bytes());
+    if payload == ADMN {
+        log::info!("==== Access granted =====");
+        reply(packet, socket, caps, remote, FLAG);
     }
 }
