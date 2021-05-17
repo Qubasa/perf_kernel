@@ -26,5 +26,4 @@ def login(payload):
 
 
 payload = b"\x01MySecretPassword"
-for i in range(300):
-    login(payload)
+login(payload)

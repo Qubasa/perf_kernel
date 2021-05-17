@@ -1,5 +1,6 @@
 use alloc::vec;
 use log::info;
+use smoltcp::phy::Device;
 use smoltcp::phy::{self, DeviceCapabilities};
 use smoltcp::Error;
 use smoltcp::Result;
@@ -260,6 +261,7 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
     let mut sockets = SocketSet::new(vec![]);
     let icmp_handle = sockets.add(icmp_socket);
     let clock = mock::Clock::new();
+    let device_caps = iface.device().capabilities();
     let port = 34;
 
     log::info!("Started icmp server");
@@ -280,9 +282,15 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
 
             if socket.can_recv() {
                 let (payload, remote) = socket.recv().unwrap();
-                let payload = &payload[8..];
+                use smoltcp::wire::Icmpv4Packet;
+                use smoltcp::wire::Icmpv4Photuris;
+                use smoltcp::wire::Icmpv4Repr;
+                let packet = Icmpv4Packet::new_unchecked(payload);
+                let payload = packet.data();
+
                 log::info!("Received packet from: {}", remote);
                 log::debug!("With payload: {:#x?}", payload.iter());
+
                 if payload.len() < 1 {
                     log::info!("Payload len is only: {}", payload.len());
                     continue;
@@ -293,8 +301,8 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
                         log::error!("Uknown remote function with id: {}", id);
                     }
                     RemoteFunction::AdmnCtrl => {
-                        log::info!("Executing admin control...");
                         unsafe {
+                            log::info!("Executing admin control...");
                             if payload.len() < ADMN_CTRL.len() {
                                 log::info!("payload is too small");
                                 continue;
@@ -303,6 +311,17 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
                             if pwd == ADMN_CTRL.as_bytes() {
                                 log::info!("==== Success!!!!! =====");
                             }
+                            let ans = "Access granted!";
+                            let icmp_repr = Icmpv4Repr::Photuris {
+                                ident: packet.echo_ident(),
+                                checksum: 0,
+                                reason: Icmpv4Photuris::Unknown(10),
+                                data: ans.as_bytes(),
+                            };
+                            let mut icmp_packet = Icmpv4Packet::new_unchecked(
+                                socket.send(icmp_repr.buffer_len(), remote).unwrap(),
+                            );
+                            icmp_repr.emit(&mut icmp_packet, &device_caps.checksum);
                         };
                     }
                 }
