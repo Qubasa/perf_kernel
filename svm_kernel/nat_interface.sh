@@ -20,4 +20,5 @@ ip netns exec scapy ip l s veth-in up
 ip netns exec scapy ip a a 1.1.1.1/24 dev veth-in
 ip netns exec scapy ip r a default via 1.1.1.2
 
-
+echo "To route packets over the nat interface execute:"
+echo "ip netns exec scapy python login.py"

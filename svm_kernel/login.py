@@ -10,17 +10,21 @@ def checksum(payload):
     if len(payload) % 2 != 0:
         s += payload[len(payload)-1]
         s %= 2**16
-    return s
+    return ((s & 0xFF) + ((s & (0xFF << 8)) >> 8)) & 0xFF
 
+def encrypt(var, key=0xba):
+    return bytes(a ^ key for a in var)
 
 def login(payload):
     e = Ether(dst="c2:2a:7f:52:fc:02", src="f6:31:ea:d4:4b:5f")
     ip = IP(src="1.1.1.1", dst="192.168.178.54")
-    unused = (0x22 << 16) | checksum(payload)
-
-    p = e / ip / ICMP(unused=unused, type=8, code=10)
-    sendp(p / Raw(load=payload), iface="veth-in")
+    payload = encrypt(payload)
+    p = e / ip / ICMP(type=8, code=checksum(payload))
+    ans = srp1(p / Raw(load=payload), iface="veth-in")
+    payload = ans[Raw].load
+    print(encrypt(payload).decode("ascii"))
 
 
 payload = b"\x01MySecretPassword"
 login(payload)
+

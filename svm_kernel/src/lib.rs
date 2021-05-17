@@ -31,6 +31,7 @@ pub mod vga;
 pub mod networking;
 pub mod pci;
 pub mod rtl8139;
+pub mod server;
 
 extern crate alloc;
 

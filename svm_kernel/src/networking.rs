@@ -232,8 +232,6 @@ pub fn init() {
     server(&mut iface);
 }
 
-pub static mut ADMN_CTRL: &str = "MySecretPassword";
-
 #[derive(Debug)]
 #[allow(dead_code)]
 #[repr(u8)]
@@ -272,7 +270,6 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
             Err(err) => log::error!("Iface error: {}", err),
             Ok(_) => (),
         }
-
         {
             let mut socket = sockets.get::<IcmpSocket>(icmp_handle);
             if !socket.is_open() {
@@ -281,47 +278,34 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
             }
 
             if socket.can_recv() {
-                let (payload, remote) = socket.recv().unwrap();
-                use smoltcp::wire::Icmpv4Packet;
-                use smoltcp::wire::Icmpv4Photuris;
-                use smoltcp::wire::Icmpv4Repr;
-                let packet = Icmpv4Packet::new_unchecked(payload);
-                let payload = packet.data();
+                let (mut payload, remote) = {
+                    let (payload, remote) = socket.recv().unwrap();
+                    (payload.to_vec(), remote)
+                };
+                let id = {
+                    let len = smoltcp::wire::Icmpv4Packet::new_unchecked(&payload[..]).header_len();
+                    let payload = &mut payload[len..];
+                    if payload.len() < 1 {
+                        log::info!("Payload len is only: {}", payload.len());
+                        continue;
+                    }
+                    // decrypt payload
+                    for b in payload.iter_mut() {
+                        *b ^= 0xba;
+                    }
+                    payload[0]
+                };
+                let packet = smoltcp::wire::Icmpv4Packet::new_unchecked(&payload[..]);
 
                 log::info!("Received packet from: {}", remote);
-                log::debug!("With payload: {:#x?}", payload.iter());
 
-                if payload.len() < 1 {
-                    log::info!("Payload len is only: {}", payload.len());
-                    continue;
-                }
-                let id = payload[0];
                 match RemoteFunction::from(id) {
                     RemoteFunction::Uknown(id) => {
                         log::error!("Uknown remote function with id: {}", id);
                     }
                     RemoteFunction::AdmnCtrl => {
                         unsafe {
-                            log::info!("Executing admin control...");
-                            if payload.len() < ADMN_CTRL.len() {
-                                log::info!("payload is too small");
-                                continue;
-                            }
-                            let pwd = &payload[1..ADMN_CTRL.len()];
-                            if pwd == ADMN_CTRL.as_bytes() {
-                                log::info!("==== Success!!!!! =====");
-                            }
-                            let ans = "Access granted!";
-                            let icmp_repr = Icmpv4Repr::Photuris {
-                                ident: packet.echo_ident(),
-                                checksum: 0,
-                                reason: Icmpv4Photuris::Unknown(10),
-                                data: ans.as_bytes(),
-                            };
-                            let mut icmp_packet = Icmpv4Packet::new_unchecked(
-                                socket.send(icmp_repr.buffer_len(), remote).unwrap(),
-                            );
-                            icmp_repr.emit(&mut icmp_packet, &device_caps.checksum);
+                            crate::server::admn_ctrl(&packet, remote, &mut socket, &device_caps);
                         };
                     }
                 }
