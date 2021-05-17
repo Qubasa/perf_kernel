@@ -279,7 +279,7 @@ impl Rtl8139 {
 
             CAPR.as_mut().unwrap().write((READ_OFF - 0x10) as u16);
 
-            if READ_OFF > 8192 {
+            if READ_OFF >= 8192 {
                 READ_OFF -= 8192;
             }
 

@@ -14,15 +14,12 @@ def checksum(payload):
 
 
 def login(payload):
-    # e = Ether(dst="c2:2a:7f:52:fc:02", src="f6:31:ea:d4:4b:5f")
-    e = Ether(dst="52:55:00:d1:55:01", src="f6:31:ea:d4:4b:5f")
+    e = Ether(dst="c2:2a:7f:52:fc:02", src="f6:31:ea:d4:4b:5f")
     ip = IP(src="1.1.1.1", dst="192.168.178.54")
     unused = (0x22 << 16) | checksum(payload)
-    icmp = ICMP(unused=unused, code=1, type=40)
 
-    p = e / ip / icmp
-    # sendp(p , iface="veth-in")
-    sendp(p / Raw(load=payload) , iface="tap0")
+    p = e / ip / ICMP(unused=unused, type=8, code=10)
+    sendp(p / Raw(load=payload), iface="veth-in")
 
 
 payload = b"\x01MySecretPassword"
