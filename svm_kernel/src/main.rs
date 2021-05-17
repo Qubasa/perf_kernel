@@ -73,5 +73,5 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     svm_kernel::println!("{}", info);
-    svm_kernel::hlt_loop();
+    svm_kernel::exit_qemu(svm_kernel::QemuExitCode::Failed);
 }
