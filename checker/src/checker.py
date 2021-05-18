@@ -25,7 +25,6 @@ class KernelManiaChecker(BaseChecker):
     The full documentation is available at https://enowars.github.io/enochecker/
     """
 
-    kernel_ip = addr.split(".")[:-1]+['3']
     # how many flags does this service deploy per round? each flag should be stored at a different location in the service
     flag_variants = 1
     # how many noises does this service deploy per round?
@@ -44,8 +43,11 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an Eno Exception.
         :raises EnoException on error
         """
+
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
         if self.variant_id == 0:
-            send(RemoteFunction.SetFlag, self.kernel_ip, self.flag.encode("ascii"))
+            send(RemoteFunction.SetFlag, kernel_ip, self.flag.encode("ascii"))
         else:
             raise ValueError(
                 "variant_id {} exceeds the amount of flag variants. Not supported.".format(
@@ -60,8 +62,11 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
+
         if self.variant_id == 0:
-            flag = send(RemoteFunction.GetFlag, self.kernel_ip)
+            flag = send(RemoteFunction.GetFlag, kernel_ip)
             try:
                 flag = flag.decode("ascii")
                 if flag != self.flag:
@@ -83,6 +88,8 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
         pass
 
     def getnoise(self) -> None:
@@ -95,6 +102,8 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
         pass
 
     def havoc(self) -> None:
@@ -103,6 +112,8 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on Error
         """
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
         pass
 
     def exploit(self) -> None:
@@ -114,8 +125,10 @@ class KernelManiaChecker(BaseChecker):
                 If nothing is returned, the service status is considered okay.
                 The preferred way to report Errors in the service is by raising an appropriate EnoException
         """
-        pwd = send(RemoteFunction.GetPassword, self.kernel_ip)
-        flag = send(RemoteFunction.AdmnCtrl, self.kernel_ip, pwd)
+        kernel_ip = self.address.split(".")[:-1]+['3']
+        print("kernel ip: ", kernel_ip)
+        pwd = send(RemoteFunction.GetPassword, kernel_ip)
+        flag = send(RemoteFunction.AdmnCtrl, kernel_ip, pwd)
         try:
             if flag.decode("ascii") != self.flag:
                 raise BrokenServiceException("retrieved flag through exploit is incorrect")
