@@ -207,6 +207,21 @@ pub fn get_dhcp(iface: &mut Interface<'_, StmPhy>) {
     } // end loop
 }
 
+
+pub fn static_ip(iface: &mut Interface<'_, StmPhy>) {
+    let ip = Ipv4Address::new(192, 168, 178, 54);
+    let cidr = Ipv4Cidr::new(ip, 24);
+    iface.update_ip_addrs(|addrs| {
+        addrs.iter_mut().next().map(|addr| {
+            *addr = IpCidr::Ipv4(cidr);
+        });
+    });
+    let default_route = Ipv4Address::new(192, 168, 178, 1);
+    iface.routes_mut().add_default_ipv4_route(default_route).unwrap();
+    log::info!("Ip address is: {}", ip);
+    log::info!("Gateway is: {}", default_route);
+}
+
 use smoltcp::iface::Interface;
 use smoltcp::socket::*;
 
@@ -227,7 +242,8 @@ pub fn init() {
         .routes(routes)
         .finalize();
 
-    get_dhcp(&mut iface);
+    // get_dhcp(&mut iface);
+    static_ip(&mut iface);
 
     server(&mut iface);
 }
