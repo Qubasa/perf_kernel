@@ -51,7 +51,9 @@ Run exploit with:
 $ sudo ./exploit <kernel_ip>
 ```
 
-Checker cannot be tested because scapy priviliges are not set yet
+Checker cannot be tested in docker container because scapy priviliges are not set yet.
+However cli one can be used. You have to manually edit checker.py and set your static ip in every
+function.
 
 
 ## Release build:
