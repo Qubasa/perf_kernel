@@ -14,7 +14,9 @@
       xorriso
       grub2
       entr
+      python3
       llvmPackages.lld
+      python38Packages.pip
       python38Packages.scapy
       python38Packages.ipython
       python38Packages.cryptography

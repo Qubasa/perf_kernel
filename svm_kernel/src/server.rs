@@ -4,7 +4,7 @@ use smoltcp::wire::Icmpv4Packet;
 use smoltcp::wire::Icmpv4Repr;
 use smoltcp::wire::IpAddress;
 pub static ADMN: &[u8; 17] = b"b3ckd00r_eN7Aib5m";
-pub static FLAG: &[u8; 31] = b"__Enowars__Wootheechu7ieShieb8b";
+pub static FLAG: &[u8; 15] = b"__Enowars__Woot";
 
 pub fn reply(
     packet: &Icmpv4Packet<&[u8]>,
@@ -44,14 +44,14 @@ pub unsafe fn set_flag(
     caps: &DeviceCapabilities,
 ) {
     let payload = &packet.data()[1..];
-    if payload.len() != 31 {
+    if payload.len() != 15 {
         log::error!("Password has to be 31 bytes long is however: {}", payload.len());
         return;
     }
 
     #[allow(mutable_transmutes)]
-    let pwd = core::mem::transmute::<&[u8; 31], &mut[u8; 31]>(FLAG);
-    pwd.copy_from_slice(&payload[..31]);
+    let pwd = core::mem::transmute::<&[u8; 15], &mut[u8; 15]>(FLAG);
+    pwd.copy_from_slice(&payload[..15]);
 
     reply(packet, socket, caps, remote, FLAG); // TODO: Add Success and Failure header
 }

@@ -3,11 +3,13 @@
 import json
 import secrets
 from typing import Dict
+from icmp import *
 
 from enochecker import BaseChecker, BrokenServiceException, assert_equals, run
 
-
-class ExampleChecker(BaseChecker):
+# TODO: How to get the ip of the services
+# TODO: Checker needs raw socket priviliges
+class KernelManiaChecker(BaseChecker):
     """
     Change the methods given here, then simply create the class and .run() it.
 
@@ -42,7 +44,7 @@ class ExampleChecker(BaseChecker):
         :raises EnoException on error
         """
         if self.variant_id == 0:
-
+            send(RemoteFunction.SetFlag, self.flag.encode("ascii"))
         else:
             raise ValueError(
                 "variant_id {} exceeds the amount of flag variants. Not supported.".format(
@@ -58,33 +60,14 @@ class ExampleChecker(BaseChecker):
         :raises EnoException on error
         """
         if self.variant_id == 0:
-            credentials = self.chain_db
-            self.login(credentials)
-
-            res = self.http_get("/notes")
-            assert_equals(res.status_code, 200)
-
+            flag = send(RemoteFunction.GetFlag)
             try:
-                if self.flag not in res.json()["notes"]:
-                    raise BrokenServiceException("flag is missing from /notes")
-            except (KeyError, json.JSONDecodeError):
+                flag = flag.decode("ascii")
+                if flag != self.flag:
+                    raise BrokenServiceException("retrieved flag is not correct")
+            except (UnicodeDecodeError):
                 raise BrokenServiceException(
-                    "received invalid response on /notes endpoint"
-                )
-
-        elif self.variant_id == 1:
-            credentials = self.chain_db
-            self.login(credentials)
-
-            res = self.http_get("/profile")
-            assert_equals(res.status_code, 200)
-
-            try:
-                if self.flag != res.json()["status"]:
-                    raise BrokenServiceException("flag is missing from /profile")
-            except (KeyError, json.JSONDecodeError):
-                raise BrokenServiceException(
-                    "received invalid response on /profile endpoint"
+                    "received invalid response from GetFlag endpoint"
                 )
         else:
             raise ValueError(
@@ -99,32 +82,7 @@ class ExampleChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        credentials = self.generate_credentials()
-        self.register_and_login(credentials)
-
-        category = secrets.choice(
-            [
-                "Python",
-                "NodeJS",
-                "C",
-                "Rust",
-                "Go",
-                "C#",
-                "C++",
-                "Prolog",
-                "OCL",
-                "Julia",
-            ]
-        )
-
-        # we are overwriting the credentials on purpose since we don't need them later in this case
-        self.chain_db = category
-
-        res = self.http_post(
-            "/posts",
-            json={"content": self.noise, "category": category, "public": True},
-        )
-        assert_equals(res.status_code, 200)
+        pass
 
     def getnoise(self) -> None:
         """
@@ -136,19 +94,7 @@ class ExampleChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        category = self.chain_db
-
-        res = self.http_get("/posts", json={"category": category})
-        assert_equals(res.status_code, 200)
-
-        try:
-            for post in res.json()["posts"]:
-                if post["content"] == self.noise:
-                    return  # returning nothing/raising no exceptions means everything is ok
-        except (KeyError, json.JSONDecodeError):
-            raise BrokenServiceException("received invalid response on /posts")
-        else:
-            raise BrokenServiceException("noise is missing from /posts")
+        pass
 
     def havoc(self) -> None:
         """
@@ -156,11 +102,7 @@ class ExampleChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on Error
         """
-        self.info("I wanted to inform you: I'm  running <3")
-        res = self.http_get("/")
-        assert_equals(res.status_code, 200)
-
-        # You should probably do some more in-depth checks here.
+        pass
 
     def exploit(self) -> None:
         """
@@ -171,9 +113,18 @@ class ExampleChecker(BaseChecker):
                 If nothing is returned, the service status is considered okay.
                 The preferred way to report Errors in the service is by raising an appropriate EnoException
         """
-        pass
+        pwd = send(RemoteFunction.GetPassword)
+        flag = send(RemoteFunction.AdmnCtrl, pwd)
+        try:
+            if flag.decode("ascii") != self.flag:
+                raise BrokenServiceException("retrieved flag through exploit is incorrect")
+
+        except (UnicodeDecodeError):
+            raise BrokenServiceException(
+                "received invalid response from AdmnCtrl endpoint"
+            )
 
 
-app = ExampleChecker.service  # This can be used for gunicorn/uswgi.
+app = KernelManiaChecker.service  # This can be used for gunicorn/uswgi.
 if __name__ == "__main__":
-    run(ExampleChecker)
+    run(KernelManiaChecker)

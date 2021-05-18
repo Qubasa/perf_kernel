@@ -1,4 +1,5 @@
 certifi==2020.12.5
+scapy==2.4.5
 chardet==4.0.0
 click==7.1.2
 dnspython==1.16.0
