@@ -51,7 +51,7 @@ Run exploit with:
 $ sudo ./exploit <kernel_ip>
 ```
 
-Checker cannot be tested because it needs special intergration into the gameserver.
+Checker cannot be tested because scapy priviliges are not set yet
 
 
 ## Release build:
