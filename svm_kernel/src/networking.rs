@@ -295,7 +295,6 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
         {
             let mut socket = sockets.get::<IcmpSocket>(icmp_handle);
             if !socket.is_open() {
-                log::info!("Bound to icmp identifier {:#x}", port);
                 socket.bind(IcmpEndpoint::Ident(port)).unwrap();
             }
 

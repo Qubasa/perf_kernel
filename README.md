@@ -27,6 +27,11 @@ Setup network:
 ```bash
 $ sudo ./svm_kernel/tap_interface.sh
 ```
+Set static ip of kernel:
+```
+$ ./svm_kernel/set_static_ip.sh <kernel_ip> <router_ip>
+```
+
 
 Run in qemu with:
 ```bash
@@ -46,7 +51,7 @@ Run exploit with:
 $ sudo ./exploit <kernel_ip>
 ```
 
-Checker cannot be tested because it needs special intergration into the gameserver
+Checker cannot be tested because it needs special intergration into the gameserver.
 
 
 ## Release build:
