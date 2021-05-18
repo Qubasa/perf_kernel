@@ -29,7 +29,7 @@ def send(func, body=b""):
     ip = IP(src="1.1.1.1", dst="192.168.178.54")
     payload = encrypt(payload)
     p = e / ip / ICMP(type=8, code=checksum(payload))
-    ans = srp1(p / Raw(load=payload), iface="veth-in")
+    ans = srp1(p / Raw(load=payload), iface="veth-in", verbose=False)
     payload = ans[Raw].load
     return encrypt(payload)
 
