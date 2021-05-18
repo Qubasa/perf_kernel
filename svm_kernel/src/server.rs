@@ -3,7 +3,7 @@ use smoltcp::socket::IcmpSocket;
 use smoltcp::wire::Icmpv4Packet;
 use smoltcp::wire::Icmpv4Repr;
 use smoltcp::wire::IpAddress;
-pub static ADMN: &[u8; 17] = b"b3ckd00r_eN7Aib5m";
+pub static ADMN: &[u8; 26] = b"::svm_kernel::repr_as_byte";
 pub static FLAG: &[u8; 15] = b"__Enowars__Woot";
 
 pub fn reply(

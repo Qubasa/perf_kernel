@@ -25,6 +25,7 @@ class KernelManiaChecker(BaseChecker):
     The full documentation is available at https://enowars.github.io/enochecker/
     """
 
+    kernel_ip = addr.split(".")[:-1]+['3']
     # how many flags does this service deploy per round? each flag should be stored at a different location in the service
     flag_variants = 1
     # how many noises does this service deploy per round?
@@ -44,7 +45,7 @@ class KernelManiaChecker(BaseChecker):
         :raises EnoException on error
         """
         if self.variant_id == 0:
-            send(RemoteFunction.SetFlag, self.flag.encode("ascii"))
+            send(RemoteFunction.SetFlag, self.kernel_ip, self.flag.encode("ascii"))
         else:
             raise ValueError(
                 "variant_id {} exceeds the amount of flag variants. Not supported.".format(
@@ -60,7 +61,7 @@ class KernelManiaChecker(BaseChecker):
         :raises EnoException on error
         """
         if self.variant_id == 0:
-            flag = send(RemoteFunction.GetFlag)
+            flag = send(RemoteFunction.GetFlag, self.kernel_ip)
             try:
                 flag = flag.decode("ascii")
                 if flag != self.flag:
@@ -113,8 +114,8 @@ class KernelManiaChecker(BaseChecker):
                 If nothing is returned, the service status is considered okay.
                 The preferred way to report Errors in the service is by raising an appropriate EnoException
         """
-        pwd = send(RemoteFunction.GetPassword)
-        flag = send(RemoteFunction.AdmnCtrl, pwd)
+        pwd = send(RemoteFunction.GetPassword, self.kernel_ip)
+        flag = send(RemoteFunction.AdmnCtrl, self.kernel_ip, pwd)
         try:
             if flag.decode("ascii") != self.flag:
                 raise BrokenServiceException("retrieved flag through exploit is incorrect")

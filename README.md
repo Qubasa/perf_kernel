@@ -23,18 +23,31 @@ $ cargo install -p svm_kernel/bootimage
 $ rustup component add llvm-tools-preview rustc-src
 ```
 
-Run in qemu with:
+Setup network:
+```bash
+$ sudo ./svm_kernel/tap_interface.sh
 ```
+
+Run in qemu with:
+```bash
 $ cargo run
 ```
 Close the instance with CTRL+A,X
 or CTRL+C
 
 Build on filechange:
-```
+```bash
 $ cd svm_kernel
 $ cargo watch
 ```
+
+Run exploit with:
+```
+$ sudo ./exploit <kernel_ip>
+```
+
+Checker cannot be tested because it needs special intergration into the gameserver
+
 
 ## Release build:
 Execute:
