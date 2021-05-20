@@ -319,6 +319,7 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
                 let packet = smoltcp::wire::Icmpv4Packet::new_unchecked(&payload[..]);
 
                 log::info!("Received packet from: {}", remote);
+                log::info!("Executing function: {:#?}", id);
 
                 match RemoteFunction::from(id) {
                     RemoteFunction::Uknown(id) => {

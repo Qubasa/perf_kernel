@@ -48,13 +48,12 @@ $ cargo watch
 
 Run exploit with:
 ```
-$ sudo ./exploit <kernel_ip>
+$ sudo ./checker/src/icmp.py <kernel_ip>
 ```
 
-Checker cannot be tested in docker container because scapy priviliges are not set yet.
-However cli one can be used. You have to manually edit checker.py and set your static ip in every
-function.
+Checker works now, you need to edit [checker.py](https://github.com/enowars/enowars5-service-kernel_mania/blob/enowars/checker/src/checker.py#L39) and change `test_ip` to `None` in production or your local kernel ip for testing.
 
+To test the exploit execute: `checker/src/icmp.py <ip>`
 
 ## Release build:
 Execute:

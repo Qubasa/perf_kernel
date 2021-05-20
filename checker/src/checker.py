@@ -35,6 +35,9 @@ class KernelManiaChecker(BaseChecker):
     # The port will automatically be picked up as default by self.connect and self.http methods.
     port = 80
 
+    # Set to None for production
+    test_ip = "192.168.178.54"
+
     def putflag(self) -> None:
         """
         This method stores a flag in the service.
@@ -44,9 +47,13 @@ class KernelManiaChecker(BaseChecker):
         :raises EnoException on error
         """
 
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
+
         print("kernel ip: ", kernel_ip)
-        if self.variant_id == 0:
+        if self.variant_id == 1:
             send(RemoteFunction.SetFlag, kernel_ip, self.flag.encode("ascii"))
         else:
             raise ValueError(
@@ -62,13 +69,17 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
 
-        if self.variant_id == 0:
+        if self.variant_id == 1:
             flag = send(RemoteFunction.GetFlag, kernel_ip)
             try:
                 flag = flag.decode("ascii")
+                print("flag: ", flag)
                 if flag != self.flag:
                     raise BrokenServiceException("retrieved flag is not correct")
             except (UnicodeDecodeError):
@@ -88,7 +99,10 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
         pass
 
@@ -102,7 +116,10 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
         pass
 
@@ -112,7 +129,10 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on Error
         """
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
         pass
 
@@ -125,9 +145,12 @@ class KernelManiaChecker(BaseChecker):
                 If nothing is returned, the service status is considered okay.
                 The preferred way to report Errors in the service is by raising an appropriate EnoException
         """
-        kernel_ip = self.address.split(".")[:-1]+['3']
+        if self.test_ip is None:
+            kernel_ip = self.address.split(".")[:-1]+['3']
+        else:
+            kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
-        pwd = send(RemoteFunction.GetPassword, kernel_ip)
+        pwd = "::svm_kernel::repr_as_byte"
         flag = send(RemoteFunction.AdmnCtrl, kernel_ip, pwd)
         try:
             if flag.decode("ascii") != self.flag:

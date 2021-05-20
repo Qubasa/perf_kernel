@@ -1,8 +1,13 @@
-version: '3'
+version: '3.4'
 services:
   # Give your container proper names!
   kernel_mania-checker:
-    build: .
+    cap_add:
+    - NET_ADMIN
+    - NET_RAW
+    build:
+      context: .
+      network: host
     # The checker runs a HTTP interfaces, so we need to map port 3031 to the outside (port 8000).
     ports:
       - 8000:3031
