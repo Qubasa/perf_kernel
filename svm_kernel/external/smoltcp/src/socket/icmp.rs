@@ -373,7 +373,7 @@ impl<'a> IcmpSocket<'a> {
             // Echo Request/Reply with the identifier field matching the endpoint
             // port.
             #[cfg(feature = "proto-ipv4")]
-            (&Endpoint::Ident(bound_ident), &IcmpRepr::Ipv4(Icmpv4Repr::EchoRequest { ident, code, data, .. })) => {
+            (&Endpoint::Ident(_), &IcmpRepr::Ipv4(Icmpv4Repr::EchoRequest { code, data, .. })) => {
                 let checksum = code;
                 let mut sum: u16 = 0;
                 let iter = data.array_chunks::<2>();
@@ -393,7 +393,7 @@ impl<'a> IcmpSocket<'a> {
                 // );
 
                 // log::info!("ident: {}", ident);
-                sum == checksum && bound_ident != ident
+                sum == checksum
             }
             (
                 &Endpoint::Ident(bound_ident),

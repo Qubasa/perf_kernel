@@ -5,7 +5,6 @@ if [ "$#" != "2" ]; then
     exit 1
 fi
 
-
 IP=$(echo "$1" | sed 's/\./, /g')
 GATEWAY=$(echo "$2" | sed 's/\./, /g')
 
