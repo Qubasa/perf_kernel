@@ -209,7 +209,7 @@ pub fn get_dhcp(iface: &mut Interface<'_, StmPhy>) {
 
 
 pub fn static_ip(iface: &mut Interface<'_, StmPhy>) {
-    let ip = Ipv4Address::new(192, 168, 178, 54);
+    let ip = Ipv4Address::new(192, 168, 177, 54);
     let cidr = Ipv4Cidr::new(ip, 24);
     iface.update_ip_addrs(|addrs| {
         addrs.iter_mut().next().map(|addr| {

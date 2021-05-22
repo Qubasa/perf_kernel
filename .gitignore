@@ -1,4 +1,5 @@
 .envrc
+svm_kernel/out/
 .nat_network
 *.idea
 svm_kernel/external/chocolate_milk/

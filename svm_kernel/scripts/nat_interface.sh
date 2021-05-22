@@ -2,9 +2,6 @@
 
 set -xe
 
-# ip neigh add 192.168.178.54 laddr 52:55:00:d1:55:01 dev wlp4s0
-# ip neigh change 192.168.178.54 lladdr 52:55:00:d1:55:01 dev wlp4s0
-# ip neigh change 192.168.178.54 lladdr 52:55:00:d1:55:01 dev br0
 iptables -t nat -A POSTROUTING -o br0 -j SNAT --to 192.168.178.250 -d 192.168.178.54
 ip link add veth-in type veth peer name veth-out
 ip l set veth-out master br0
