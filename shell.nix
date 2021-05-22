@@ -6,21 +6,17 @@
       llvmPackages.bintools
       bridge-utils
       tunctl
-      dhcp
-      gitAndTools.git-extras
-      arp-scan
       zlib.out
       rustup
       xorriso
       grub2
       entr
-      python3
       llvmPackages.lld
+      python3
       python38Packages.pip
       python38Packages.scapy
       python38Packages.ipython
       python38Packages.cryptography
-      dnsmasq
       docker-compose
     ];
     shellHook = ''
