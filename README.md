@@ -1,5 +1,6 @@
 ## Description
-A unicore kernel with an custom icmp protocol, with some vulnerabilities
+A unicore kernel with a custom icmp protocol, with some vulnerabilities
+
 
 ## Setup & Debug Build
 Clone the repo with submodules:
@@ -55,20 +56,27 @@ $ docker-compose up --build
 Then visit http://localhost:8000/
 
 
-## Debug with gdb
+## Challenge setup
+First you need to have followed Setup & Debug Build.
+To generate the challenges edit [generate_challenges.sh](svm_kernel/scripts/generate_challenges.sh),
+and change:
 ```bash
-$ qemu-kvm -cpu host -smp cores=4 -cdrom target/x86_64-os/debug/bootimage-svm_kernel.iso -serial stdio -display none -device isa-debug-exit,iobase=0xf4,iosize=0x04 -m 2G
+# Put here the IP of the kernel for every team
+TEAMS=("192.168.178.54" "192.168.177.54")
+# Put here the gateway for all teams
+GATEWAY="192.168.178.1"
 ```
-In another shell execute:
-```bash
-$ gdb target/x86_64-os/debug/isofiles/boot/kernel.elf -ex "target remote:1234"
-```
-You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the breakpoints get ignored.
 
-To get debug symbols for the kernel and not for the bootloader execute:
+Then execute the script:
+```bash
+$ ./scripts/generate_challenges.sh
 ```
-(gdb) symbol-file target/x86_64-os/debug/svm_kernel
-```
+
+The ctf player machines need these programs installed:
+* qemu
+* tunctl
+* brctl
+* dhclient
 
 
 ## Debug with radare2

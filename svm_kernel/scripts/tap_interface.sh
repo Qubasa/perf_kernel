@@ -34,6 +34,14 @@ fi
 
 USERNAME="$1"
 
+set +e
+ip link show dev kmania_br0 &> /dev/null
+if [ 0 -eq $? ]; then
+   echo "kmania_br0 already exists. This script has already been executed"
+   exit 1
+fi
+set -e
+
 first_eth=$(for i in /proc/sys/net/ipv4/conf/en*; do basename "$i"; break; done)
 
 echo "Using ethernet device: $first_eth"
@@ -43,9 +51,9 @@ if [ -z "$first_eth" ]; then
    exit 1
 fi
 
-brctl addbr br0
-brctl addif br0 "$first_eth"
-tunctl -t tap0 -u "$USERNAME"
-brctl addif br0 tap0
-ifconfig tap0 up
-dhclient -v br0
+brctl addbr kmania_br0
+brctl addif kmania_br0 "$first_eth"
+tunctl -t kmania_tap0 -u "$USERNAME"
+brctl addif kmania_br0 kmania_tap0
+ifconfig kmania_tap0 up
+dhclient -v kmania_br0

@@ -6,7 +6,7 @@
       llvmPackages.bintools
       bridge-utils
       tunctl
-      # dhcp
+      dhcp
       zlib.out
       rustup
       xorriso

