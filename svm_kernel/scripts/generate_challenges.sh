@@ -2,6 +2,12 @@
 
 set -e
 
+if ! command -v cargo &> /dev/null
+then
+   echo "cargo command could not be found"
+   exit 1
+fi
+
 # TODO: Put here the IP of the kernel for every team
 TEAMS=("192.168.178.54" "192.168.177.54")
 # Put here the gateway for all teams

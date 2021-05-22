@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ "$#" != "2" ]; then
-    echo "$0 <old_ip> <old_gateway> <ip> <gateway>"
+    echo "$0 <ip> <gateway>"
     exit 1
 fi
 
