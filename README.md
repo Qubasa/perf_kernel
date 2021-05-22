@@ -1,10 +1,5 @@
-## ==== WORK IN PROGRESS ====
-Working on multicore support
-
 ## Description
-x86_64 HPC AMD kernel written in Rust.
-Optimized for hypervisor usage.
-
+A unicore kernel with an custom icmp protocol, with some vulnerabilities
 
 ## Setup & Debug Build
 Clone the repo with submodules:
@@ -12,10 +7,8 @@ Clone the repo with submodules:
 $ git clone --recursive <url>
 ```
 
-Pinned rustc version is found in [rust-toolchain](svm_kernel/rust-toolchain)
-
-Install the dependencies listed in `shell.nix` or execute
-`nix-shell shell.nix` if on NixOS.
+Install the dependencies listed in [shell.nix](shell.nix), make sure to also add the PATH variables to your environment.
+Or execute `nix-shell shell.nix` if on NixOS.
 
 Install cargo dependencies:
 ```
@@ -23,22 +16,22 @@ $ cargo install -p svm_kernel/bootimage
 $ rustup component add llvm-tools-preview rustc-src
 ```
 
-Setup network:
+Then you need to setup a tap interface owned by your build user. For this
+execute the following script:
 ```bash
-$ sudo ./svm_kernel/tap_interface.sh
-```
-Set static ip of kernel:
-```
-$ ./svm_kernel/set_static_ip.sh <kernel_ip> <router_ip>
+$ sudo ./svm_kernel/scripts/tap_interface.sh <username>
 ```
 
+Set static ip of kernel:
+```
+$ ./svm_kernel/scripts/set_static_ip.sh <kernel_ip> <router_ip>
+```
 
 Run in qemu with:
 ```bash
 $ cargo run
 ```
-Close the instance with CTRL+A,X
-or CTRL+C
+Close the instance with CTRL+C
 
 Build on filechange:
 ```bash
@@ -53,29 +46,13 @@ $ sudo ./checker/src/icmp.py <kernel_ip>
 
 Checker works now, you need to edit [checker.py](https://github.com/enowars/enowars5-service-kernel_mania/blob/enowars/checker/src/checker.py#L39) and change `test_ip` to `None` in production or your local kernel ip for testing.
 
-To test the exploit execute: `checker/src/icmp.py <ip>`
-
-## Release build:
-Execute:
+Execute checker normally with:
 ```bash
-$ cargo run --release
-```
-The resulting file lies in: `target/x86_64-os/release/bootimage-svm_kernel.bin`
-Flash it with:
-```bash
-$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/MYDEVICE
+$ cd checker
+$ docker-compose up --build
 ```
 
-OR
-Edit the file `Cargo.toml` and change `build-command` to `["build", "--release"]`
-Then execute `cargo bootimage --grub`
-
-## Generate & view assembly
-```
-$ cargo asm
-```
-
-You can find the asm file in `target/x86_64-os/release/deps/svm_kernel-*.s`
+Then visit http://localhost:8000/
 
 
 ## Debug with gdb
@@ -91,18 +68,6 @@ You have to use `hb` instead of `b` in gdb when using qemu-kvm. If not the break
 To get debug symbols for the kernel and not for the bootloader execute:
 ```
 (gdb) symbol-file target/x86_64-os/debug/svm_kernel
-```
-
-If you want to debug other cores you have to use qemu in emulation mode and not in kvm mode!
-If qemu is in emulation mode gdb sees other cores as threads thus settings breakpoints has to be done
-as follows:
-List all cores and its IDs:
-```
-(gdb) thread
-```
-Set breakpoint
-```
-(gdb) break <location> thread <thread-id>
 ```
 
 
