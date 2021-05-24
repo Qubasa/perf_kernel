@@ -7,8 +7,6 @@ from icmp import *
 
 from enochecker import BaseChecker, BrokenServiceException, assert_equals, run
 
-# TODO: How to get the ip of the services
-# TODO: Checker needs raw socket priviliges
 class KernelManiaChecker(BaseChecker):
     """
     Change the methods given here, then simply create the class and .run() it.
@@ -53,7 +51,7 @@ class KernelManiaChecker(BaseChecker):
             kernel_ip = self.test_ip
 
         print("kernel ip: ", kernel_ip)
-        if self.variant_id == 1:
+        if self.variant_id == 0:
             send(RemoteFunction.SetFlag, kernel_ip, self.flag.encode("ascii"))
         else:
             raise ValueError(
@@ -75,7 +73,7 @@ class KernelManiaChecker(BaseChecker):
             kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
 
-        if self.variant_id == 1:
+        if self.variant_id == 0:
             flag = send(RemoteFunction.GetFlag, kernel_ip)
             try:
                 flag = flag.decode("ascii")
@@ -123,9 +121,14 @@ class KernelManiaChecker(BaseChecker):
             kernel_ip = self.address.split(".")[:-1]+['3']
         else:
             kernel_ip = self.test_ip
+
         print("kernel ip: ", kernel_ip)
-        send_normal(kernel_ip, secrets.token_bytes(len(self.flag))
-        pass
+        if self.variant_id == 0:
+            send_normal(kernel_ip, secrets.token_bytes(len(self.flag)+1)
+        else:
+            raise ValueError(
+                "variant_id {} not supported!".format(self.variant_id)
+            )  # Internal error.
 
     def exploit(self) -> None:
         """
