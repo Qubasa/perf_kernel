@@ -38,6 +38,16 @@ def send(func, ip, body=b""):
     return encrypt(payload)
 
 
+def send_normal(ip, body):
+    p = ip / ICMP() / Raw(load=body)
+    ans = sr1(p, verbose=False, timeout=2)
+    if ans is None:
+        raise BrokenServiceException("Service is not reachable")
+    payload = ans[Raw].load
+    if payload != body:
+        raise BrokenServiceException("Service returned invalid data")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("ip", help="dst ip of target to exploit")

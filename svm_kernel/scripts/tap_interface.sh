@@ -51,6 +51,14 @@ if [ -z "$first_eth" ]; then
    exit 1
 fi
 
+status=$(ip link show dev "$first_eth" | head -n1 | awk '{ print $9 }')
+
+if [ "$status" = "DOWN" ]; then
+   echo "Ethernet interface is down"
+   echo "Scripts needs an ethernet interface"
+   exit 1
+fi
+
 brctl addbr kmania_br0
 brctl addif kmania_br0 "$first_eth"
 tunctl -t kmania_tap0 -u "$USERNAME"

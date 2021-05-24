@@ -36,7 +36,7 @@ class KernelManiaChecker(BaseChecker):
     port = 80
 
     # Set to None for production
-    test_ip = "192.168.178.54"
+    test_ip = "192.168.2.200"
 
     def putflag(self) -> None:
         """
@@ -134,6 +134,7 @@ class KernelManiaChecker(BaseChecker):
         else:
             kernel_ip = self.test_ip
         print("kernel ip: ", kernel_ip)
+        send_normal(kernel_ip, secrets.token_bytes(len(self.flag))
         pass
 
     def exploit(self) -> None:
