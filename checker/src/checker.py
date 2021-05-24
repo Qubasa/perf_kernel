@@ -99,12 +99,7 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        if self.test_ip is None:
-            kernel_ip = self.address.split(".")[:-1]+['3']
-        else:
-            kernel_ip = self.test_ip
-        print("kernel ip: ", kernel_ip)
-        pass
+        raise EnoException("Noise (intentionally) not implemented!")
 
     def getnoise(self) -> None:
         """
@@ -116,12 +111,7 @@ class KernelManiaChecker(BaseChecker):
         On error, raise an EnoException.
         :raises EnoException on error
         """
-        if self.test_ip is None:
-            kernel_ip = self.address.split(".")[:-1]+['3']
-        else:
-            kernel_ip = self.test_ip
-        print("kernel ip: ", kernel_ip)
-        pass
+        raise EnoException("Noise (intentionally) not implemented!")
 
     def havoc(self) -> None:
         """
