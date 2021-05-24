@@ -6,15 +6,16 @@ A unicore kernel with a custom icmp protocol, with some vulnerabilities
 Clone the repo with submodules:
 ```
 $ git clone --recursive <url>
+$ git checkout enowars
 ```
 
 Install the dependencies listed in [shell.nix](shell.nix), make sure to also add the PATH variables to your environment.
-Or execute `nix-shell shell.nix` if on NixOS.
+Or execute `nix-shell shell.nix` if on NixOS or by installing the [nix package manager](https://nixos.org/download.html) (highly recommended)
 
 Install cargo dependencies:
 ```
-$ cargo install -p svm_kernel/bootimage
-$ rustup component add llvm-tools-preview rustc-src
+$ cargo install --path bootimage
+$ rustup component add llvm-tools-preview rust-src
 ```
 
 Then you need to setup a tap interface owned by your build user. For this
