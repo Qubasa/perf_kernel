@@ -15,12 +15,12 @@ $ git clone --recursive <url>
 Pinned rustc version is found in [rust-toolchain](svm_kernel/rust-toolchain)
 
 Install the dependencies listed in `shell.nix` or execute
-`nix-shell shell.nix` if on NixOS.
+`nix-shell shell.nix` if on NixOS or install the [nix package manager](https://nixos.org/download.html)(highly recommended).
 
 Install cargo dependencies:
 ```
 $ cargo install -p svm_kernel/bootimage
-$ rustup component add llvm-tools-preview rustc-src
+$ rustup component add llvm-tools-preview rust-src
 ```
 
 Run in qemu with:
