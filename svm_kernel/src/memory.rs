@@ -276,7 +276,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 unsafe impl FrameAllocator<Size2MiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame::<Size2MiB>> {
         let frame = self.usable_frames::<Size2MiB>().nth(self.next);
-        self.next += 1;
+        self.next += (Size2MiB::SIZE / Size4KiB::SIZE) as usize;
         frame
     }
 }

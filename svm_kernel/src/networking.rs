@@ -207,17 +207,19 @@ pub fn get_dhcp(iface: &mut Interface<'_, StmPhy>) {
     } // end loop
 }
 
-
 pub fn static_ip(iface: &mut Interface<'_, StmPhy>) {
-    let ip = Ipv4Address::new(192, 168, 2, 200);
+    let ip = Ipv4Address::new(192, 168, 178, 1);
     let cidr = Ipv4Cidr::new(ip, 24);
     iface.update_ip_addrs(|addrs| {
         addrs.iter_mut().next().map(|addr| {
             *addr = IpCidr::Ipv4(cidr);
         });
     });
-    let default_route = Ipv4Address::new(192, 168, 2, 1);
-    iface.routes_mut().add_default_ipv4_route(default_route).unwrap();
+    let default_route = Ipv4Address::new(192, 168, 178, 77);
+    iface
+        .routes_mut()
+        .add_default_ipv4_route(default_route)
+        .unwrap();
     log::info!("Ip address is: {}", ip);
     log::info!("Gateway is: {}", default_route);
 }
@@ -228,8 +230,7 @@ use smoltcp::socket::*;
 pub fn init() {
     let device = StmPhy::new();
 
-    let mut neighbor_cache_entries = [None; 8];
-    let neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);
+    let neighbor_cache = NeighborCache::new(alloc::collections::BTreeMap::new());
     let mut routes_storage = [None; 1];
     let routes = Routes::new(&mut routes_storage[..]);
 
@@ -244,8 +245,93 @@ pub fn init() {
 
     // get_dhcp(&mut iface);
     static_ip(&mut iface);
-
+    tcp_server(&mut iface);
     server(&mut iface);
+}
+
+fn tcp_server(iface: &mut Interface<'_, StmPhy>) {
+    let rand = x86_64::instructions::random::RdRand::new().unwrap();
+    'reconnect: loop {
+        use crate::alloc::borrow::ToOwned;
+        use alloc::vec::Vec;
+        let tcp_rx_buffer = TcpSocketBuffer::new(vec![0; 64]);
+        let tcp_tx_buffer = TcpSocketBuffer::new(vec![0; 128]);
+        let tcp_socket = TcpSocket::new(tcp_rx_buffer, tcp_tx_buffer);
+        let mut sockets = SocketSet::new(vec![]);
+        let tcp_handle = sockets.add(tcp_socket);
+        let remoteAddr = Ipv4Address::new(192, 168, 178, 35);
+        let remotePort = 2850;
+        let localPort = 10500;
+        {
+            let mut socket = sockets.get::<TcpSocket>(tcp_handle);
+            socket.connect((remoteAddr, remotePort), localPort).unwrap();
+        }
+        let mut tcp_active = false;
+        let clock = mock::Clock::new();
+        'inner: loop {
+            let timestamp = clock.elapsed();
+            let mut upper_deadline: u64 = 0;
+            while upper_deadline == 0 {
+                match iface.poll(&mut sockets, timestamp) {
+                    Ok(_) => {
+                        iface
+                            .poll_at(&sockets, timestamp)
+                            .map(|sockets_upper_deadline| {
+                                upper_deadline = sockets_upper_deadline.millis() as u64
+                            });
+                    }
+                    Err(e) => {
+                        log::debug!("poll error: {}", e);
+                    }
+                }
+                crate::time::sleep(100);
+            }
+
+            {
+                let mut socket = sockets.get::<TcpSocket>(tcp_handle);
+                if socket.is_active() && !tcp_active {
+                    log::debug!("connected");
+                } else if !socket.is_active() && tcp_active {
+                    log::debug!("disconnected");
+                    break 'inner;
+                }
+                tcp_active = socket.is_active();
+
+                if socket.may_recv() {
+                    let data = socket
+                        .recv(|data| {
+                            let mut data = data.to_owned();
+                            if !data.is_empty() {
+                                log::debug!(
+                                    "recv data: {:?}",
+                                    alloc::str::from_utf8(data.as_ref())
+                                        .unwrap_or("(invalid utf8)")
+                                );
+                                data = data.split(|&b| b == b'\n').collect::<Vec<_>>().concat();
+                                data.reverse();
+                                data.extend(b"\n");
+                            }
+                            (data.len(), data)
+                        })
+                        .unwrap();
+                    if socket.can_send() && !data.is_empty() {
+                        log::debug!(
+                            "send data: {:?}",
+                            alloc::str::from_utf8(data.as_ref()).unwrap_or("(invalid utf8)")
+                        );
+                        socket.send_slice(&data[..]).unwrap();
+                    }
+                } else if socket.may_send() {
+                    log::debug!("close");
+                    socket.close();
+                }
+            }
+            crate::time::sleep(200);
+            clock.advance(Duration {
+                millis: 1,
+            });
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -255,8 +341,8 @@ enum RemoteFunction {
     Uknown(u8),
     AdmnCtrl,
     GetPassword,
-    SetFlag,
-    GetFlag
+    AddFlag,
+    GetFlag,
 }
 
 impl ::core::convert::From<u8> for RemoteFunction {
@@ -265,7 +351,7 @@ impl ::core::convert::From<u8> for RemoteFunction {
             0 => RemoteFunction::Uknown(0),
             1 => RemoteFunction::AdmnCtrl,
             2 => RemoteFunction::GetPassword,
-            3 => RemoteFunction::SetFlag,
+            3 => RemoteFunction::AddFlag,
             4 => RemoteFunction::GetFlag,
             i => RemoteFunction::Uknown(i),
         }
@@ -283,6 +369,10 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
     let clock = mock::Clock::new();
     let device_caps = iface.device().capabilities();
     let port = 34;
+
+    unsafe {
+        crate::server::FLAGS = Some(alloc::vec::Vec::new());
+    }
 
     log::info!("Started icmp server");
     loop {
@@ -335,9 +425,9 @@ pub fn server(iface: &mut Interface<'_, StmPhy>) {
                             crate::server::get_password(&packet, remote, &mut socket, &device_caps);
                         };
                     }
-                    RemoteFunction::SetFlag => {
+                    RemoteFunction::AddFlag => {
                         unsafe {
-                            crate::server::set_flag(&packet, remote, &mut socket, &device_caps);
+                            crate::server::add_flag(&packet, remote, &mut socket, &device_caps);
                         };
                     }
                     RemoteFunction::GetFlag => {

@@ -268,6 +268,7 @@ impl Rtl8139 {
                 // let mut part1 = buf[0..diff].to_vec();
                 // part0.append(&mut part1);
                 // PACKET_BUF.as_mut().unwrap().lock().push_back(part0);
+                log::warn!("Buffer rewraps....throwing packet away");
             }else {
                 let buf = &buf[READ_OFF + 4..READ_OFF + size];
                 PACKET_BUF.as_mut().unwrap().lock().push_back(buf.to_vec());

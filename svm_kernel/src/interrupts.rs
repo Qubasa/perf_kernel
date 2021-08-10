@@ -1,4 +1,5 @@
 use crate::apic;
+use crate::println;
 use crate::gdt;
 use crate::print;
 use crate::pci;
@@ -258,6 +259,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: &mut InterruptSt
     unsafe {
         apic::end_of_interrupt();
     }
+
 }
 
 extern "x86-interrupt" fn spurious_handler(_stack_frame: &mut InterruptStackFrame) {

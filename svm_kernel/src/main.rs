@@ -32,19 +32,22 @@ extern crate alloc;
  * The macro entry_point creates the nomangle _start func for us and checks that
  * the given function has the correct signature
  */
-//TODO: Reset rsp to start of stack
+//TODO: rsp has to be 16 byte aligned
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Trace);
 
     let rsp: u64;
     unsafe {
         asm!("mov {}, rsp", out(reg) rsp);
     };
     log::info!("Reached kernel! rsp: {:x}", rsp);
+    log::info!("bootinfo: {:#?}", _boot_info);
+    let region = _boot_info.memory_map.get_region_by_addr(0x6a8000);
+    log::info!("Found region: {:#?}", region);
 
     // Initialize routine for kernel
     svm_kernel::init(_boot_info);

@@ -361,10 +361,11 @@ impl Iterator for PdeAllocator {
 
     fn next(&mut self) -> Option<&'static mut PageTable> {
         let addr = self.p2_start_addr + core::mem::size_of::<PageTable>() * self.index;
-        if addr > self.p2_end_addr {
+        let layout = core::alloc::Layout::from_size_align(addr, 16).unwrap();
+        if layout.size() > self.p2_end_addr {
             return None;
         }
-        let p2_table = unsafe { &mut *(addr as *mut PageTable) };
+        let p2_table = unsafe { &mut *(layout.size() as *mut PageTable) };
         self.index += 1;
         Some(p2_table)
     }
