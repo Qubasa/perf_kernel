@@ -1,6 +1,11 @@
 ## Description
-A unicore kernel with a custom icmp protocol, with some vulnerabilities
+==== WORK IN PROGRESS ====
 
+Trying to get multicore to work.
+
+Goal:
+x86_64 AMD kernel optimized for extreme performance at the cost of ditching all security measures.
+In the future this should become a hypervisor.
 
 ## Setup & Debug Build
 Clone the repo with submodules:
