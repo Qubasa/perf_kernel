@@ -5,6 +5,7 @@
 #![reexport_test_harness_main = "test_main"]
 #![feature(asm)]
 #![feature(test)]
+#![cfg(not(test))]
 /*
  * Followed the tutorial here: https://os.phil-opp.com
  * TODO: Replace builtin memcpy, memset with optimized one
@@ -33,6 +34,7 @@ extern crate alloc;
  * the given function has the correct signature
  */
 //TODO: rsp has to be 16 byte aligned
+
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 

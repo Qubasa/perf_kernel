@@ -12,6 +12,14 @@ opt-level = 3
 debug=true
 codegen-units=1
 
+
+# This is needed to tell rust-analyzer to compile #[cfg(not(test))] attributes
+# Else rust-analyzer sets this attribute and doesn't check your real code
+[[bin]]
+name = "svm_kernel"
+test = false
+
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 pc-keyboard = "0.5.1"
