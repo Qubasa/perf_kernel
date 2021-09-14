@@ -50,10 +50,10 @@ impl FixedSizeBlockAllocator {
             None => {
                 panic!("dealloced invalid ptr! {:#?}, index: {}", ptr, index);
             }
-            Some(i) => {
+            Some(_i) => {
                 // log::trace!(
                 //     "dealloced {:#x} bytes at addr: {:#?}",
-                //     i as usize * ALLOC_STEPS,
+                //     _i as usize * ALLOC_STEPS,
                 //     ptr
                 // );
                 self.arr[index] = None;

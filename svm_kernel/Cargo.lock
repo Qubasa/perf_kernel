@@ -27,12 +27,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "byteorder"
-version = "1.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -67,12 +61,6 @@ checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "managed"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ca88d725a0a943b096803bd34e73a4437208b6077654cc4ecb2947a5f91618d"
 
 [[package]]
 name = "modular-bitfield"
@@ -140,16 +128,6 @@ name = "rangeset"
 version = "0.1.0"
 
 [[package]]
-name = "smoltcp"
-version = "0.7.0"
-dependencies = [
- "bitflags",
- "byteorder",
- "log",
- "managed",
-]
-
-[[package]]
 name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -178,7 +156,6 @@ dependencies = [
  "pc-keyboard",
  "pic8259_simple",
  "rangeset",
- "smoltcp",
  "spin 0.6.0",
  "uart_16550",
  "x86_64",

@@ -14,7 +14,6 @@ codegen-units=1
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-#k256 = { version="0.8.1", default-features=false, features = ["ecdsa", "sha256"] }
 pc-keyboard = "0.5.1"
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 pic8259_simple = { path="external/pic8259_simple"  }
@@ -24,17 +23,15 @@ spin = "0.6.0"
 x86_64 = {path= "external/x86_64"}
 modular-bitfield = "0.10.0"
 bootloader = { path="external/bootloader" }
-smoltcp = {path="external/smoltcp", default-features = false, features= [ "log", "alloc", "proto-ipv4",
-"proto-igmp", "proto-dhcpv4", "proto-ipv6", "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"]}
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=1", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "2G", "-netdev", "tap,id=mynet0,ifname=kmania_tap0,script=no,downscript=no", "-device", "rtl8139,netdev=mynet0,mac=52:55:00:d1:55:11"]
-# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "tap,id=mynet0,ifname=tap0,script=no,downscript=no", "-device", "rtl8139,netdev=mynet0,mac=52:55:00:d1:55:01"]
-# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-netdev", "user,id=mynet0,hostfwd=tcp::8080-:80", "-device", "rtl8139,netdev=mynet0"]
+run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=1", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "2G"]
+# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
+# run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "4G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
 # build-command = ["build"]
 build-command = ["build"]

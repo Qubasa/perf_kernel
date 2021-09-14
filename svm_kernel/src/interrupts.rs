@@ -1,8 +1,6 @@
 use crate::apic;
-use crate::println;
 use crate::gdt;
 use crate::print;
-use crate::pci;
 
 use pic8259_simple::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -115,8 +113,6 @@ lazy_static::lazy_static! {
             .set_handler_fn(spurious_handler);
         idt[InterruptIndex::MasterPicSpurious.as_usize()]
             .set_handler_fn(spurious_handler);
-        idt[InterruptIndex::Rtl8139.as_usize()]
-            .set_handler_fn(received_packet);
         idt
     };
 }
@@ -127,14 +123,6 @@ pub fn load_idt() {
 
 use crate::hlt_loop;
 use x86_64::structures::idt::PageFaultErrorCode;
-
-extern "x86-interrupt" fn received_packet(_stack_frame: &mut InterruptStackFrame) {
-    unsafe {
-        pci::DEVICES.lock()[0].receive_packet();
-        PICS.lock()
-            .notify_end_of_interrupt(InterruptIndex::Rtl8139.as_u8());
-    }
-}
 
 extern "x86-interrupt" fn page_fault_handler(
     stack_frame: &mut InterruptStackFrame,

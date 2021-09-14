@@ -4,10 +4,11 @@
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use bootloader::{entry_point, BootInfo};
+use bootloader::{entry_point, bootinfo::BootInfo};
 use core::panic::PanicInfo;
 use svm_kernel::{exit_qemu, init, println, QemuExitCode};
 
+#[allow(unreachable_code)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     println!("[ok]");

@@ -6,7 +6,8 @@
 
 extern crate alloc;
 
-use bootloader::{entry_point, BootInfo};
+use bootloader::bootinfo::BootInfo;
+use bootloader::entry_point;
 use core::panic::PanicInfo;
 use svm_kernel::{
     allocator::HEAP_START, bench::black_box, bench::Bench, mylog::LOGGER, print, println,
@@ -15,9 +16,6 @@ use svm_kernel::{
 entry_point!(main);
 
 fn main(boot_info: &'static BootInfo) -> ! {
-    use svm_kernel::allocator;
-    use svm_kernel::memory::{self, BootInfoFrameAllocator};
-    use x86_64::VirtAddr;
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
 
@@ -202,6 +200,7 @@ fn many_boxes() {
     bench.end();
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 struct Test0 {
     typ: u8,
@@ -210,7 +209,7 @@ struct Test0 {
     id: u8,
     flags: u32,
 }
-
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 struct Test1 {
     typ: u8,
@@ -220,7 +219,7 @@ struct Test1 {
     mapped_to: u32,
     flags: u16,
 }
-
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 struct Test2 {
     typ: u8,

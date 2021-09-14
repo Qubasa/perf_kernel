@@ -18,17 +18,6 @@ $ cargo install --path bootimage
 $ rustup component add llvm-tools-preview rust-src
 ```
 
-Then you need to setup a tap interface owned by your build user. For this
-execute the following script:
-```bash
-$ sudo ./svm_kernel/scripts/tap_interface.sh <username>
-```
-
-Set static ip of kernel:
-```
-$ ./svm_kernel/scripts/set_static_ip.sh <kernel_ip> <router_ip>
-```
-
 Run in qemu with:
 ```bash
 $ cargo run
@@ -40,45 +29,6 @@ Build on filechange:
 $ cd svm_kernel
 $ cargo watch
 ```
-
-Run exploit with:
-```
-$ sudo ./checker/src/icmp.py <kernel_ip>
-```
-
-Checker works now, you need to edit [checker.py](https://github.com/enowars/enowars5-service-kernel_mania/blob/enowars/checker/src/checker.py#L39) and change `test_ip` to `None` in production or your local kernel ip for testing.
-
-Execute checker normally with:
-```bash
-$ cd checker
-$ docker-compose up --build
-```
-
-Then visit http://localhost:8000/
-
-
-## Challenge setup
-First you need to have followed Setup & Debug Build.
-To generate the challenges edit [generate_challenges.sh](svm_kernel/scripts/generate_challenges.sh),
-and change:
-```bash
-# Put here the IP of the kernel for every team
-TEAMS=("192.168.178.54" "192.168.177.54")
-# Put here the gateway for all teams
-GATEWAY="192.168.178.1"
-```
-
-Then execute the script:
-```bash
-$ ./scripts/generate_challenges.sh
-```
-
-The ctf player machines need these programs installed:
-* qemu
-* tunctl
-* brctl
-* dhclient
-
 
 ## Debug with radare2
 ```bash

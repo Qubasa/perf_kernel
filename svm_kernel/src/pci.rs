@@ -44,12 +44,12 @@ pub trait Device: Send + Sync  {
     /// may have been interrupted mid-use.
     unsafe fn purge(&self);
 }
-type ProbeFunction = fn(&PciDevice, addr: u32) -> Option<Arc<crate::rtl8139::Rtl8139>>;
+type ProbeFunction = fn(&PciDevice, addr: u32) -> Option<()>;
 
 /// List of all driver probe routines on the system. If they return `Some` then
 /// we successfully found a driver and thus we'll register it in the
 /// `DEVICES` database
-const DRIVERS: &[ProbeFunction] = &[crate::rtl8139::probe];
+const DRIVERS: &[ProbeFunction] = &[];
 
 /// If `true` verbose PCI device enumeration will be displayed
 const DEBUG_PCI_DEVICES: bool = false;
@@ -63,7 +63,7 @@ pub const PCI_CONFIG_DATA: u16 = 0xcfc;
 /// Enable bit for accessing the `0xcf8` I/O port
 const PCI_ADDRESS_ENABLE: u32 = 1 << 31;
 
-pub static DEVICES: spin::Mutex<Vec<Arc<crate::rtl8139::Rtl8139>>> = spin::Mutex::new(Vec::new());
+pub static DEVICES: spin::Mutex<Vec<Arc<()>>> = spin::Mutex::new(Vec::new());
 
 /// Common PCI header for the PCI configuration space of any device or bridge
 #[derive(Clone, Copy, Debug)]
@@ -204,10 +204,11 @@ pub unsafe fn init() {
 
             // Attempt to find a driver for this device
             for probe in DRIVERS {
-                if let Some(driver) = probe(&device, addr.try_into().unwrap()) {
+                if let Some(_driver) = probe(&device, addr.try_into().unwrap()) {
                     // Found a handler, go to the next function during the PCI
                     // enumeration
-                    DEVICES.lock().push(driver);
+                    //DEVICES.lock().push(driver);
+                    //TODO: Replace () with a driver
                 }
             }
         }
