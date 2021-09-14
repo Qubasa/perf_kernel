@@ -78,6 +78,8 @@ fn main() {
     // Strip debug symbols from kernel for faster loading
     let stripped_kernel_file_name = format!("kernel_stripped-{}", kernel_file_name);
     let stripped_kernel = out_dir.join(&stripped_kernel_file_name);
+    // use std::path::Path;
+    // std::fs::copy(&Path::new(&kernel), &Path::new(&stripped_kernel)).unwrap();
     let objcopy = llvm_tools
         .tool(&llvm_tools::exe("llvm-objcopy"))
         .expect("llvm-objcopy not found in llvm-tools");
@@ -444,9 +446,11 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + already_padded
             + 1;
 
-        for _ in 0..pad_size {
-            buf.insert(index, 0); // TODO: Make more efficient
-        }
+        let zero = std::iter::repeat(0).take(pad_size);
+        buf.splice(index..index, zero);
+        // for _ in 0..pad_size {
+        //     buf.insert(index, 0); // TODO: Make more efficient
+        // }
         // Sum of all applied pad sizes
         already_padded_vec.push(pad_size);
     }
@@ -461,9 +465,12 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + already_padded;
 
         eprintln!("Padding last load segment by: {:#x} bytes", pad_size);
-        for _ in 0..pad_size {
-            buf.insert(index, 0); // TODO: Make more efficient
-        }
+
+        let zero = std::iter::repeat(0).take(pad_size);
+        buf.splice(index..index, zero);
+        // for _ in 0..pad_size {
+        //     buf.insert(index, 0); // TODO: Make more efficient
+        // }
 
         already_padded_vec.push(pad_size);
     }
@@ -518,8 +525,21 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             apply_type_mut::<Elf64_Shdr>(header.e_shoff, header.e_shnum.into(), &mut buf).unwrap();
 
         for section in sections {
-            //TODO: If section does not map to load_segment what should we do?
-            let idx = addr_to_seg_map(section.sh_offset, &load_segments).unwrap();
+            // If section does not map to load_segment what should we do?
+            let idx = if let Some(idx) = addr_to_seg_map(section.sh_offset, &load_segments) {
+                idx
+            } else {
+                // Assume that it is at the end of the file
+                eprintln!("Section: {:#x?}", section);
+                eprintln!("Section does not map to load segment");
+                if section.sh_offset > load_segments.last().unwrap().p_offset {
+                    load_segments.len() - 1
+                } else {
+                    panic!(
+                        "Section is before last load segment but does not map to any load segment"
+                    );
+                }
+            };
             let already_padded = already_padded_vec[..idx].iter().sum::<usize>();
 
             section.sh_offset += already_padded as u64;
@@ -562,9 +582,12 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             let offset = section.sh_offset as usize;
             // Edge case: bss section lies outside of the padded file
             if offset + section.sh_size as usize > buf.len() {
-                for _ in 0..(offset + section.sh_size as usize - buf.len()) {
-                    buf.push(0); // TODO: Make more efficient
-                }
+                let pad_size = offset + section.sh_size as usize - buf.len();
+                let buf_len = buf.len();
+                buf.resize(buf_len + pad_size, 0);
+                // for _ in 0..(offset + section.sh_size as usize - buf.len()) {
+                //     buf.push(0); // TODO: Make more efficient
+                // }
             }
             let bss = &mut buf[offset..offset + section.sh_size as usize];
             for i in bss {

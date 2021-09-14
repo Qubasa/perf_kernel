@@ -110,14 +110,17 @@ impl Apic {
         return feature != 0;
     }
 
+    // IMPORTANT: Fix to be migrated
     unsafe fn init_chained_pics(&self, acpi: &Acpi) {
         PICS.lock().initialize();
         if !acpi.mask_pics {
-            log::info!("Virtual wire mode is active");
+            // log::info!("Virtual wire mode is active");
             let keyboard_enable = InterruptIndex::Keyboard.as_pic_enable_mask();
             let serial_enable = InterruptIndex::COM1.as_pic_enable_mask()
                 & InterruptIndex::COM2.as_pic_enable_mask();
-            PICS.lock().mask(keyboard_enable & serial_enable, 0xff);
+            let pic2 = InterruptIndex::Pic2.as_pic_enable_mask();
+            PICS.lock().mask(keyboard_enable & serial_enable & pic2, 0xff);
+            // PICS.lock().mask(0, 0);
         } else {
             use x86_64::instructions::port::Port;
             let mut imcr_low: Port<u8> = Port::new(0x22);

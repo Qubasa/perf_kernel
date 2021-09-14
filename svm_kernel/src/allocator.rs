@@ -6,7 +6,11 @@ use x86_64::{
 };
 
 pub const HEAP_START: usize = 0x_4444_4444_0000;
-pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+pub const HEAP_SIZE: usize = 1000 * 1024; // 2Mib
+// TODO: Bug arises when all 4KiB pages are exausted and then 4KiB pages are allocated in 2MiB
+// pages? (i didn't understand it fully)
+
+
 
 pub mod fixed_size_block;
 
@@ -33,15 +37,18 @@ pub fn init_heap(
         Page::range_inclusive(heap_start_page, heap_end_page)
     };
 
+    log::debug!("Start init heap");
     for page in page_range {
         let frame = frame_allocator
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
+        // log::debug!("Mapping virtual page: {:x?} to {:x?}", page, frame);
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
         unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
+        // log::info!("After map_to");
     }
 
-    log::info!("Done.");
+    log::debug!("Done init heap");
     Ok(())
 }
 

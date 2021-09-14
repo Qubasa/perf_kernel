@@ -60,16 +60,6 @@ pub fn print_pagetable(mapper: &OffsetPageTable) {
     log::info!("Done");
 }
 
-
-//TODO: If rust allows it in the future save the iterator in struct
-unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        let frame = self.usable_frames::<Size4KiB>().nth(self.next);
-        self.next += 1;
-        frame
-    }
-}
-
 // Identity maps the phys address + type size and volatile reads the type from
 // memory. Does not unmap the page
 pub unsafe fn map_and_read_phys<T: Copy>(
@@ -114,6 +104,28 @@ pub unsafe fn id_map_nocache<T: PageSize>(
 ) -> Result<Page<T>, IdMapError> {
     let my_flags = PageTableFlags::NO_CACHE | (add_flags.unwrap_or(PageTableFlags::empty()));
     id_map(mapper, frame_allocator, my_frame, Some(my_flags))
+}
+
+
+pub unsafe fn id_map_nocache_update_flags<T: PageSize>(
+    mapper: &mut (impl Mapper<T> + Translate),
+    frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
+    my_frame: PhysFrame<T>,
+    add_flags: Option<PageTableFlags>,
+) -> Result<Page<T>, IdMapError> {
+    let my_flags = PageTableFlags::NO_CACHE | (add_flags.unwrap_or(PageTableFlags::empty()));
+    match id_map_nocache(mapper, frame_allocator, my_frame, Some(my_flags)) {
+        Ok(i) => Ok(i),
+        Err(IdMapError::AlreadyMappedDiffFlags(_)) => {
+
+            let addr = VirtAddr::new(my_frame.start_address().as_u64());
+            let page = Page::<T>::from_start_address(addr).unwrap();
+            let my_flags = PageTableFlags::PRESENT | my_flags;
+            mapper.update_flags(page, my_flags).unwrap().flush();
+            Ok(page)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 /// Identity map phys frame
@@ -200,18 +212,15 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    /// TODO: Needs to ensure that start addr is aligned to pageSize
-    pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame> {
+    pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame::<T>> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions =
             unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
 
-        // Filter out regions smaller then 2Mb
-        let adjusted_regions = usable_regions.filter(move |r| r.range.size() >= T::SIZE);
 
         // Reduce frame range to fit into 2Mb pages
-        let adjusted_regions = adjusted_regions.map(|r| {
+        let adjusted_regions = usable_regions.map(|r| {
             let diff = r.range.size() % T::SIZE;
             if diff != 0 {
                 let new = r.range.end_addr() - diff;
@@ -223,6 +232,25 @@ impl BootInfoFrameAllocator {
             *r
         });
 
+        // Increase the start of frame range to fit into alignment
+        let adjusted_regions = adjusted_regions.map(move |r| {
+            let rest = r.range.start_addr() % T::SIZE;
+            if rest != 0 {
+                let new = r.range.start_addr() + (T::SIZE - rest);
+                if new > r.range.end_addr() {
+                    return MemoryRegion::empty();
+                }
+                return MemoryRegion {
+                    range: FrameRange::new(new, r.range.end_addr()),
+                    region_type: r.region_type,
+                };
+            }
+            r
+        });
+
+        // Filter out regions smaller then 2Mb
+        let adjusted_regions = adjusted_regions.filter(move |r| r.range.size() >= T::SIZE);
+
         // map each region to its address range
         let addr_ranges = adjusted_regions.map(|r| r.range.start_addr()..r.range.end_addr());
 
@@ -232,5 +260,23 @@ impl BootInfoFrameAllocator {
         // panic!("Missing check if start addr is PageSize aligned");
         // // create `PhysFrame` types from the start addresses
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
+}
+
+
+//TODO: If rust allows it in the future save the iterator in struct
+unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame> {
+        let frame = self.usable_frames::<Size4KiB>().nth(self.next);
+        self.next += 1;
+        frame
+    }
+}
+
+unsafe impl FrameAllocator<Size2MiB> for BootInfoFrameAllocator {
+    fn allocate_frame(&mut self) -> Option<PhysFrame::<Size2MiB>> {
+        let frame = self.usable_frames::<Size2MiB>().nth(self.next);
+        self.next += (Size2MiB::SIZE / Size4KiB::SIZE) as usize;
+        frame
     }
 }
