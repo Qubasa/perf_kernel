@@ -11,9 +11,7 @@ In the future this should become a hypervisor.
 Clone the repo with submodules:
 ```bash
 $ git clone --recursive <url>
-$ git checkout enowars
 ```
-
 
 Install the [nix package manager](https://nixos.org/download.html).  
 The installation script requires that you have `sudo` access to `root`.
@@ -23,19 +21,20 @@ $ curl -L https://nixos.org/nix/install | sh
 
 To download all required pinned dependencies just execute:
 ```bash
-$ cd svm_kernel
+$ cd <project_root>
 $ nix-shell shell.nix
 ```
 
 Then install cargo dependencies:
 ```bash
-$ cd svm_kernel
+$ cd <project_root>
 $ cargo install --path bootimage
 $ rustup component add llvm-tools-preview rust-src
 ```
 
 Now compile & run the kernel in qemu with:
 ```bash
+$ cd <project_root>/svm_kernel
 $ cargo run
 ```
 Close the instance with CTRL+C
@@ -48,9 +47,11 @@ $ cargo watch
 
 ## Debug with radare2
 ```bash
+$ cd <project_root>/svm_kernel
 $ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # Debug bootloader
 ```
 ```bash
+$ cd <project_root>/svm_kernel
 $ r2 target/x86_64-os/debug/svm_kernel # Debug kernel
 ```
 
@@ -59,6 +60,7 @@ Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloa
 ## Run tests
 To execute tests run:
 ```
+$ cd <project_root>/svm_kernel
 $ cargo test
 ```
 Run specific test:
