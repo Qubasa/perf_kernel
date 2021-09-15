@@ -3,9 +3,14 @@
 .global _start_bootloader
 .global switch_to_long_mode
 .global jump_to_long_mode
+.global gdt_64_pointer
 
 .code32
 _start_bootloader:
+    lgdt gdt_64_pointer
+    ljmp 0x18, offset switch_protected_mode
+
+switch_protected_mode:
     mov esp, offset __stack_start
     push ebx
     push eax
@@ -63,8 +68,10 @@ gdt_64:
     .quad 0x0000000000000000          # Null Descriptor - should be present.
     .quad 0x00209A0000000000          # 64-bit code descriptor (exec/read).
     .quad 0x0000920000000000          # 64-bit data descriptor (read/write).
+    .quad 0x00cf9a000000ffff          # 32-bit code descriptor (exec/read).
+    .quad 0x00cf92000000ffff          # 32-bit data descriptor (read/write).
 
 .align 4
 gdt_64_pointer:
     .word gdt_64_pointer - gdt_64 - 1    # 16-bit Size (Limit) of GDT.
-    .long gdt_64                         # 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)
+    .long gdt_64                         # 64-bit Base Address of GDT. (CPU will zero extend to 64-bit)

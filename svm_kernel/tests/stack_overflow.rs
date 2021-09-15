@@ -36,7 +36,7 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
-    let x = 0;
+    let x:[u8; 512] = [0; 512];
     stack_overflow();
     unsafe {
         core::ptr::read_volatile(&x);

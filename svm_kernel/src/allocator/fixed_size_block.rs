@@ -42,6 +42,10 @@ impl FixedSizeBlockAllocator {
             log::debug!("{}: {:#?}, ", i, self.arr[i]);
         }
     }
+    pub fn print_stats(&self) {
+        log::debug!("==== FixedSizeBlockAllocator ====");
+        log::debug!("");
+    }
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, _layout: &Layout) {
         let index = (ptr as usize - self.heap_start) / ALLOC_STEPS;

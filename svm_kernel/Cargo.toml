@@ -12,14 +12,6 @@ opt-level = 3
 debug=true
 codegen-units=1
 
-
-# This is needed to tell rust-analyzer to compile #[cfg(not(test))] attributes
-# Else rust-analyzer sets this attribute and doesn't check your real code
-[[bin]]
-name = "svm_kernel"
-test = false
-
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 pc-keyboard = "0.5.1"
@@ -37,7 +29,8 @@ features = ["spin_no_std"]
 
 # cargo run command options
 [package.metadata.bootimage]
-run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=1", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "2G"]
+run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
+#run-command = ["qemu-system-x86_64","-cpu" ,"EPYC-v1" ,"-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-s", "-S"]
 # run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
 # run-command = ["qemu-kvm","-cpu", "host","-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G"]
 # run-command = ["qemu-kvm","-cpu","host", "-m", "4G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]

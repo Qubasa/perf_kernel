@@ -8,9 +8,7 @@
 use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;
 use bootloader::mmu;
-use bootloader::mylog::LOGGER;
-use bootloader::pagetable;
-use bootloader::smp;
+use bootloader::{mylog::LOGGER, pagetable, smp};
 use core::convert::TryInto;
 use log::LevelFilter;
 use multiboot2;
@@ -98,6 +96,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             panic!("Processor does not support x86_64 instruction set");
         }
     }
+
+    //smp::undef_instr();
 
     // Parses the multiboot2 header
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);

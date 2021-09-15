@@ -1,15 +1,17 @@
 use x86::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 lazy_static::lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
+    pub static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.page_fault.set_handler_fn(page_fault_handler::<14>);
         crate::default_interrupt::init_default_handlers(&mut idt);
+        idt.invalid_opcode.set_handler_fn(invalid_op);
         idt
     };
 }
 
 pub fn load_idt() {
+    log::info!("Loading idt");
     IDT.load();
 }
 
@@ -59,6 +61,11 @@ impl IndexToException {
         }
         unsafe { core::intrinsics::transmute::<usize, IndexToException>(n) }
     }
+}
+
+pub extern "x86-interrupt" fn invalid_op(stack_frame: &mut InterruptStackFrame) {
+    log::error!("EXECPTION: Invalid Opcode");
+    panic!("{:?}", stack_frame);
 }
 
 pub extern "x86-interrupt" fn page_fault_handler<const N: usize>(

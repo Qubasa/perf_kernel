@@ -353,8 +353,3 @@ extern "x86-interrupt" fn security_handler(
 }
 
 // Executed on cargo test
-#[test_case]
-fn test_breakpoint_exception() {
-    log::info!("Breakpoint reached...");
-    x86_64::instructions::interrupts::int3();
-}

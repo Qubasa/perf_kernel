@@ -9,6 +9,7 @@
       xorriso
       grub2
       entr
+      qemu
       llvmPackages.lld
       python3
     ];

@@ -17,7 +17,7 @@ entry_point!(main);
 
 fn main(boot_info: &'static BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Debug);
 
     svm_kernel::init(boot_info);
     println!("===== heap_allocator test =====");
@@ -145,9 +145,10 @@ fn realloc_copy_shrink() {
 fn heap_full_alloc() {
     unsafe {
         let mut bench = Bench::start();
-        let layout = Layout::array::<u8>(HEAP_SIZE).unwrap();
+        let layout = Layout::array::<u8>(HEAP_SIZE-512).unwrap();
         let ptr = black_box(alloc(layout));
 
+        log::info!("ptr: {:x?}", ptr);
         // let failed_layout = Layout::array::<u8>(1).unwrap();
         // let failed_ptr = alloc(failed_layout);
         // assert_eq!(failed_ptr, core::ptr::null_mut());

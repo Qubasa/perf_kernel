@@ -2,6 +2,7 @@
 .intel_syntax noprefix
 .global _smp_trampoline
 .global stack_avail
+.global undef_instr
 
 .code16
 _smp_trampoline:
@@ -21,14 +22,14 @@ _smp_trampoline:
   out 0x92, al
 
   # Load 32-bit GDT
-  lgdt gdt32_pointer
+  lgdt gdt_64_pointer
 
   # Enable protected mode
   mov eax, cr0
   or  eax, (1 << 0)
   mov cr0, eax
 
-  ljmp 0x8, offset protected_mode_setup
+  ljmp 0x18, offset protected_mode_setup
 
 .code32
 protected_mode_setup:
@@ -52,17 +53,8 @@ wait_for_stack:
 spin:
   jmp spin
 
+undef_instr:
+  .long 0xffffffff
+
 .align 2
 stack_avail: .byte 1
-
-.align 4
-gdt32:
-  .quad 0x0000000000000000          # Null Descriptor - should be present.
-  .quad 0x00cf9a000000ffff          # 32-bit code descriptor (exec/read).
-  .quad 0x00cf92000000ffff          # 32-bit data descriptor (read/write)
-gdt32_end:
-
-.align 4
-gdt32_pointer:
-  .word gdt32_end - gdt32 - 1  # 16-bit Size (Limit) of GDT.
-  .long gdt32                  # 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)
