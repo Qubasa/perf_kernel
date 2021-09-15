@@ -9,29 +9,40 @@ In the future this should become a hypervisor.
 
 ## Setup & Debug Build
 Clone the repo with submodules:
-```
+```bash
 $ git clone --recursive <url>
 $ git checkout enowars
 ```
 
-Install the dependencies listed in [shell.nix](shell.nix), make sure to also add the PATH variables to your environment.
-Or execute `nix-shell shell.nix` if on NixOS or by installing the [nix package manager](https://nixos.org/download.html) (highly recommended)
 
-Install cargo dependencies:
+Install the [nix package manager](https://nixos.org/download.html).  
+The installation script requires that you have `sudo` access to `root`.
+```bash
+$ curl -L https://nixos.org/nix/install | sh
 ```
+
+To download all required pinned dependencies just execute:
+```bash
+$ cd svm_kernel
+$ nix-shell shell.nix
+```
+
+Then install cargo dependencies:
+```bash
+$ cd svm_kernel
 $ cargo install --path bootimage
 $ rustup component add llvm-tools-preview rust-src
 ```
 
-Run in qemu with:
+Now compile & run the kernel in qemu with:
 ```bash
 $ cargo run
 ```
 Close the instance with CTRL+C
 
-Build on filechange:
+To build on filechange:
 ```bash
-$ cd svm_kernel
+$ cargo install cargo-watch
 $ cargo watch
 ```
 

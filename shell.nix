@@ -4,9 +4,6 @@
   pkgs.mkShell {
     buildInputs = with pkgs; [
       llvmPackages.bintools
-      bridge-utils
-      tunctl
-      dhcp
       zlib.out
       rustup
       xorriso
@@ -14,11 +11,6 @@
       entr
       llvmPackages.lld
       python3
-      python38Packages.pip
-      python38Packages.scapy
-      python38Packages.ipython
-      python38Packages.cryptography
-      docker-compose
     ];
     shellHook = ''
       export HISTFILE=${toString ./.history}
