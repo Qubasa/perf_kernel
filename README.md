@@ -60,18 +60,29 @@ Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloa
 ## Debug with gdb
 
 Edit [Cargo.toml](./svm_kernel/Cargo.toml)
-and uncomment the `run-command` line to the line with `"-s", "-S"` at the end.
-Debugging the bootloader with gdb
+and uncomment the `run-command` line to the line with `"-s", "-S"` at the end.  
+Debugging the *bootloader* with gdb
 ```bash
 $ cd <project_root>/svm_kernel
 $ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/isofiles/boot/kernel.elf"
 ```
 
-Debugging the kernel with gdb
+Debugging the *kernel* with gdb
 ```bash
 $ cd <project_root>/svm_kernel
 $ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/svm_kernel"
 ```
+
+### Debugging a different cpu core 
+In gdb cpu cores get handled like threads. So to display all cpu cores execute: `info threads`
+To set a breakpoint on a different core execute: `hb <address> thread <cpu_num>`
+
+### Important
+If you use qemu with kvm you have to use [hardware breakpoints](https://en.wikipedia.org/wiki/Breakpoint#Implementations). Those are set with `hb <address>`
+
+In qemu emulation mode just use the normal breakpoints set with `b <address>`
+
+
 
 ## Debug with qemu monitor
 Connect to [qemu monitor](https://qemu.readthedocs.io/en/latest/system/monitor.html) with
@@ -79,6 +90,12 @@ Connect to [qemu monitor](https://qemu.readthedocs.io/en/latest/system/monitor.h
 $ nc 127.0.0.1 8124
 (qemu) help
 ```
+
+To switch to a different cpu core, execute:
+```
+(qemu) cpu <core_num>-1
+```
+
 
 ## Run tests
 To execute tests run:
