@@ -1,7 +1,7 @@
 use core::arch::x86::{__cpuid};
 
 extern "C" {
-    pub fn undef_instr();
+    pub fn undefined_instruction();
 }
 
 pub fn num_cores() -> u32 {
@@ -21,12 +21,16 @@ pub fn apic_id() -> u8 {
 
 #[no_mangle]
 unsafe extern "C" fn smp_main() {
+    
+   
     // Load interrupt handlers for x86 mode
     log::info!("=== smp main! === ");
-
+    //crate::vga::_print(format_args!("Hello World"));
     crate::interrupts::load_idt();
-
-    undef_instr();
+    
+    loop {
+        log::info!("core 1 says HELLO!")
+    }
 }
 
 

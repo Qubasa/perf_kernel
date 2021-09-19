@@ -72,7 +72,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // kernel. The symbol _kernel_size does not come from the linker script
     // but from objcopy. Read more under `$ man objcopy`
     core::hint::black_box(_kernel_size);
-
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
@@ -96,8 +95,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             panic!("Processor does not support x86_64 instruction set");
         }
     }
-
-    //smp::undef_instr();
 
     // Parses the multiboot2 header
     let boot_info = multiboot2::load(mboot2_info_ptr as usize);

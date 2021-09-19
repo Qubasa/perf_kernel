@@ -123,6 +123,7 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         }
     }
 
+
     // Init pci devices
     //TODO: uncomment
     // x86_64::instructions::interrupts::without_interrupts(|| unsafe {

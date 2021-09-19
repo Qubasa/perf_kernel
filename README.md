@@ -45,17 +45,40 @@ $ cargo install cargo-watch
 $ cargo watch
 ```
 
-## Debug with radare2
+## View assembly with radare2
 ```bash
 $ cd <project_root>/svm_kernel
-$ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # Debug bootloader
+$ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # View bootloader asm
 ```
 ```bash
 $ cd <project_root>/svm_kernel
-$ r2 target/x86_64-os/debug/svm_kernel # Debug kernel
+$ r2 target/x86_64-os/debug/svm_kernel # View kernel asm
 ```
 
 Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
+
+## Debug with gdb
+
+Edit [Cargo.toml](./svm_kernel/Cargo.toml)
+and uncomment the `run-command` line to the line with `"-s", "-S"` at the end.
+Debugging the bootloader with gdb
+```bash
+$ cd <project_root>/svm_kernel
+$ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/isofiles/boot/kernel.elf"
+```
+
+Debugging the kernel with gdb
+```bash
+$ cd <project_root>/svm_kernel
+$ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/svm_kernel"
+```
+
+## Debug with qemu monitor
+Connect to [qemu monitor](https://qemu.readthedocs.io/en/latest/system/monitor.html) with
+```
+$ nc 127.0.0.1 8124
+(qemu) help
+```
 
 ## Run tests
 To execute tests run:

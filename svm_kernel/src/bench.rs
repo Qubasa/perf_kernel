@@ -5,6 +5,8 @@ use core::arch::x86_64::__cpuid;
 pub enum CpuidIndex {
     TscInvariant = 0x8000_0007,
     Rdtscp = 0x8000_0001,
+    TLBInfo = 0x8000_0005,
+    TLBInfo1GbPages = 0x8000_0019,
 }
 
 impl CpuidIndex {
@@ -52,6 +54,21 @@ pub fn black_box<T>(dummy: T) -> T {
     dummy
 }
 
+pub fn max_num_4kib_pages() -> u8 {
+    let res = unsafe { __cpuid(CpuidIndex::TLBInfo.as_u32()) };
+    return ((res.ebx & (0xff << 16)) >> 16) as u8;
+}
+
+pub fn max_num_2mib_pages() -> u8 {
+    let res = unsafe { __cpuid(CpuidIndex::TLBInfo.as_u32()) };
+    return ((res.eax & (0xff << 16)) >> 16) as u8;
+}
+
+pub fn max_num_1gib_pages() -> u16 {
+    let res = unsafe { __cpuid(CpuidIndex::TLBInfo1GbPages.as_u32()) };
+    return ((res.eax & (0xfff << 16)) >> 16) as u16;
+}
+
 pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
 
@@ -64,6 +81,10 @@ pub fn check_support() {
     if res.edx == 0 {
         panic!("Rdtscp instruction is not supported");
     }
+
+    log::info!("max num 1Gib pages: {}", max_num_1gib_pages());
+    log::info!("max num 2Mib pages: {}", max_num_2mib_pages());
+    log::info!("max num 4Kib pages: {}", max_num_4kib_pages());
 }
 
 // TODO: When threading is implemented add a counter where execution time is spent most of the time

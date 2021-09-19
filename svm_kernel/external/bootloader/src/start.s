@@ -8,9 +8,12 @@
 .code32
 _start_bootloader:
     lgdt gdt_64_pointer
-    ljmp 0x18, offset switch_protected_mode
+    ljmp 24, offset switch_protected_mode
 
 switch_protected_mode:
+    mov dx, 32 # Set ds to 32-bit data segment
+    mov ds, dx
+    mov ss, dx
     mov esp, offset __stack_start
     push ebx
     push eax
@@ -47,31 +50,15 @@ load_64bit_gdt:
     lgdt gdt_64_pointer                # Load GDT.Pointer defined below.
 
 jump_to_long_mode:
-    push 0x8
-    mov eax, offset reset_state
-    push eax
-    retf # Load CS with 64 bit segment and flush the instruction cache
+    ljmp 8, offset reset_state
 
+.align 8
 .code64
 reset_state:
     mov byte ptr [stack_avail], 1
     xor rax, rax
-    mov ss, rax
+    mov ss, rax # in long mode these segment register are ignored
     mov es, rax
     mov gs, rax
-    mov rax, 16 # offset to 3rd entry in gdt_64
     mov ds, rax
     jmp rsi
-
-.align 4
-gdt_64:
-    .quad 0x0000000000000000          # Null Descriptor - should be present.
-    .quad 0x00209A0000000000          # 64-bit code descriptor (exec/read).
-    .quad 0x0000920000000000          # 64-bit data descriptor (read/write).
-    .quad 0x00cf9a000000ffff          # 32-bit code descriptor (exec/read).
-    .quad 0x00cf92000000ffff          # 32-bit data descriptor (read/write).
-
-.align 4
-gdt_64_pointer:
-    .word gdt_64_pointer - gdt_64 - 1    # 16-bit Size (Limit) of GDT.
-    .long gdt_64                         # 64-bit Base Address of GDT. (CPU will zero extend to 64-bit)
