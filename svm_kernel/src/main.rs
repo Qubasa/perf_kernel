@@ -27,6 +27,7 @@ use svm_kernel::mylog::LOGGER;
 
 use bootloader::bootinfo;
 use bootloader::entry_point;
+use svm_kernel::{smp};
 
 extern crate alloc;
 /*
@@ -38,10 +39,35 @@ extern crate alloc;
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
+
+
+    // Check if this is a smp core
     if svm_kernel::smp::apic_id() != 0 {
-        log::info!("Core 1 now looping...");
-        loop {}
+
+        // Make sure bsp core state is the same as smp core state
+        {
+            let curr_core_state = smp::CoreState::new();
+            let bsp_state = unsafe {
+                smp::BSPCORE_STATE.unwrap()
+            };
+
+            if curr_core_state != bsp_state {
+                log::info!("First one is BSP second one is core 1");
+                bsp_state.diff_print(&curr_core_state);
+                panic!("Different core states. This will create issues.");
+            }
+        }
+
+        loop {
+            log::info!("Core 1 now looping...");
+        }
     }
+
+    // Get state of bsp core for later to make sure other
+    // cores arrive here with the same state here
+    unsafe {
+        smp::BSPCORE_STATE = Some(smp::CoreState::new());  
+    };
 
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();

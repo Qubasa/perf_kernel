@@ -1,5 +1,6 @@
 use core::arch::x86::__cpuid;
 use x86::addr::PhysAddr;
+use x86::registers::control::{Cr0, Cr0Flags};
 
 use crate::bootinfo;
 
@@ -48,10 +49,16 @@ unsafe extern "C" fn smp_main() {
     // and set cr3 register with memory map
     crate::mmu::setup_mmu(PhysAddr::new(BOOT_INFO.page_table_addr));
 
+    // Enable write through 
+    // Enable caches
+    let mut cr0 = Cr0::read();
+    cr0.remove(Cr0Flags::NOT_WRITE_THROUGH);
+    cr0.remove(Cr0Flags::CACHE_DISABLE);
+    Cr0::write(cr0);
+
+    // Switch to long mode
     let entry_addr = BOOT_INFO.kernel_entry_addr;
-
     log::info!("Switching to long mode...");
-
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 
