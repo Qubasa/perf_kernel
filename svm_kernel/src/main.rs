@@ -38,13 +38,16 @@ extern crate alloc;
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
+    if svm_kernel::smp::apic_id() != 0 {
+        log::info!("Core 1 now looping...");
+        loop {}
+    }
+
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
 
     log::info!("bootinfo: {:#?}", _boot_info);
-    let region = _boot_info.memory_map.get_region_by_addr(0x6a8000);
-    log::info!("Found region: {:#?}", region);
 
     // Initialize routine for kernel
     svm_kernel::init(_boot_info);

@@ -22,7 +22,7 @@ pub unsafe fn generate_page_table(
         // Every entry in p2 is   2Mb big in total p2 can do 2M*512    entries = 1Gb
         // Every entry in p1 is   4Kb big in total p1 can do 4K*512    entries = 2Mb
         // Memory requirements for first 4Gb mapped with 4Kb pages
-        // 4*(8*1*512*512) = 8Mb 
+        // 4*(8*1*512*512) = 8Mb
         // Memory requirements for first 4Gb mapped with 2Mb pages
         // 4*(8*512) = 16Kb
         let mut entry = pagetable::PageTableEntry::new();

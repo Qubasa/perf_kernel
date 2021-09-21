@@ -14,6 +14,7 @@ use log::LevelFilter;
 use multiboot2;
 mod media_extensions;
 use multiboot2::MemoryAreaType;
+use smp::BOOT_INFO;
 use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
 use x86::{PhysAddr, VirtAddr};
@@ -54,8 +55,6 @@ extern "C" {
     static __page_table_end: usize;
     static __minimum_mem_requirement: usize;
 }
-
-static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
 
 // TODO: We have some n^2 complexity checking in here
 // we need a flame graph / execution hotspot map and start optimizing
@@ -290,7 +289,10 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     log::info!("Num physical cores: {}", smp::num_cores());
-    log::debug!("Apic id: {}", smp::apic_id());
+
+    if smp::apic_id() != 0 {
+        panic!("BSP core is non zero. Bootloader did not expect that.");
+    }
 
     // Allocate 8Mb stack space for every core
     // + 4096b guard page at the end
@@ -344,6 +346,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // and set cr3 register with memory map
     mmu::setup_mmu(p4_physical);
 
+    BOOT_INFO.page_table_addr = p4_physical.as_u32();
+
     log::debug!("Done creating page table.");
 
     // Check that kernel ELF header is correct
@@ -354,6 +358,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Read start addr from ELF header and jump to it
     let stack_addr = BOOT_INFO.cores[smp::apic_id() as usize].stack_start_addr as u32;
     let entry_addr = kernel_header.e_entry as u32;
+    BOOT_INFO.kernel_entry_addr = entry_addr;
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 

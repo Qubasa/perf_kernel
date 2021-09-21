@@ -33,6 +33,8 @@ pub struct BootInfo {
     /// Function pointer to a cpu core init function
     pub smp_trampoline: u32,
     pub physical_memory_offset: u64,
+    pub page_table_addr: u32,
+    pub kernel_entry_addr: u32,
     pub cores: Cores,
     /// The amount of physical memory available in bytes
     pub max_phys_memory: u64,
@@ -51,7 +53,9 @@ impl BootInfo {
         BootInfo {
             memory_map,
             smp_trampoline,
+            page_table_addr: 0,
             max_phys_memory: 0,
+            kernel_entry_addr: 0,
             physical_memory_offset,
             cores: Cores::empty(),
             _non_exhaustive: 0,
@@ -91,7 +95,9 @@ impl DerefMut for Cores {
 
 impl fmt::Debug for Cores {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_list().entries(self.cores[0..self.num_cores as usize].iter()).finish()
+        f.debug_list()
+            .entries(self.cores[0..self.num_cores as usize].iter())
+            .finish()
     }
 }
 
@@ -119,17 +125,17 @@ impl Core {
 impl fmt::Debug for Core {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
-        fmt.debug_struct("Core")
-            .field(
-                "stack_start_addr",
-                &format_args!("{:#x}", &self.stack_start_addr),
-            )
-            .field(
-                "stack_end_addr",
-                &format_args!("{:#x}", &self.stack_end_addr),
-            )
-            .field("stack_size", &format_args!("{:#x}", &self.stack_size))
-            .finish()
+            fmt.debug_struct("Core")
+                .field(
+                    "stack_start_addr",
+                    &format_args!("{:#x}", &self.stack_start_addr),
+                )
+                .field(
+                    "stack_end_addr",
+                    &format_args!("{:#x}", &self.stack_end_addr),
+                )
+                .field("stack_size", &format_args!("{:#x}", &self.stack_size))
+                .finish()
         }
     }
 }

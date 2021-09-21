@@ -46,9 +46,6 @@ switch_to_long_mode:
     or eax, (1 << 31)
     mov cr0, eax
 
-load_64bit_gdt:
-    lgdt gdt_64_pointer                # Load GDT.Pointer defined below.
-
 jump_to_long_mode:
     ljmp 8, offset reset_state
 

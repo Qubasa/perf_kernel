@@ -12,7 +12,7 @@
 #![feature(const_generics)]
 #![feature(abi_x86_interrupt)]
 #![feature(naked_functions)]
-
+#![feature(test)]
 
 // The dependencies here are set to target_arch = x86 because
 // the 'bootimage' command first builds this crate as dependencie of the kernel
@@ -23,11 +23,13 @@
 pub mod bootinfo;
 
 #[cfg(target_arch = "x86")]
-pub mod smp;
-#[cfg(target_arch = "x86")]
 pub mod default_interrupt;
 #[cfg(target_arch = "x86")]
 pub mod interrupts;
+#[cfg(target_arch = "x86")]
+pub mod media_extensions;
+#[cfg(target_arch = "x86")]
+pub mod mmu;
 #[cfg(target_arch = "x86")]
 pub mod mylog;
 #[cfg(target_arch = "x86")]
@@ -37,10 +39,11 @@ pub mod print;
 #[cfg(target_arch = "x86")]
 pub mod serial;
 #[cfg(target_arch = "x86")]
-pub mod vga;
+pub mod smp;
 #[cfg(target_arch = "x86")]
-pub mod mmu;
+pub mod vga;
 
+// TODO: Why does this need to be imported two times?
 global_asm!(include_str!("multiboot2_header.s"));
 
 pub const ONE_MEG: u64 = 1048576;

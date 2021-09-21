@@ -213,7 +213,9 @@ impl DerefMut for MemoryMap {
 impl fmt::Debug for MemoryMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let next_index = self.next_entry_index();
-        f.debug_list().entries(self.entries[0..next_index].iter()).finish()
+        f.debug_list()
+            .entries(self.entries[0..next_index].iter())
+            .finish()
     }
 }
 

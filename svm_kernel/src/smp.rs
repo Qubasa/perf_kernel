@@ -75,6 +75,14 @@ pub fn num_cores() -> u32 {
     count
 }
 
+pub fn apic_id() -> u8 {
+    unsafe {
+        let res = core::arch::x86_64::__cpuid(0x0000_0001);
+        let core_id = (res.ebx >> 24) as u8;
+        return core_id;
+    };
+}
+
 pub fn init(apic: &crate::apic::Apic, acpi_table: &crate::acpi::Acpi) {
     let apics = acpi_table.apics.as_ref().unwrap();
     if apic.is_bsp() {

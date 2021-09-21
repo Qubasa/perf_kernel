@@ -286,11 +286,7 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    pub fn usable_xsize_frames(
-        &self,
-        xsize: u64,
-        alignment: u64,
-    ) -> impl Iterator<Item = u64> {
+    pub fn usable_xsize_frames(&self, xsize: u64, alignment: u64) -> impl Iterator<Item = u64> {
         if alignment % 4096 != 0 {
             panic!("alignment needs to be multiple of 4096");
         }

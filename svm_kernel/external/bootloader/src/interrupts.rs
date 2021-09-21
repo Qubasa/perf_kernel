@@ -11,7 +11,6 @@ lazy_static::lazy_static! {
 }
 
 pub fn load_idt() {
-    log::info!("Loading idt");
     IDT.load();
 }
 
