@@ -9,10 +9,12 @@
 #![feature(global_asm)]
 #![feature(asm)]
 #![allow(incomplete_features)]
-#![feature(const_generics)]
+#![feature(adt_const_params)]
+#![feature(generic_const_exprs)]
 #![feature(abi_x86_interrupt)]
 #![feature(naked_functions)]
 #![feature(test)]
+#![feature(bench_black_box)]
 
 // The dependencies here are set to target_arch = x86 because
 // the 'bootimage' command first builds this crate as dependencie of the kernel

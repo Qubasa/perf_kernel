@@ -5,7 +5,7 @@
 #![reexport_test_harness_main = "test_main"]
 #![feature(asm)]
 #![feature(test)]
-
+#![feature(bench_black_box)]
 
 /*
  * Followed the tutorial here: https://os.phil-opp.com

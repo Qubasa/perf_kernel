@@ -21,7 +21,7 @@ mod memory_map;
 /// use the correct argument types. To ensure that the entry point function has the correct
 /// signature, use the [`entry_point`] macro.
 #[derive(Copy, Debug, Clone)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct BootInfo {
     /// A map of the physical memory regions of the underlying machine.
     ///
@@ -38,7 +38,6 @@ pub struct BootInfo {
     pub cores: Cores,
     /// The amount of physical memory available in bytes
     pub max_phys_memory: u64,
-    _non_exhaustive: u8, // `()` is not FFI safe
 }
 
 impl BootInfo {
@@ -58,13 +57,12 @@ impl BootInfo {
             kernel_entry_addr: 0,
             physical_memory_offset,
             cores: Cores::empty(),
-            _non_exhaustive: 0,
         }
     }
 }
 
 #[derive(Copy, Clone)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct Cores {
     cores: [Core; 256],
     pub num_cores: u32,
@@ -102,7 +100,7 @@ impl fmt::Debug for Cores {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct Core {
     /// Start address of stack for physical core
     pub stack_start_addr: u64,

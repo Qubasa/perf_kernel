@@ -7,7 +7,7 @@ const MAX_MEMORY_MAP_SIZE: usize = 64;
 
 /// A map of the physical memory regions of the underlying machine.
 #[derive(Copy, Clone)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct MemoryMap {
     entries: [MemoryRegion; MAX_MEMORY_MAP_SIZE],
     // u64 instead of usize so that the structure layout is platform
@@ -221,7 +221,7 @@ impl fmt::Debug for MemoryMap {
 
 /// Represents a region of physical memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct MemoryRegion {
     /// The range of frames that belong to the region.
     pub range: FrameRange,
@@ -244,7 +244,7 @@ impl MemoryRegion {
 
 /// A range of frames with an exclusive upper bound.
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C, packed)]
+#[repr(C, packed(64))]
 pub struct FrameRange {
     /// The frame _number_ of the first 4KiB frame in the region.
     ///

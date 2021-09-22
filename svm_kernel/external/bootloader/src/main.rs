@@ -4,6 +4,7 @@
 #![feature(asm)]
 #![feature(test)]
 #![allow(unused_imports)]
+#![feature(bench_black_box)]
 
 use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;

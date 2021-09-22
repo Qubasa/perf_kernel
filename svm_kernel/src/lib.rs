@@ -6,7 +6,8 @@
 #![reexport_test_harness_main = "test_main"]
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
-#![feature(const_in_array_repeat_expressions)]
+#![feature(inline_const)]
+#![feature(bench_black_box)]
 #![feature(const_mut_refs)]
 #![feature(asm)]
 #![feature(test)]
@@ -117,7 +118,6 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     
     unsafe {
         let apic = interrupts::APIC.lock();
-        smp::init(&apic, &acpi);
         if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
             apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
         }
