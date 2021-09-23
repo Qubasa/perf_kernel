@@ -1,10 +1,10 @@
 //! Provides boot information to the kernel.
 
-#![deny(improper_ctypes)]
-
 pub use self::memory_map::*;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use core::ptr::addr_of;
+use core::ptr::read_unaligned;
 mod memory_map;
 
 /// This structure represents the information that the bootloader passes to the kernel.
@@ -21,7 +21,7 @@ mod memory_map;
 /// use the correct argument types. To ensure that the entry point function has the correct
 /// signature, use the [`entry_point`] macro.
 #[derive(Copy, Debug, Clone)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct BootInfo {
     /// A map of the physical memory regions of the underlying machine.
     ///
@@ -62,7 +62,7 @@ impl BootInfo {
 }
 
 #[derive(Copy, Clone)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct Cores {
     cores: [Core; 256],
     pub num_cores: u32,
@@ -100,7 +100,7 @@ impl fmt::Debug for Cores {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct Core {
     /// Start address of stack for physical core
     pub stack_start_addr: u64,
@@ -120,24 +120,24 @@ impl Core {
     }
 }
 
+
+
 impl fmt::Debug for Core {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         unsafe {
             fmt.debug_struct("Core")
                 .field(
                     "stack_start_addr",
-                    &format_args!("{:#x}", &self.stack_start_addr),
+                    &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_start_addr))),
                 )
                 .field(
                     "stack_end_addr",
-                    &format_args!("{:#x}", &self.stack_end_addr),
+                    &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_end_addr))),
                 )
-                .field("stack_size", &format_args!("{:#x}", &self.stack_size))
+                .field("stack_size", &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_size))))
                 .finish()
-        }
+            }
     }
 }
 
-extern "C" {
-    fn _improper_ctypes_check_bootinfo(_boot_info: BootInfo);
-}
+

@@ -13,6 +13,8 @@ use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
+use core::ptr::addr_of;
+use core::ptr::{read};
 
 //
 // The bootloader maps the page table to a very high offset
@@ -215,8 +217,9 @@ impl BootInfoFrameAllocator {
     pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame::<T>> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
+
         let usable_regions =
-            unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
+            unsafe { regions.filter(|r| read(addr_of!(r.region_type)) == MemoryRegionType::Usable) };
 
 
         // Reduce frame range to fit into 2Mb pages

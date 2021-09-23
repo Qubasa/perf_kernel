@@ -1,4 +1,3 @@
-use core::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 
 /// Maximum number of cores allowed on the system
 pub const MAX_CORES: usize = 1024;

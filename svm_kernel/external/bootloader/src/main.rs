@@ -19,6 +19,7 @@ use smp::BOOT_INFO;
 use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
 use x86::{PhysAddr, VirtAddr};
+use core::ptr::{read_unaligned, addr_of};
 
 global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
@@ -105,7 +106,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Set smp trampoline
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
 
-    log::info!("smp trampoline function: {:#x}", BOOT_INFO.smp_trampoline);
+    log::info!("smp trampoline function: {:#x}", read_unaligned(addr_of!(BOOT_INFO.smp_trampoline)));
 
     /*
      * Convert memory areas to memory map
@@ -157,7 +158,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             if let Some(ref mut last) = last {
                 if last.range.intersects(map.range.start_addr()) {
                     log::debug!("Memory maps intersect: \n {:#?} <-> {:#?}", last, map);
-                    if map.region_type == bootinfo::MemoryRegionType::Usable {
+                    if read_unaligned(addr_of!(map.region_type)) == bootinfo::MemoryRegionType::Usable {
                         map.range.set_start_addr(last.range.end_addr());
                         continue;
                     }
@@ -193,7 +194,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
             if region.range.intersects(addr) {
                 unsafe {
-                    if region.region_type != MemoryRegionType::Usable {
+                    if read_unaligned(addr_of!(region.region_type)) != MemoryRegionType::Usable {
                         panic!(
                             "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
                             addr,

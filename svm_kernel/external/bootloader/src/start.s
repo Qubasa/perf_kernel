@@ -1,5 +1,4 @@
 .section .init_bootloader, "awx"
-.intel_syntax noprefix
 .global _start_bootloader
 .global switch_to_long_mode
 .global jump_to_long_mode

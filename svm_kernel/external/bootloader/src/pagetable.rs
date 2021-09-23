@@ -3,6 +3,8 @@ use core::convert::TryInto;
 use core::fmt;
 use core::ops::{Index, IndexMut};
 use x86::structures::paging::page::{PageSize, Size4KiB};
+use core::ptr::addr_of;
+use core::ptr::read_unaligned;
 // use x86::PhysAddr;
 
 /// The number of entries in a page table.
@@ -269,7 +271,7 @@ use crate::bootinfo::{FrameRange, MemoryMap, MemoryRegion, MemoryRegionType};
 #[derive(Debug)]
 pub struct BootInfoFrameAllocator {
     memory_map: &'static MemoryMap,
-    next: usize,
+    //next: usize, TODO: Do I really not need this?
 }
 
 impl BootInfoFrameAllocator {
@@ -281,7 +283,7 @@ impl BootInfoFrameAllocator {
     pub unsafe fn new(memory_map: &'static MemoryMap) -> Self {
         BootInfoFrameAllocator {
             memory_map,
-            next: 0,
+            //next: 0,
         }
     }
 
@@ -294,7 +296,7 @@ impl BootInfoFrameAllocator {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions =
-            unsafe { regions.filter(|r| r.region_type == MemoryRegionType::Usable) };
+            unsafe { regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable) };
 
         // Reduce the end of frame range to fit into alignment
         let adjusted_regions = usable_regions.map(move |r| {

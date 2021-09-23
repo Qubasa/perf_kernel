@@ -1,5 +1,4 @@
 .section .smp_trampoline, "awx"
-.intel_syntax noprefix
 .global _smp_trampoline
 .global stack_avail
 .global undefined_instruction

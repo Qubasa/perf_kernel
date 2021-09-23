@@ -69,11 +69,11 @@ lazy_static! {
 }
 
 pub fn init() {
-    use x86_64::instructions::segmentation::set_cs;
+    use x86_64::instructions::segmentation::{CS, Segment};
     use x86_64::instructions::tables::load_tss;
     GDT.0.load();
     unsafe {
-        set_cs(GDT.1.code_selector); // Offset to kernel code segment
+        CS::set_reg(GDT.1.code_selector); // Offset to kernel code segment
         load_tss(GDT.1.tss_selector); // Offset to TSS entry
     }
 }

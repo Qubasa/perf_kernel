@@ -1,5 +1,7 @@
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use core::ptr::addr_of;
+use core::ptr::read_unaligned;
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -7,7 +9,7 @@ const MAX_MEMORY_MAP_SIZE: usize = 64;
 
 /// A map of the physical memory regions of the underlying machine.
 #[derive(Copy, Clone)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct MemoryMap {
     entries: [MemoryRegion; MAX_MEMORY_MAP_SIZE],
     // u64 instead of usize so that the structure layout is platform
@@ -81,7 +83,7 @@ impl MemoryMap {
         }
 
         unsafe {
-            if region.region_type != MemoryRegionType::Usable {
+            if read_unaligned(addr_of!(region.region_type)) != MemoryRegionType::Usable {
                 return Err(PartitionError::RegionTypeIsNotUsable(region));
             }
         }
@@ -121,7 +123,7 @@ impl MemoryMap {
 
         for &i in regions.iter() {
             unsafe {
-                if i.region_type != MemoryRegionType::Empty {
+                if core::ptr::read_unaligned(addr_of!(i.region_type)) != MemoryRegionType::Empty {
                     self.add_region(i);
                 }
             }
@@ -172,13 +174,13 @@ impl MemoryMap {
                 } else if r2.range.is_empty() {
                     Ordering::Less
                 } else {
-                    let ordering = r1
+                    let ordering = read_unaligned(addr_of!(r1
                         .range
-                        .start_frame_number
-                        .cmp(&r2.range.start_frame_number);
+                        .start_frame_number))
+                        .cmp(&read_unaligned(addr_of!(r2.range.start_frame_number)));
 
                     if ordering == Ordering::Equal {
-                        r1.range.end_frame_number.cmp(&r2.range.end_frame_number)
+                        read_unaligned(addr_of!(r1.range.end_frame_number)).cmp(&read_unaligned(addr_of!(r2.range.end_frame_number)))
                     } else {
                         ordering
                     }
@@ -221,7 +223,7 @@ impl fmt::Debug for MemoryMap {
 
 /// Represents a region of physical memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct MemoryRegion {
     /// The range of frames that belong to the region.
     pub range: FrameRange,
@@ -244,7 +246,7 @@ impl MemoryRegion {
 
 /// A range of frames with an exclusive upper bound.
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[repr(C, packed(64))]
+#[repr(C, packed)]
 pub struct FrameRange {
     /// The frame _number_ of the first 4KiB frame in the region.
     ///
@@ -317,7 +319,7 @@ impl fmt::Debug for FrameRange {
 
 /// Represents possible types for memory regions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub enum MemoryRegionType {
     /// Unused memory, can be freely used by the kernel.
     Usable,
