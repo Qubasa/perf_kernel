@@ -4,7 +4,7 @@
 #![test_runner(test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-use bootloader::{entry_point, bootinfo::BootInfo};
+use bootloader::{bootinfo::BootInfo, entry_point};
 use core::panic::PanicInfo;
 use svm_kernel::{exit_qemu, init, println, QemuExitCode};
 
@@ -36,7 +36,7 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
 
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
-    let x:[u8; 512] = [0; 512];
+    let x: [u8; 512] = [0; 512];
     stack_overflow();
     unsafe {
         core::ptr::read_volatile(&x);

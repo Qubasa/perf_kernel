@@ -137,18 +137,13 @@ extern "x86-interrupt" fn page_fault_handler(
     hlt_loop();
 }
 
-pub extern "x86-interrupt" fn default_handler<const N: usize>(
-    stack_frame: InterruptStackFrame,
-) {
+pub extern "x86-interrupt" fn default_handler<const N: usize>(stack_frame: InterruptStackFrame) {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {}", N);
     panic!("{:?}", stack_frame);
 }
 
-extern "x86-interrupt" fn general_prot_handler(
-    stack_frame: InterruptStackFrame,
-    error_code: u64,
-) {
+extern "x86-interrupt" fn general_prot_handler(stack_frame: InterruptStackFrame, error_code: u64) {
     log::error!("EXCEPTION: General Protection Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
@@ -156,10 +151,7 @@ extern "x86-interrupt" fn general_prot_handler(
 }
 
 // TODO: Enable alignment checking
-extern "x86-interrupt" fn alignment_handler(
-    stack_frame: InterruptStackFrame,
-    error_code: u64,
-) {
+extern "x86-interrupt" fn alignment_handler(stack_frame: InterruptStackFrame, error_code: u64) {
     log::error!("EXCEPTION: Alignment Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
@@ -247,7 +239,6 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     unsafe {
         apic::end_of_interrupt();
     }
-
 }
 
 extern "x86-interrupt" fn spurious_handler(_stack_frame: InterruptStackFrame) {
@@ -300,10 +291,7 @@ extern "x86-interrupt" fn device_not_available_handler(stack_frame: InterruptSta
     panic!("{:?}", stack_frame);
 }
 
-extern "x86-interrupt" fn invalid_tss_handler(
-    stack_frame: InterruptStackFrame,
-    _error_code: u64,
-) {
+extern "x86-interrupt" fn invalid_tss_handler(stack_frame: InterruptStackFrame, _error_code: u64) {
     log::error!("invalid tss exception");
     panic!("{:?}", stack_frame);
 }
@@ -344,10 +332,7 @@ extern "x86-interrupt" fn virtualization_handler(stack_frame: InterruptStackFram
     panic!("{:?}", stack_frame);
 }
 
-extern "x86-interrupt" fn security_handler(
-    stack_frame: InterruptStackFrame,
-    _error_code: u64,
-) {
+extern "x86-interrupt" fn security_handler(stack_frame: InterruptStackFrame, _error_code: u64) {
     log::error!("security exception");
     panic!("{:?}", stack_frame);
 }

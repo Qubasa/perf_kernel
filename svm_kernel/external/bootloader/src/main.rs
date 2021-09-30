@@ -297,7 +297,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Allocate 8Mb stack space for every core
-    // + 4096b guard page at the end
+    // + 2 mb guard page at the end
     {
         use core::convert::TryFrom;
         let allocator = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map);

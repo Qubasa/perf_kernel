@@ -51,7 +51,13 @@ pub struct IoApic {
 
 impl fmt::Debug for IoApic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe { write!(f, "IoApic address: {:#x}", read_unaligned(addr_of!(self.address))) }
+        unsafe {
+            write!(
+                f,
+                "IoApic address: {:#x}",
+                read_unaligned(addr_of!(self.address))
+            )
+        }
     }
 }
 
@@ -88,7 +94,8 @@ impl fmt::Debug for IntOverride {
             write!(
                 f,
                 "IntOverride src: {} mapped to: {}",
-                self.source, read_unaligned(addr_of!(self.mapped_to))
+                self.source,
+                read_unaligned(addr_of!(self.mapped_to))
             )
         }
     }
@@ -105,6 +112,12 @@ pub struct NonMaskableInts {
 
 impl fmt::Debug for NonMaskableInts {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe { write!(f, "Non Maskable Interrupt: {}", read_unaligned(addr_of!(self.int_num))) }
+        unsafe {
+            write!(
+                f,
+                "Non Maskable Interrupt: {}",
+                read_unaligned(addr_of!(self.int_num))
+            )
+        }
     }
 }

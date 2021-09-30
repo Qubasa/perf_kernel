@@ -114,14 +114,12 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         pci::init();
     };
 
-    
     unsafe {
         let apic = interrupts::APIC.lock();
         if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
             apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
         }
     }
-
 
     // Init pci devices
     //TODO: uncomment
@@ -138,7 +136,7 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
  * TESTING CODE
  */
 #[cfg(test)]
-use bootloader::{entry_point, bootinfo::BootInfo};
+use bootloader::{bootinfo::BootInfo, entry_point};
 use core::panic::PanicInfo;
 // Entry point for `cargo test`
 #[cfg(test)]

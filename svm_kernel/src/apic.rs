@@ -6,9 +6,9 @@ use crate::interrupts::InterruptIndex;
 use crate::interrupts::PICS;
 use core::ptr::{read_volatile, write_volatile};
 use x86_64::registers::model_specific::Msr;
+use x86_64::structures::paging::page_table::PageTableFlags;
 use x86_64::structures::paging::{FrameAllocator, OffsetPageTable, PhysFrame, Size4KiB};
 use x86_64::PhysAddr;
-use x86_64::structures::paging::page_table::PageTableFlags;
 
 // Other constants
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
@@ -119,7 +119,8 @@ impl Apic {
             let serial_enable = InterruptIndex::COM1.as_pic_enable_mask()
                 & InterruptIndex::COM2.as_pic_enable_mask();
             let pic2 = InterruptIndex::Pic2.as_pic_enable_mask();
-            PICS.lock().mask(keyboard_enable & serial_enable & pic2, 0xff);
+            PICS.lock()
+                .mask(keyboard_enable & serial_enable & pic2, 0xff);
             // PICS.lock().mask(0, 0);
         } else {
             use x86_64::instructions::port::Port;
@@ -145,7 +146,13 @@ impl Apic {
 
         let frame = PhysFrame::<Size4KiB>::containing_address(PhysAddr::new(APIC_BASE));
         // Map page for apic base address
-        crate::memory::id_map_nocache(mapper, frame_allocator, frame, Some(PageTableFlags::WRITABLE)).unwrap();
+        crate::memory::id_map_nocache(
+            mapper,
+            frame_allocator,
+            frame,
+            Some(PageTableFlags::WRITABLE),
+        )
+        .unwrap();
 
         // Enable apic by writing MSR base reg
         let mut apic_base_reg = Msr::new(0x0000_001B);

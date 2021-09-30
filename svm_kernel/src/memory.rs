@@ -1,10 +1,8 @@
 use x86_64::registers::control::Cr3;
 // use x86_64::structures::paging::mapper::MapToError;
+use core::ptr::addr_of;
+use core::ptr::read;
 use x86_64::structures::paging::mapper::MappedFrame;
-use x86_64::{
-    structures::paging::{FrameAllocator, PhysFrame, Size1GiB, Size2MiB, Size4KiB},
-    PhysAddr,
-};
 use x86_64::structures::paging::mapper::TranslateResult;
 use x86_64::structures::paging::page::PageSize;
 use x86_64::structures::paging::Mapper;
@@ -13,8 +11,10 @@ use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
-use core::ptr::addr_of;
-use core::ptr::{read};
+use x86_64::{
+    structures::paging::{FrameAllocator, PhysFrame, Size1GiB, Size2MiB, Size4KiB},
+    PhysAddr,
+};
 
 //
 // The bootloader maps the page table to a very high offset
@@ -94,7 +94,6 @@ pub enum IdMapError {
     AlreadyMappedDiffFlags(PageTableFlags),
 }
 
-
 /// Identity map phys frame
 /// If virt addr already mapped checks if contains requested flags
 /// and correct phys frame addr. Adds default flag NO_CACHE
@@ -108,7 +107,6 @@ pub unsafe fn id_map_nocache<T: PageSize>(
     id_map(mapper, frame_allocator, my_frame, Some(my_flags))
 }
 
-
 pub unsafe fn id_map_nocache_update_flags<T: PageSize>(
     mapper: &mut (impl Mapper<T> + Translate),
     frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
@@ -119,7 +117,6 @@ pub unsafe fn id_map_nocache_update_flags<T: PageSize>(
     match id_map_nocache(mapper, frame_allocator, my_frame, Some(my_flags)) {
         Ok(i) => Ok(i),
         Err(IdMapError::AlreadyMappedDiffFlags(_)) => {
-
             let addr = VirtAddr::new(my_frame.start_address().as_u64());
             let page = Page::<T>::from_start_address(addr).unwrap();
             let my_flags = PageTableFlags::PRESENT | my_flags;
@@ -214,13 +211,13 @@ impl BootInfoFrameAllocator {
     }
 
     /// Returns an iterator over the usable frames specified in the memory map.
-    pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame::<T>> {
+    pub fn usable_frames<T: PageSize>(&self) -> impl Iterator<Item = PhysFrame<T>> {
         // get usable regions from memory map
         let regions = self.memory_map.iter();
 
-        let usable_regions =
-            unsafe { regions.filter(|r| read(addr_of!(r.region_type)) == MemoryRegionType::Usable) };
-
+        let usable_regions = unsafe {
+            regions.filter(|r| read(addr_of!(r.region_type)) == MemoryRegionType::Usable)
+        };
 
         // Reduce frame range to fit into 2Mb pages
         let adjusted_regions = usable_regions.map(|r| {
@@ -266,7 +263,6 @@ impl BootInfoFrameAllocator {
     }
 }
 
-
 //TODO: If rust allows it in the future save the iterator in struct
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
@@ -277,7 +273,7 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 }
 
 unsafe impl FrameAllocator<Size2MiB> for BootInfoFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame::<Size2MiB>> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
         let frame = self.usable_frames::<Size2MiB>().nth(self.next);
         self.next += (Size2MiB::SIZE / Size4KiB::SIZE) as usize;
         frame

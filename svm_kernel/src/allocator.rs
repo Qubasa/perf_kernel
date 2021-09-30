@@ -7,10 +7,8 @@ use x86_64::{
 
 pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE: usize = 1000 * 1024; // 2Mib
-// TODO: Bug arises when all 4KiB pages are exausted and then 4KiB pages are allocated in 2MiB
-// pages? (i didn't understand it fully)
-
-
+                                          // TODO: Bug arises when all 4KiB pages are exausted and then 4KiB pages are allocated in 2MiB
+                                          // pages? (i didn't understand it fully)
 
 pub mod fixed_size_block;
 

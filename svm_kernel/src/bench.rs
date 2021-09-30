@@ -38,20 +38,8 @@ pub fn overflow() {
         asm!("mov {}, rsp", out(reg) x);
     }
     log::info!("Stack ptr: {:#x}", x);
-    black_box(a);
+    core::hint::black_box(a);
     overflow();
-}
-
-/// A function that is opaque to the optimizer, to allow benchmarks to
-/// pretend to use outputs to assist in avoiding dead-code
-/// elimination.
-///
-/// This function is a no-op, and does not even read from `dummy`.
-pub fn black_box<T>(dummy: T) -> T {
-    // we need to "use" the argument in some way LLVM can't
-    // introspect.
-    unsafe { asm!("/* {0} */" , in(reg) &dummy) }
-    dummy
 }
 
 pub fn max_num_4kib_pages() -> u8 {

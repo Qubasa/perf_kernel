@@ -145,7 +145,7 @@ fn realloc_copy_shrink() {
 fn heap_full_alloc() {
     unsafe {
         let mut bench = Bench::start();
-        let layout = Layout::array::<u8>(HEAP_SIZE-512).unwrap();
+        let layout = Layout::array::<u8>(HEAP_SIZE - 512).unwrap();
         let ptr = black_box(alloc(layout));
 
         log::info!("ptr: {:x?}", ptr);
