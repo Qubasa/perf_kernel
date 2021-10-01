@@ -92,8 +92,6 @@ pub unsafe fn remap_first_2mb_with_4kb(
     p3: &'static usize,
     p1: &'static usize,
     stack_guard: &'static usize,
-    smp_trampoline_start: &'static usize,
-    smp_trampoline_end: &'static usize,
     boot_info: &bootinfo::BootInfo,
 ) {
     let p3_physical = p3 as *const _ as u64;
@@ -136,13 +134,6 @@ pub unsafe fn remap_first_2mb_with_4kb(
                 _ => (),
             }
         }
-
-
-        if addr >= smp_trampoline_start as *const _ as u64 && addr < smp_trampoline_end as *const _ as u64 {
-            log::info!("====SMP TRAMPOLINE==== size: {:#x}",smp_trampoline_end as *const _ as u64 - smp_trampoline_start as *const _ as u64);
-            log::info!("{:#x?}", entry);
-        }
-
     }
 
     // Identity map vga address

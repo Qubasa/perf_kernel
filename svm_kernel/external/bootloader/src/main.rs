@@ -248,7 +248,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // skips guard page
     // skips frame zero 0-4Kb
     // also id maps vga address
-    mmu::remap_first_2mb_with_4kb(&_p3, &_p1, &__stack_guard, &__smp_trampoline_start, &__smp_trampoline_end, &BOOT_INFO);
+    mmu::remap_first_2mb_with_4kb(&_p3, &_p1, &__stack_guard, &BOOT_INFO);
 
     // Update MEM_MAP
     {

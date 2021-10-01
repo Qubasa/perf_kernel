@@ -5,7 +5,8 @@
     "linker": "rust-lld",
     "pre-link-args": {
         "ld.lld": [
-	    "--script=linker.ld"
+	    "--script=linker.ld",
+        "--Map=target/linker.map"
     ]
     },
     "target-endian": "little",
@@ -15,7 +16,5 @@
     "os": "none",
     "features": "-mmx,-sse,+soft-float",
     "disable-redzone": true,
-    "panic": "abort",
-    "executables": true,
-    "relocation_model": "static"
+    "executables": true
 }

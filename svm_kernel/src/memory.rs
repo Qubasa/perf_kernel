@@ -47,8 +47,8 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
 pub fn print_pagetable(mapper: &OffsetPageTable) {
     use x86_64::structures::paging::mapper::TranslateError;
 
-    for page_addr in (0..core::u64::MAX).step_by(4096) {
-        let addr = Page::<Size4KiB>::from_start_address(VirtAddr::new(page_addr)).unwrap();
+    for page_addr in (0x200000..core::u64::MAX).step_by(0x200000) {
+        let addr = Page::<Size2MiB>::from_start_address(VirtAddr::new(page_addr)).unwrap();
         let res = mapper.translate_page(addr);
 
         match res {
