@@ -343,7 +343,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             BOOT_INFO
                 .memory_map
                 .partition_memory_region(
-                    addr + (bootloader::TWO_MEG - 4096), // start addr
+                    addr, // start addr
                     stack_start,                         // end addr
                     bootinfo::MemoryRegionType::KernelStack,
                 )
