@@ -62,11 +62,8 @@ extern "C" {
 // we need a flame graph / execution hotspot map and start optimizing
 // there. As I do not how well this scales if we have 2Tb+ of memory.
 // I think it should be fine, nonetheless it should be looked after at some point
-// TODO: If supported by cpu map stack and kernel code to 1Gb pages then use MTRRs and PAT to
-// define uncachable memory and write protected memory
-// TODO: Firmware sets fixed MTRRs for the first 1Mb of memory. Parse them and check that
-// our heap allocator does not use uncachable memory maps
-// TODO: Also parse variable range MTRRs to see if they are set to something
+// TODO: Make it so that the core state is saved at the index of the apic id
+// so that apic ids don't have to be numbered 0-x but can also start at an arbitrary offset 20-x
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
@@ -76,7 +73,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Info);
+        log::set_max_level(LevelFilter::Debug);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -105,8 +102,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Set smp trampoline
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
-
-    log::info!("smp trampoline function: {:#x}", read_unaligned(addr_of!(BOOT_INFO.smp_trampoline)));
 
     /*
      * Convert memory areas to memory map
@@ -172,6 +167,22 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
+    // Set all memory to reserved that is below 1Mib
+    {
+        for map in BOOT_INFO.memory_map.iter() {
+            if read_unaligned(addr_of!(map.region_type)) == bootinfo::MemoryRegionType::Usable {
+                let start_addr = read_unaligned(addr_of!(map.range)).start_addr();
+                let end_addr = read_unaligned(addr_of!(map.range)).end_addr();
+                let one_mib = 0x100000; // 1Mib in hex
+                if start_addr < one_mib && end_addr < one_mib{
+                    BOOT_INFO.memory_map.partition_memory_region(start_addr, end_addr, bootinfo::MemoryRegionType::UsableButDangerous).unwrap();
+                }else if start_addr < one_mib && end_addr > one_mib{
+                    BOOT_INFO.memory_map.partition_memory_region(start_addr, one_mib, bootinfo::MemoryRegionType::UsableButDangerous).unwrap();
+                }
+            }
+        }
+    }
+
     // Checks that the current loaded image lies in available (good) physical memory
     {
         for i in BOOT_INFO.memory_map.iter() {
@@ -194,7 +205,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
             if region.range.intersects(addr) {
                 unsafe {
-                    if read_unaligned(addr_of!(region.region_type)) != MemoryRegionType::Usable {
+                    let mem_type = read_unaligned(addr_of!(region.region_type));
+                    if mem_type != MemoryRegionType::Usable && mem_type != MemoryRegionType::UsableButDangerous {
                         panic!(
                             "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
                             addr,
@@ -236,7 +248,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // skips guard page
     // skips frame zero 0-4Kb
     // also id maps vga address
-    mmu::remap_first_2mb_with_4kb(&_p3, &_p1, &__stack_guard, &BOOT_INFO);
+    mmu::remap_first_2mb_with_4kb(&_p3, &_p1, &__stack_guard, &__smp_trampoline_start, &__smp_trampoline_end, &BOOT_INFO);
 
     // Update MEM_MAP
     {
@@ -339,7 +351,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    log::debug!("BootInfo: {:#?}", BOOT_INFO);
+    log::debug!("{:#?}", BOOT_INFO);
 
     // Enable all media extensions
     media_extensions::enable_all();

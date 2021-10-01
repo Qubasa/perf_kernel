@@ -92,6 +92,8 @@ pub unsafe fn remap_first_2mb_with_4kb(
     p3: &'static usize,
     p1: &'static usize,
     stack_guard: &'static usize,
+    smp_trampoline_start: &'static usize,
+    smp_trampoline_end: &'static usize,
     boot_info: &bootinfo::BootInfo,
 ) {
     let p3_physical = p3 as *const _ as u64;
@@ -107,7 +109,8 @@ pub unsafe fn remap_first_2mb_with_4kb(
     p1_table.zero();
     p2_entry.set_addr(
         p1_physical,
-        p2_entry.flags() & !pagetable::PageTableFlags::HUGE_PAGE,
+        pagetable::PageTableFlags::PRESENT
+        | pagetable::PageTableFlags::WRITABLE
     );
 
     // Identity map 0Mb - 2Mb in 4Kb pages
@@ -124,7 +127,7 @@ pub unsafe fn remap_first_2mb_with_4kb(
         // Only map usable mem regions
         if let Some(mem_area) = boot_info.memory_map.get_region_by_addr(addr) {
             match mem_area.region_type {
-                MemoryRegionType::Usable => {
+                MemoryRegionType::Usable | MemoryRegionType::UsableButDangerous => {
                     entry.set_addr(
                         addr as u64,
                         pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
@@ -133,6 +136,13 @@ pub unsafe fn remap_first_2mb_with_4kb(
                 _ => (),
             }
         }
+
+
+        if addr >= smp_trampoline_start as *const _ as u64 && addr < smp_trampoline_end as *const _ as u64 {
+            log::info!("====SMP TRAMPOLINE==== size: {:#x}",smp_trampoline_end as *const _ as u64 - smp_trampoline_start as *const _ as u64);
+            log::info!("{:#x?}", entry);
+        }
+
     }
 
     // Identity map vga address

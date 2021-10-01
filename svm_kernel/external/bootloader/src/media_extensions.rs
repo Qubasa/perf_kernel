@@ -89,37 +89,37 @@ pub unsafe fn enable_all() {
         // Check for XOP support
         let res = __cpuid(0x8000_0001);
         if res.ecx & (1 << 11) == 0 {
-            log::info!("AMD XOP not supported");
+            log::debug!("AMD XOP not supported");
         }
 
         // Check for FMA support
         let res = __cpuid(0x0000_0001);
         if res.ecx & (1 << 12) == 0 {
-            log::info!("FMA not supported");
+            log::debug!("FMA not supported");
         }
 
         // Check for FMA4 support
         let res = __cpuid(0x8000_0001);
         if res.ecx & (1 << 16) == 0 {
-            log::info!("FMA4 not supported");
+            log::debug!("FMA4 not supported");
         }
 
         // Check for BMI1 support
         let res = __cpuid_count(0x0000_0007, 0);
         if res.ebx & (1 << 3) == 0 {
-            log::info!("BMI1 not supported");
+            log::debug!("BMI1 not supported");
         }
 
         // Check for BMI2 support
         let res = __cpuid_count(0x0000_0007, 0);
         if res.ebx & (1 << 8) == 0 {
-            log::info!("BMI2 not supported");
+            log::debug!("BMI2 not supported");
         }
 
         // Check for TBM support
         let res = __cpuid(0x8000_0001);
         if res.ecx & (1 << 21) == 0 {
-            log::info!("TBM not supported");
+            log::debug!("TBM not supported");
         }
 
         // Enable instruction extension

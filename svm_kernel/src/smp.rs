@@ -180,7 +180,7 @@ impl CoreState {
             log::info!("Fixed MTRRs are disabled!");
             return;
         }
-        log::info!("Fixed MTRRs are enabled");
+        log::info!("Fixed MTRRs are enabled:");
         let arr = [
             self.mtrrfix64k00000,
             self.mtrrfix16k80000,
@@ -209,7 +209,7 @@ impl CoreState {
                         blast = Some(range);
                     }
 
-                    if i + 1 == arr.len() && z+1 == 7 {
+                    if i + 1 == arr.len() && z + 1 == 7 {
                         crate::println!(
                             "{:#x}: {:?}",
                             range.range.end.start_address().as_u64(),
@@ -223,17 +223,19 @@ impl CoreState {
         }
     }
 
-    //TODO: Write a checkc function that makes sure that caching is enabled
-
     pub fn print_variable_mtrrs(&self) {
         if !self.mtrrdeftype.contains(MTRRdefTypeFlags::MTRR_ENABLE) {
             panic!("MTRRs are not enabled. Everything is set to uncacheable!");
         }
 
-        log::info!(
-            "Default memory type is set to: {:?}",
-            MTRRtype::try_from(self.mtrrdeftype.bitand(MTRRdefTypeFlags::TYPE).bits()).unwrap(),
-        );
+        let default_mem_type =
+            MTRRtype::try_from(self.mtrrdeftype.bitand(MTRRdefTypeFlags::TYPE).bits()).unwrap();
+        if default_mem_type != MTRRtype::WriteBack {
+            panic!(
+                "Default memory type should be WriteBack is however {:?}",
+                default_mem_type
+            );
+        }
 
         let arr = [
             (self.mtrrphysbase0, self.mtrrphysmask0),
@@ -246,6 +248,7 @@ impl CoreState {
             (self.mtrrphysbase7, self.mtrrphysmask7),
         ];
 
+        let mut valid_once = false;
         for (i, (base, mask)) in arr.iter().enumerate() {
             let physbase = base.bitand(MTRRphysBaseFlags::PHYS_BASE).bits();
             let physmask = mask.bitand(MTRRphysMaskFlags::PHYS_MASK).bits();
@@ -263,7 +266,12 @@ impl CoreState {
                     endrange,
                     mem_type
                 );
+                valid_once = true;
             }
+        }
+
+        if valid_once {
+            panic!("Variable mtrrs are enabled and valid. Make *very* sure that you want this. In combination with PAT this is a recipe for desaster.");
         }
     }
 

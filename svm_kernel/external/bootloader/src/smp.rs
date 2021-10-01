@@ -43,7 +43,7 @@ unsafe extern "C" fn smp_main() {
 
     // Get stack address for this core
     let stack_addr = BOOT_INFO.cores[apic_id() as usize].stack_start_addr as u32;
-    log::info!("Stack addr: {:#x}", stack_addr);
+    log::debug!("Stack addr: {:#x}", stack_addr);
 
     // Enable mmu features
     // and set cr3 register with memory map
@@ -58,7 +58,7 @@ unsafe extern "C" fn smp_main() {
 
     // Switch to long mode
     let entry_addr = BOOT_INFO.kernel_entry_addr;
-    log::info!("Switching to long mode...");
+    log::debug!("Switching to long mode...");
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 

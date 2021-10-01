@@ -52,13 +52,17 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Trace);
+    log::set_max_level(log::LevelFilter::Info);
 
     log::info!("bootinfo: {:#?}", _boot_info);
 
+    // Check state integrity of bsp core
     unsafe {
-        smp::BSPCORE_STATE.unwrap().print_fixed_mtrrs();
-        smp::BSPCORE_STATE.unwrap().print_variable_mtrrs();
+        let corestate = smp::BSPCORE_STATE.unwrap();
+        if log::log_enabled!(log::Level::Debug) {
+            corestate.print_fixed_mtrrs();
+        }
+        corestate.print_variable_mtrrs();
     }
 
     // Initialize routine for kernel
@@ -76,6 +80,10 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 }
 
 fn smp_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
+    // TODO: Check that stacks for multicore in gdt are okay
+    // TODO: Filter out ranges in the memorymap that are below 1Mb because of fixed MTRRs
+    // TODO: Reimplement the frame allocator
+    // TODO: Make the whole init process like the bsp
     // Make sure bsp core state is the same as smp core state
     {
         let curr_core_state = smp::CoreState::new();

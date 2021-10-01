@@ -61,6 +61,7 @@ pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
 
     let tsc_invariant = res.edx & (1 << 8);
+
     if tsc_invariant == 0 {
         log::warn!("rtdsc does not increment at a fixed rate");
     }

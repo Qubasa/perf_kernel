@@ -82,11 +82,13 @@ impl MemoryMap {
             return Err(PartitionError::NotSameRegion(region, end_region));
         }
 
-        unsafe {
-            if read_unaligned(addr_of!(region.region_type)) != MemoryRegionType::Usable {
-                return Err(PartitionError::RegionTypeIsNotUsable(region));
-            }
+        let mem_type = unsafe {
+            read_unaligned(addr_of!(region.region_type))
+        };
+        if mem_type != MemoryRegionType::Usable && mem_type != MemoryRegionType::UsableButDangerous {
+            return Err(PartitionError::RegionTypeIsNotUsable(region));
         }
+    
 
         let mut regions = [MemoryRegion::empty(); 3];
         regions[1].region_type = region_type;
@@ -103,7 +105,7 @@ impl MemoryMap {
             regions[0].region_type = MemoryRegionType::Empty;
         } else {
             regions[1].range.set_start_addr(start_addr);
-            regions[0].region_type = MemoryRegionType::Usable;
+            regions[0].region_type = mem_type;
             regions[0].range.set_start_addr(region.range.start_addr());
             regions[0].range.set_end_addr(start_addr);
         }
@@ -114,7 +116,7 @@ impl MemoryMap {
             regions[2].region_type = MemoryRegionType::Empty;
         } else {
             regions[1].range.set_end_addr(end_addr);
-            regions[2].region_type = MemoryRegionType::Usable;
+            regions[2].region_type = mem_type;
             regions[2].range.set_start_addr(end_addr);
             regions[2].range.set_end_addr(region.range.end_addr());
         }
@@ -325,6 +327,8 @@ pub enum MemoryRegionType {
     Usable,
     /// Memory that is already in use.
     InUse,
+    /// Usable memory that should be avoided when possible
+    UsableButDangerous,
     /// Memory reserved by the hardware. Not usable.
     Reserved,
     /// ACPI reclaimable memory

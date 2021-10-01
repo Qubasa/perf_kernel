@@ -103,6 +103,4 @@ pub unsafe fn calibrate() {
 
     // Stock the TSC rate
     RDTSC_MHZ.store(rounded_rate, Ordering::Relaxed);
-
-    log::info!("Calibrate rdtsc mhz: {}", rounded_rate);
 }
