@@ -96,6 +96,10 @@ To switch to a different cpu core, execute:
 (qemu) cpu <core_num>-1
 ```
 
+## Linker mapped
+The linker generates a linker map where all ELF objects are listed with their respective addresses.
+You can find the file under `<project_root>/svm_kernel/external/bootloader/target/linker.map`.
+
 
 ## Run tests
 To execute tests run:
