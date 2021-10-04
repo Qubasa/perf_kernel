@@ -280,9 +280,18 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             .unwrap();
 
         BOOT_INFO
+        .memory_map
+        .partition_memory_region(
+            &__stack_guard as *const _ as u64, // Stack guard page
+            &__stack_end as *const _ as u64,
+            bootinfo::MemoryRegionType::GuardPage,
+        )
+        .unwrap();
+
+        BOOT_INFO
             .memory_map
             .partition_memory_region(
-                &__stack_guard as *const _ as u64, // Stack guard page
+                &__stack_end as *const _ as u64, // Stack guard page
                 &__stack_start as *const _ as u64,
                 bootinfo::MemoryRegionType::KernelStack,
             )
@@ -332,18 +341,29 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 addr + guard_page,
             );
 
+            // Delete table entry for guard page
             let p3_physical = &_p3 as *const _ as u64;
             let p3_table = &*(p3_physical as *mut pagetable::PageTable);
-
-            let p3_index = usize::try_from(addr >> 12 >> 9 >> 9).unwrap();
+            let p3_index = usize::try_from(addr >> 12 >> 9 >> 9 & 0o777).unwrap();
             let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
-            let p2_index = usize::try_from(addr >> 12 >> 9).unwrap();
+            let p2_index = usize::try_from(addr >> 12 >> 9 & 0o777).unwrap();
             p2_table[p2_index].set_unused();
 
+            // Mark guard page
+            BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                addr, 
+                addr + guard_page,                         // end addr
+                bootinfo::MemoryRegionType::GuardPage,
+            )
+            .unwrap();
+
+            // Mark kernel stack
             BOOT_INFO
                 .memory_map
                 .partition_memory_region(
-                    addr, // start addr
+                    addr + guard_page, // start addr
                     stack_start,                         // end addr
                     bootinfo::MemoryRegionType::KernelStack,
                 )
@@ -351,7 +371,71 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    log::debug!("{:#?}", BOOT_INFO);
+    // Allocate seven 100KiB stacks + 8KiB Guard Page per core for TSS
+    {
+        use pagetable::PageTableFlags;
+        use core::convert::TryFrom;
+        let allocator = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map);
+        let stack_size = 4096 * 25; // 100KiB
+        let guard_page = 4096 * 2; // 8 KiB
+
+        for ci in 0..smp::num_cores() {
+            let mut iter = allocator.usable_xsize_frames(stack_size + guard_page, bootloader::TWO_MEG);
+            for i in 0..7 {
+                let addr = iter
+                    .next()
+                    .expect("Not enough memory to allocate stack for all cores");
+                let stack_start = addr + stack_size + guard_page;
+                BOOT_INFO.cores[ci as usize].tss.stack_size[i as usize] = stack_size;
+                BOOT_INFO.cores[ci as usize].tss.stack_start_addr[i as usize] = stack_start;
+                BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] = addr + guard_page;
+                log::debug!(
+                    "Core {} TSS space {} from: {:#x} to {:#x}",
+                    ci,
+                    i,
+                    stack_start,
+                    addr + guard_page,
+                );
+
+                // Delete table entry for guard page
+                let p3_physical = &_p3 as *const _ as u64;
+                let p3_table = &*(p3_physical as *mut pagetable::PageTable);
+                let p3_index = usize::try_from(addr >> 12 >> 9 >> 9 & 0o777).unwrap();
+                let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
+                let p2_index = usize::try_from(addr >> 12 >> 9 & 0o777).unwrap();
+                let flags = p2_table[p2_index].flags();
+                p2_table[p2_index].set_flags(flags & !PageTableFlags::HUGE_PAGE);
+                let p1_table = &mut *(p2_table[p2_index].addr() as *mut pagetable::PageTable);
+                let p1_index =  usize::try_from(addr >> 12 & 0o777).unwrap();
+
+                for i in 0..(guard_page / 4096) {
+                    p1_table[p1_index + i as usize].set_unused();
+                }
+
+                // Mark guard page
+                BOOT_INFO
+                .memory_map
+                .partition_memory_region(
+                    addr, 
+                    addr + guard_page,                         // end addr
+                    bootinfo::MemoryRegionType::GuardPage,
+                )
+                .unwrap();
+
+                // Mark kernel stack
+                BOOT_INFO
+                    .memory_map
+                    .partition_memory_region(
+                        addr + guard_page, // start addr
+                        stack_start,                         // end addr
+                        bootinfo::MemoryRegionType::TSSstack,
+                    )
+                    .unwrap();
+            }
+        }
+    }
+
+    log::debug!("{:#x?}", BOOT_INFO);
 
     // Enable all media extensions
     media_extensions::enable_all();

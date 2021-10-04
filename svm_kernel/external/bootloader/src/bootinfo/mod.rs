@@ -106,8 +106,21 @@ pub struct Core {
     pub stack_start_addr: u64,
     /// End address of stack for physical core
     pub stack_end_addr: u64,
-    // Size of stack
+    /// Size of stack
     pub stack_size: u64,
+    /// Stacks for tss 
+    pub tss: TSS,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C, packed)]
+pub struct TSS {
+    /// Stack start addresses for TSS
+    pub stack_start_addr: [u64; 7],
+    /// Stack end addresses for TSS
+    pub stack_end_addr: [u64; 7],
+    /// Stack sizes for TSS
+    pub stack_size: [u64; 7],
 }
 
 impl Core {
@@ -116,6 +129,7 @@ impl Core {
             stack_start_addr: 0,
             stack_end_addr: 0,
             stack_size: 0,
+            tss: TSS { stack_start_addr: [0; 7], stack_end_addr:[0; 7], stack_size: [0; 7]}
         }
     }
 }

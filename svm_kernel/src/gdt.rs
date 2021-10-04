@@ -5,6 +5,7 @@ use x86_64::VirtAddr;
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 
+//TODO: Generate a 100KiB area with 8Kib guard page
 /*
  * The TSS is an array that holds addresses to different stacks
  * Can be assigned to exception handlers

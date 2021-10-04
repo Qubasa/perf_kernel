@@ -152,7 +152,7 @@ impl PageTable {
     }
     /// Returns an iterator over the entries of the page table.
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &PageTableEntry> {
         self.entries.iter()
     }
 
@@ -166,7 +166,7 @@ impl PageTable {
 
     /// Returns an iterator that allows modifying the entries of the page table.
     #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
+    pub fn iter_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut PageTableEntry> {
         self.entries.iter_mut()
     }
 }
@@ -293,12 +293,16 @@ impl BootInfoFrameAllocator {
             panic!("alignment needs to be multiple of 4096");
         }
 
+        // if xsize % alignment != 0 {
+        //     panic!("xsize has to be multiple of alignment");
+        // }
+
         // get usable regions from memory map
         let regions = self.memory_map.iter();
         let usable_regions =
             unsafe { regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable) };
 
-        // Reduce the end of frame range to fit into alignment
+        // Reduce the end of frame range to fit into xsize
         let adjusted_regions = usable_regions.map(move |r| {
             let diff = r.range.size() % xsize;
             if diff != 0 {

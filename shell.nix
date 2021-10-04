@@ -3,6 +3,8 @@
   }:
   pkgs.mkShell {
     buildInputs = with pkgs; [
+      glibc
+      libvmi
       llvmPackages.bintools
       zlib.out
       rustup
@@ -16,6 +18,6 @@
     shellHook = ''
       export HISTFILE=${toString ./.history}
       export PATH=$PATH:~/.cargo/bin
-      export PATH=$PATH:~/.rustup/toolchains/nightly-2021-01-28-x86_64-unknown-linux-gnu/bin/
+      export PATH=$PATH:~/.rustup/toolchains/nightly-2021-09-19-x86_64-unknown-linux-gnu/bin/
       '';
   }

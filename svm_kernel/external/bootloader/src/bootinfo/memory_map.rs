@@ -355,6 +355,10 @@ pub enum MemoryRegionType {
     BootInfo,
     /// Memory used for storing the supplied package
     Package,
+    /// An unmapped page for guarding overreach into other memory
+    GuardPage,
+    /// TSS Stack
+    TSSstack,
     /// Additional variant to ensure that we can add more variants in the future without
     /// breaking backwards compatibility.
     #[doc(hidden)]
