@@ -16,12 +16,17 @@
     RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
     # https://github.com/rust-lang/rust-bindgen#environment-variables
     LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
-    BINDGEN_EXTRA_CLANG_ARGS = (builtins.map (a: ''-I"${a}/include"'') [ pkgs.libvmi pkgs.glibc.dev  ])
-     ++ [
+    RUSTFLAGS = (builtins.map (a: ''-L ${a}/lib'') [
+    ]);
+    BINDGEN_EXTRA_CLANG_ARGS = 
+    # Includes with normal include path
+    (builtins.map (a: ''-I"${a}/include"'') [
+      pkgs.glibc.dev 
+    ])
+    # Includes with special directory paths
+    ++ [
       ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
-      ''-I"${pkgs.glib.dev}/include/glib-2.0"''
-      ''-I${pkgs.glib.out}/lib/glib-2.0/include/''
-      ];
+    ];
     HISTFILE=toString ./.history;
     shellHook = ''
       export PATH=$PATH:~/.cargo/bin
