@@ -13,8 +13,8 @@
       llvmPackages_latest.lld
       python3
     ];
-    RUST_LIBS = pkgs.lib.makeLibraryPath buildInputs;
     RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
+    # https://github.com/rust-lang/rust-bindgen#environment-variables
     LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
     BINDGEN_EXTRA_CLANG_ARGS = (builtins.map (a: ''-I"${a}/include"'') [ pkgs.libvmi pkgs.glibc.dev  ])
      ++ [

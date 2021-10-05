@@ -3,14 +3,16 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(svm_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![feature(bench_black_box)]
 
 extern crate alloc;
 
 use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
 use core::panic::PanicInfo;
+use core::hint::black_box;
 use svm_kernel::{
-    allocator::HEAP_START, bench::black_box, bench::Bench, mylog::LOGGER, print, println,
+    allocator::HEAP_START, bench::Bench, mylog::LOGGER, print, println,
 };
 
 entry_point!(main);
