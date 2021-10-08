@@ -10,3 +10,6 @@
 [submodule "svm_kernel/external/smoltcp"]
 	path = svm_kernel/external/smoltcp
 	url = git@github.com:Luis-Hebendanz/smoltcp.git
+[submodule "vmsh"]
+	path = vmsh
+	url = git@github.com:Luis-Hebendanz/vmsh.git

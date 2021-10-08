@@ -135,15 +135,15 @@ extern "x86-interrupt" fn page_fault_handler(
     log::error!("Accessed Address: {:?}", addr);
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
-    unsafe {
-        use x86_64::addr::VirtAddr;
-        use crate::memory::*;
-        use x86_64::structures::paging::Translate;
-        let pagetable = init(VirtAddr::new(0));
-        //print_pagetable(&pagetable);
-        let res = pagetable.translate(addr);
-        log::info!("Mapped to: {:?}", res)
-    }
+    // unsafe {
+    //     use x86_64::addr::VirtAddr;
+    //     use crate::memory::*;
+    //     use x86_64::structures::paging::Translate;
+    //     let pagetable = init(VirtAddr::new(0));
+    //     //print_pagetable(&pagetable);
+    //     let res = pagetable.translate(addr);
+    //     log::info!("Mapped to: {:?}", res)
+    // }
     hlt_loop();
 }
 
