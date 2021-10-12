@@ -133,7 +133,7 @@ $ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/<YourUSB
 If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/svm_kernel-*.s`
 
 ## Build system
-The build system is highly custom but well integrated into cargo. The [bootimage](https://github.com/Luis-Hebendanz/bootimage/tree/8762ee1484c8bf0c23704fd367644b57f8eaad1a#inner-workings) tool goes into more detail.
+The build system is highly custom but well integrated into cargo. The [bootimage](https://github.com/Luis-Hebendanz/bootimage#inner-workings) tool goes into more detail.
 
 Important configuration files for the build system are:
 * [.cargo/config](svm_kernel/.cargo/config)
