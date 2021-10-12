@@ -1,10 +1,11 @@
 ## Description
 ==== WORK IN PROGRESS ====
 
-Trying to get multicore to work.
+Working SMP/multicore support, there is still some work to be done.
 
-Goal:
-x86_64 AMD kernel optimized for extreme performance at the cost of ditching all security measures.
+
+### Goal
+x86_64 AMD kernel optimized for extreme performance by not implementing  mitigation & security measures in the kernel but instead expecting the Rust compiler to handle that. 
 In the future this should become a hypervisor.
 
 ## Setup & Debug Build
@@ -141,6 +142,7 @@ Important configuration files for the build system are:
 * [i686-uknown-linux-gnu.json](svm_kernel/external/bootloader/i686-unknown-linux-gnu.json)
 * [linker.ld](svm_kernel/external/bootloader/linker.ld)
 * [build.rs](svm_kernel/external/bootloader/build.rs)
+* [rust-toolchain](rust-toolchain)
 
 ## Run tests
 To execute tests run:
