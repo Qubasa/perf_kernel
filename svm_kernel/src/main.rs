@@ -39,7 +39,7 @@ extern crate alloc;
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     // Check if this is a smp core
-    // TODO: apic id's don't have to start on 0
+    // TODO: apic id's don't have to start at 0
     if svm_kernel::smp::apic_id() != 0 {
         smp_main(_boot_info);
     }
@@ -86,7 +86,6 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
 fn smp_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     // TODO: Check that stacks for multicore in tss are okay
-    // TODO: Reimplement the frame allocator
     // TODO: Make the whole init process like the bsp
     // Make sure bsp core state is the same as smp core state
     {
