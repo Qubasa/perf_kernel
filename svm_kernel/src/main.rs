@@ -6,7 +6,7 @@
 #![feature(asm)]
 #![feature(test)]
 #![feature(bench_black_box)]
-
+#![allow(unreachable_code)]
 /*
  * Followed the tutorial here: https://os.phil-opp.com
  * TODO: Replace builtin memcpy, memset with optimized one
@@ -48,14 +48,16 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     // cores arrive here with the same state
     unsafe {
         smp::BSPCORE_STATE = Some(smp::CoreState::new());
-        
     };
 
     // Init & set logger level
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
 
-    log::info!("bootinfo: {:#?}", _boot_info);
+    log::info!("Reached kernel!!");
+    svm_kernel::hlt_loop();
+
+    //log::info!("bootinfo: {:#?}", _boot_info);
 
     // Check state integrity of bsp core
     unsafe {

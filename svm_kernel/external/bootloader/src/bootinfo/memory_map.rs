@@ -5,7 +5,7 @@ use core::ptr::read_unaligned;
 
 const PAGE_SIZE: u64 = 4096;
 
-const MAX_MEMORY_MAP_SIZE: usize = 64;
+const MAX_MEMORY_MAP_SIZE: usize = 3840;
 
 /// A map of the physical memory regions of the underlying machine.
 #[derive(Copy, Clone)]
@@ -82,13 +82,11 @@ impl MemoryMap {
             return Err(PartitionError::NotSameRegion(region, end_region));
         }
 
-        let mem_type = unsafe {
-            read_unaligned(addr_of!(region.region_type))
-        };
-        if mem_type != MemoryRegionType::Usable && mem_type != MemoryRegionType::UsableButDangerous {
+        let mem_type = unsafe { read_unaligned(addr_of!(region.region_type)) };
+        if mem_type != MemoryRegionType::Usable && mem_type != MemoryRegionType::UsableButDangerous
+        {
             return Err(PartitionError::RegionTypeIsNotUsable(region));
         }
-    
 
         let mut regions = [MemoryRegion::empty(); 3];
         regions[1].region_type = region_type;
@@ -176,13 +174,12 @@ impl MemoryMap {
                 } else if r2.range.is_empty() {
                     Ordering::Less
                 } else {
-                    let ordering = read_unaligned(addr_of!(r1
-                        .range
-                        .start_frame_number))
+                    let ordering = read_unaligned(addr_of!(r1.range.start_frame_number))
                         .cmp(&read_unaligned(addr_of!(r2.range.start_frame_number)));
 
                     if ordering == Ordering::Equal {
-                        read_unaligned(addr_of!(r1.range.end_frame_number)).cmp(&read_unaligned(addr_of!(r2.range.end_frame_number)))
+                        read_unaligned(addr_of!(r1.range.end_frame_number))
+                            .cmp(&read_unaligned(addr_of!(r2.range.end_frame_number)))
                     } else {
                         ordering
                     }
@@ -194,7 +191,7 @@ impl MemoryMap {
         }
     }
 
-    fn next_entry_index(&self) -> usize {
+    pub fn next_entry_index(&self) -> usize {
         self.next_entry_index as usize
     }
 }
@@ -217,8 +214,9 @@ impl DerefMut for MemoryMap {
 impl fmt::Debug for MemoryMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let next_index = self.next_entry_index();
+
         f.debug_list()
-            .entries(self.entries[0..next_index].iter())
+            .entries(self.entries.iter().take(next_index))
             .finish()
     }
 }

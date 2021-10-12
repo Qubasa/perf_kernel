@@ -5,6 +5,7 @@ use core::fmt;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use core::ptr::read_unaligned;
+
 mod memory_map;
 
 /// This structure represents the information that the bootloader passes to the kernel.
@@ -94,7 +95,7 @@ impl DerefMut for Cores {
 impl fmt::Debug for Cores {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_list()
-            .entries(self.cores[0..self.num_cores as usize].iter())
+            .entries(self.cores.iter().take(self.num_cores as usize))
             .finish()
     }
 }
@@ -108,7 +109,7 @@ pub struct Core {
     pub stack_end_addr: u64,
     /// Size of stack
     pub stack_size: u64,
-    /// Stacks for tss 
+    /// Stacks for tss
     pub tss: TSS,
 }
 
@@ -116,11 +117,11 @@ pub struct Core {
 #[repr(C, packed)]
 pub struct TSS {
     /// Stack start addresses for TSS
-    pub stack_start_addr: [u64; 7],
+    pub stack_start_addr: [u64; 8],
     /// Stack end addresses for TSS
-    pub stack_end_addr: [u64; 7],
+    pub stack_end_addr: [u64; 8],
     /// Stack sizes for TSS
-    pub stack_size: [u64; 7],
+    pub stack_size: [u64; 8],
 }
 
 impl Core {
@@ -129,12 +130,14 @@ impl Core {
             stack_start_addr: 0,
             stack_end_addr: 0,
             stack_size: 0,
-            tss: TSS { stack_start_addr: [0; 7], stack_end_addr:[0; 7], stack_size: [0; 7]}
+            tss: TSS {
+                stack_start_addr: [0; 8],
+                stack_end_addr: [0; 8],
+                stack_size: [0; 8],
+            },
         }
     }
 }
-
-
 
 impl fmt::Debug for Core {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
@@ -148,10 +151,11 @@ impl fmt::Debug for Core {
                     "stack_end_addr",
                     &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_end_addr))),
                 )
-                .field("stack_size", &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_size))))
+                .field(
+                    "stack_size",
+                    &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_size))),
+                )
                 .finish()
-            }
+        }
     }
 }
-
-

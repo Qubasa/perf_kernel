@@ -2,9 +2,9 @@ use bitflags::bitflags;
 use core::convert::TryInto;
 use core::fmt;
 use core::ops::{Index, IndexMut};
-use x86::structures::paging::page::{PageSize, Size4KiB};
 use core::ptr::addr_of;
 use core::ptr::read_unaligned;
+use x86::structures::paging::page::{PageSize, Size4KiB};
 // use x86::PhysAddr;
 
 /// The number of entries in a page table.
@@ -299,8 +299,9 @@ impl BootInfoFrameAllocator {
 
         // get usable regions from memory map
         let regions = self.memory_map.iter();
-        let usable_regions =
-            unsafe { regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable) };
+        let usable_regions = unsafe {
+            regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable)
+        };
 
         // Reduce the end of frame range to fit into xsize
         let adjusted_regions = usable_regions.map(move |r| {
@@ -342,29 +343,29 @@ impl BootInfoFrameAllocator {
     }
 }
 
-pub struct PdeAllocator {
+pub struct PageTableAllocator {
     index: usize,
-    p2_start_addr: usize,
-    p2_end_addr: usize,
+    start_addr: usize,
+    end_addr: usize,
 }
 
-impl PdeAllocator {
+impl PageTableAllocator {
     pub fn new(p2_start_addr: &'static usize, p2_end_addr: &'static usize) -> Self {
-        PdeAllocator {
+        PageTableAllocator {
             index: 0,
-            p2_start_addr: p2_start_addr as *const _ as usize,
-            p2_end_addr: p2_end_addr as *const _ as usize,
+            start_addr: p2_start_addr as *const _ as usize,
+            end_addr: p2_end_addr as *const _ as usize,
         }
     }
 }
 
-impl Iterator for PdeAllocator {
+impl Iterator for PageTableAllocator {
     type Item = &'static mut PageTable;
 
     fn next(&mut self) -> Option<&'static mut PageTable> {
-        let addr = self.p2_start_addr + core::mem::size_of::<PageTable>() * self.index;
+        let addr = self.start_addr + core::mem::size_of::<PageTable>() * self.index;
         let layout = core::alloc::Layout::from_size_align(addr, 16).unwrap();
-        if layout.size() > self.p2_end_addr {
+        if layout.size() > self.end_addr {
             return None;
         }
         let p2_table = unsafe { &mut *(layout.size() as *mut PageTable) };

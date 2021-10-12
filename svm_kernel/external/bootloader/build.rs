@@ -38,7 +38,8 @@ fn main() {
     // check that the kernel file exists
     assert!(
         kernel.exists(),
-        "KERNEL does not exist: {}", kernel.display()
+        "KERNEL does not exist: {}",
+        kernel.display()
     );
 
     // get access to llvm tools shipped in the llvm-tools-preview rustup component
@@ -223,9 +224,10 @@ use core::ptr::addr_of;
 use core::ptr::read_unaligned;
 impl Ord for Elf64_Phdr {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        unsafe { 
+        unsafe {
             let x = read_unaligned(addr_of!(other.p_vaddr));
-            read_unaligned(addr_of!(self.p_vaddr)).cmp(&x) }
+            read_unaligned(addr_of!(self.p_vaddr)).cmp(&x)
+        }
     }
 }
 
@@ -233,21 +235,41 @@ use std::fmt;
 impl fmt::Display for Elf64_Shdr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {
-            writeln!(f, "\nsh_addr: {:#x}", read_unaligned(addr_of!(self.sh_addr)))?;
-            writeln!(f, "sh_offset: {:#x}", read_unaligned(addr_of!(self.sh_offset)))?;
+            writeln!(
+                f,
+                "\nsh_addr: {:#x}",
+                read_unaligned(addr_of!(self.sh_addr))
+            )?;
+            writeln!(
+                f,
+                "sh_offset: {:#x}",
+                read_unaligned(addr_of!(self.sh_offset))
+            )?;
             writeln!(f, "sh_size: {:#x}", read_unaligned(addr_of!(self.sh_size)))
         }
     }
 }
 impl fmt::Display for Elf64_Phdr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe { write!(f, "Virtual Address: {:#x}", read_unaligned(addr_of!(self.p_vaddr))) }
+        unsafe {
+            write!(
+                f,
+                "Virtual Address: {:#x}",
+                read_unaligned(addr_of!(self.p_vaddr))
+            )
+        }
     }
 }
 
 impl fmt::Debug for Elf64_Phdr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe { write!(f, "Virtual Address: {:#x}", read_unaligned(addr_of!(self.p_vaddr))) }
+        unsafe {
+            write!(
+                f,
+                "Virtual Address: {:#x}",
+                read_unaligned(addr_of!(self.p_vaddr))
+            )
+        }
     }
 }
 
@@ -404,7 +426,10 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         {
             unsafe {
                 eprintln!("Programm header comes after LOAD2 segment. This is not supported.");
-                eprintln!("Program header addr: {:#x}", read_unaligned(addr_of!(header.e_phoff)));
+                eprintln!(
+                    "Program header addr: {:#x}",
+                    read_unaligned(addr_of!(header.e_phoff))
+                );
                 eprintln!(
                     "LOAD2 offset: {:#x}",
                     read_unaligned(addr_of!(load_segments.iter().nth(0).unwrap().p_offset))
@@ -418,7 +443,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             if read_unaligned(addr_of!(load_segments.iter().nth(0).unwrap().p_vaddr)) != 0x200000 {
                 panic!("Base address (first load segment) has to be 0x200000 = 2Mb");
             }
-      }
+        }
     }
 
     // Pad load segments with zeros
@@ -600,7 +625,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
                 *i = 0;
             }
         } else {
-            panic!("Kernel does not have a .bss section");
+            println!("cargo:warning=Kernel does not have a .bss section");
         }
     }
 

@@ -9,11 +9,9 @@ extern crate alloc;
 
 use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
-use core::panic::PanicInfo;
 use core::hint::black_box;
-use svm_kernel::{
-    allocator::HEAP_START, bench::Bench, mylog::LOGGER, print, println,
-};
+use core::panic::PanicInfo;
+use svm_kernel::{allocator::HEAP_START, bench::Bench, mylog::LOGGER, print, println};
 
 entry_point!(main);
 

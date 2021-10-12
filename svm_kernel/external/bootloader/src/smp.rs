@@ -49,7 +49,7 @@ unsafe extern "C" fn smp_main() {
     // and set cr3 register with memory map
     crate::mmu::setup_mmu(PhysAddr::new(BOOT_INFO.page_table_addr));
 
-    // Enable write through 
+    // Enable write through
     // Enable caches
     let mut cr0 = Cr0::read();
     cr0.remove(Cr0Flags::NOT_WRITE_THROUGH);

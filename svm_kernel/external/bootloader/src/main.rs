@@ -14,12 +14,12 @@ use core::convert::TryInto;
 use log::LevelFilter;
 use multiboot2;
 mod media_extensions;
+use core::ptr::{addr_of, read_unaligned};
 use multiboot2::MemoryAreaType;
 use smp::BOOT_INFO;
 use x86::structures::gdt::*;
 use x86::structures::paging::frame::PhysFrame;
 use x86::{PhysAddr, VirtAddr};
-use core::ptr::{read_unaligned, addr_of};
 
 global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
@@ -53,7 +53,9 @@ extern "C" {
     static _p3: usize;
     static _p2_tables_start: usize;
     static _p2_tables_end: usize;
-    static _p1: usize;
+    static _p1_tss_tables_start: usize;
+    static _p1_tables_end: usize;
+    static _p1_tables_start: usize;
     static __page_table_end: usize;
     static __minimum_mem_requirement: usize;
 }
@@ -73,7 +75,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Debug);
+        log::set_max_level(LevelFilter::Info);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::load_idt();
@@ -153,7 +155,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             if let Some(ref mut last) = last {
                 if last.range.intersects(map.range.start_addr()) {
                     log::debug!("Memory maps intersect: \n {:#?} <-> {:#?}", last, map);
-                    if read_unaligned(addr_of!(map.region_type)) == bootinfo::MemoryRegionType::Usable {
+                    if read_unaligned(addr_of!(map.region_type))
+                        == bootinfo::MemoryRegionType::Usable
+                    {
                         map.range.set_start_addr(last.range.end_addr());
                         continue;
                     }
@@ -174,10 +178,24 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let start_addr = read_unaligned(addr_of!(map.range)).start_addr();
                 let end_addr = read_unaligned(addr_of!(map.range)).end_addr();
                 let one_mib = 0x100000; // 1Mib in hex
-                if start_addr < one_mib && end_addr < one_mib{
-                    BOOT_INFO.memory_map.partition_memory_region(start_addr, end_addr, bootinfo::MemoryRegionType::UsableButDangerous).unwrap();
-                }else if start_addr < one_mib && end_addr > one_mib{
-                    BOOT_INFO.memory_map.partition_memory_region(start_addr, one_mib, bootinfo::MemoryRegionType::UsableButDangerous).unwrap();
+                if start_addr < one_mib && end_addr < one_mib {
+                    BOOT_INFO
+                        .memory_map
+                        .partition_memory_region(
+                            start_addr,
+                            end_addr,
+                            bootinfo::MemoryRegionType::UsableButDangerous,
+                        )
+                        .unwrap();
+                } else if start_addr < one_mib && end_addr > one_mib {
+                    BOOT_INFO
+                        .memory_map
+                        .partition_memory_region(
+                            start_addr,
+                            one_mib,
+                            bootinfo::MemoryRegionType::UsableButDangerous,
+                        )
+                        .unwrap();
                 }
             }
         }
@@ -206,7 +224,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             if region.range.intersects(addr) {
                 unsafe {
                     let mem_type = read_unaligned(addr_of!(region.region_type));
-                    if mem_type != MemoryRegionType::Usable && mem_type != MemoryRegionType::UsableButDangerous {
+                    if mem_type != MemoryRegionType::Usable
+                        && mem_type != MemoryRegionType::UsableButDangerous
+                    {
                         panic!(
                             "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
                             addr,
@@ -240,15 +260,21 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    // Generate id mapping with 2Mb pages for the first 4Gb
+    // Map first 4Gb with 2Mb pages that are writable
     let p4_physical =
         mmu::generate_page_table(&_p4, &_p3, &_p2_tables_start, &_p2_tables_end, &BOOT_INFO);
 
     // Remap first 2Mb with 4Kb pages
-    // skips guard page
-    // skips frame zero 0-4Kb
-    // also id maps vga address
-    mmu::remap_first_2mb_with_4kb(&_p3, &_p1, &__stack_guard, &BOOT_INFO);
+    // sets stack guard page to read only
+    // sets frame zero 0-4Kb to unmapped
+    // also id maps vga address to uncachable
+    mmu::remap_first_2mb_with_4kb(
+        &_p3,
+        &_p1_tables_start,
+        &__stack_guard,
+        &__smp_trampoline_start,
+        &__smp_trampoline_end,
+    );
 
     // Update MEM_MAP
     {
@@ -280,13 +306,13 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             .unwrap();
 
         BOOT_INFO
-        .memory_map
-        .partition_memory_region(
-            &__stack_guard as *const _ as u64, // Stack guard page
-            &__stack_end as *const _ as u64,
-            bootinfo::MemoryRegionType::GuardPage,
-        )
-        .unwrap();
+            .memory_map
+            .partition_memory_region(
+                &__stack_guard as *const _ as u64, // Stack guard page
+                &__stack_end as *const _ as u64,
+                bootinfo::MemoryRegionType::GuardPage,
+            )
+            .unwrap();
 
         BOOT_INFO
             .memory_map
@@ -337,97 +363,137 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             log::debug!(
                 "Core {} stack space from: {:#x} to {:#x}",
                 i,
-                stack_start,
                 addr + guard_page,
+                stack_start,
             );
 
-            // Delete table entry for guard page
+            // Set 2Mb guard page to readable with NX bit set
             let p3_physical = &_p3 as *const _ as u64;
             let p3_table = &*(p3_physical as *mut pagetable::PageTable);
             let p3_index = usize::try_from(addr >> 12 >> 9 >> 9 & 0o777).unwrap();
             let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
             let p2_index = usize::try_from(addr >> 12 >> 9 & 0o777).unwrap();
-            p2_table[p2_index].set_unused();
+            p2_table[p2_index].set_flags(
+                pagetable::PageTableFlags::PRESENT
+                    | pagetable::PageTableFlags::HUGE_PAGE
+                    | pagetable::PageTableFlags::NO_EXECUTE,
+            );
 
             // Mark guard page
             BOOT_INFO
-            .memory_map
-            .partition_memory_region(
-                addr, 
-                addr + guard_page,                         // end addr
-                bootinfo::MemoryRegionType::GuardPage,
-            )
-            .unwrap();
+                .memory_map
+                .partition_memory_region(
+                    addr,
+                    addr + guard_page, // end addr
+                    bootinfo::MemoryRegionType::GuardPage,
+                )
+                .unwrap();
 
             // Mark kernel stack
             BOOT_INFO
                 .memory_map
                 .partition_memory_region(
                     addr + guard_page, // start addr
-                    stack_start,                         // end addr
+                    stack_start,       // end addr
                     bootinfo::MemoryRegionType::KernelStack,
                 )
                 .unwrap();
         }
     }
 
-    // Allocate seven 100KiB stacks + 8KiB Guard Page per core for TSS
+    // Allocate eight 132KiB stacks + 8 KiB Guard Page per core for TSS
     {
-        use pagetable::PageTableFlags;
         use core::convert::TryFrom;
+        use pagetable::PageTable;
+        use pagetable::PageTableFlags;
         let allocator = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map);
-        let stack_size = 4096 * 25; // 100KiB
-        let guard_page = 4096 * 2; // 8 KiB
+        let stack_size = 4096 * 30; // 132 KiB
+        let guard_page = 4096 * 2; // 12 KiB
 
+        // Create iterator that on every next() call returns a new mutable pde page table
+        let mut p1_allocator =
+            pagetable::PageTableAllocator::new(&_p1_tss_tables_start, &_p1_tables_end);
+        let mut p1_table: Option<&'static mut PageTable> = None;
+        let mut usable_frames = allocator
+            .usable_xsize_frames(stack_size + guard_page, bootloader::TWO_MEG)
+            .peekable();
+
+        // Iter over number of cores
         for ci in 0..smp::num_cores() {
-            let mut iter = allocator.usable_xsize_frames(stack_size + guard_page, bootloader::TWO_MEG);
-            for i in 0..7 {
-                let addr = iter
+            let addr = *usable_frames.peek().expect("Not enough memory to allocate tss stack for all cores");
+            if ci % 2 == 0 {
+                let p = p1_allocator
                     .next()
-                    .expect("Not enough memory to allocate stack for all cores");
+                    .expect("Not enough p1 tables in linker script allocated");
+                p.zero();
+
+                // Delete huge page entry and set pointer to p1 table
+                {
+                    // Make sure that addr is a new 2Mb page
+                    if addr % bootloader::TWO_MEG != 0 {
+                        panic!("Not 2Meg aligned: {:#x}", addr);
+                    }
+
+                    let p3_physical = &_p3 as *const _ as u64;
+                    let p3_table = &*(p3_physical as *mut pagetable::PageTable);
+                    let p3_index = usize::try_from(addr >> 12 >> 9 >> 9 & 0o777).unwrap();
+                    let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
+                    let p2_index = usize::try_from(addr >> 12 >> 9 & 0o777).unwrap();
+                    p2_table[p2_index].set_addr(
+                        addr_of!(*p) as u64,
+                        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                    );
+                }
+
+                for (i, entry) in p.iter_mut().enumerate() {
+                    let a = addr + i as u64 * 4096;
+                    entry.set_addr(a, PageTableFlags::PRESENT | PageTableFlags::WRITABLE);
+                }
+
+                p1_table = Some(p);
+            }
+
+            let p1_table: &mut PageTable = p1_table.as_deref_mut().unwrap();
+
+            // Iter over number of stacks for TSS
+            for i in 0..8 {
+                let addr = usable_frames
+                    .next()
+                    .expect("Not enough memory to allocate tss stack for all cores");
                 let stack_start = addr + stack_size + guard_page;
+
+                // Populate BOOT_INFO with stack addresses for every core
                 BOOT_INFO.cores[ci as usize].tss.stack_size[i as usize] = stack_size;
                 BOOT_INFO.cores[ci as usize].tss.stack_start_addr[i as usize] = stack_start;
                 BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] = addr + guard_page;
-                log::debug!(
-                    "Core {} TSS space {} from: {:#x} to {:#x}",
-                    ci,
-                    i,
-                    stack_start,
-                    addr + guard_page,
-                );
 
-                // Delete table entry for guard page
-                let p3_physical = &_p3 as *const _ as u64;
-                let p3_table = &*(p3_physical as *mut pagetable::PageTable);
-                let p3_index = usize::try_from(addr >> 12 >> 9 >> 9 & 0o777).unwrap();
-                let p2_table = &mut *(p3_table[p3_index].addr() as *mut pagetable::PageTable);
-                let p2_index = usize::try_from(addr >> 12 >> 9 & 0o777).unwrap();
-                let flags = p2_table[p2_index].flags();
-                p2_table[p2_index].set_flags(flags & !PageTableFlags::HUGE_PAGE);
-                let p1_table = &mut *(p2_table[p2_index].addr() as *mut pagetable::PageTable);
-                let p1_index =  usize::try_from(addr >> 12 & 0o777).unwrap();
+                // Compute p1 index of address
+                let start_index = usize::try_from(addr >> 12 & 0o777).unwrap();
 
-                for i in 0..(guard_page / 4096) {
-                    p1_table[p1_index + i as usize].set_unused();
+                // Iter over number of guard pages
+                for (i, bytes) in (0..guard_page).step_by(4096).enumerate() {
+                    p1_table[start_index + i].set_addr(
+                        addr + bytes,
+                        PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE,
+                    );
                 }
 
                 // Mark guard page
                 BOOT_INFO
-                .memory_map
-                .partition_memory_region(
-                    addr, 
-                    addr + guard_page,                         // end addr
-                    bootinfo::MemoryRegionType::GuardPage,
-                )
-                .unwrap();
+                    .memory_map
+                    .partition_memory_region(
+                        addr,
+                        addr + guard_page, // end addr
+                        bootinfo::MemoryRegionType::GuardPage,
+                    )
+                    .unwrap();
 
-                // Mark kernel stack
+                // Mark tss stack
                 BOOT_INFO
                     .memory_map
                     .partition_memory_region(
                         addr + guard_page, // start addr
-                        stack_start,                         // end addr
+                        stack_start,       // end addr
                         bootinfo::MemoryRegionType::TSSstack,
                     )
                     .unwrap();

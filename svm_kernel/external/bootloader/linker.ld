@@ -54,8 +54,11 @@ SECTIONS {
         _p2_tables_start = .;
             . += 0x4000; /* One p2 table equals 1Gb memory mapped */
         _p2_tables_end = .;
+        _p1_tables_start = .;
         . += 0x1000; /* First p1 table to map 0-2Mb with 4Kb pages*/
-        _p1 = .;
-    __page_table_end = .; /* Allocates 8Mb of RAM to map 4Gb of virt addr*/
+        _p1_tss_tables_start = .;
+        . += 0x1000 * 128; /* 1Mb per core for interrupt stacks (max 256 cores) */
+        _p1_tables_end = .;
+    __page_table_end = .; 
     __minimum_mem_requirement = .;
 }

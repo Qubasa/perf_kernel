@@ -10,9 +10,13 @@
       xorriso
       grub2
       qemu
+      hotspot
       llvmPackages_latest.lld
       python3
-    ];
+    ] ++ (with pkgs.python39Packages; [
+      pyelftools
+      intervaltree
+    ]);
     RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
     # https://github.com/rust-lang/rust-bindgen#environment-variables
     LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];

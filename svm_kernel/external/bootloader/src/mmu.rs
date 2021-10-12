@@ -2,9 +2,11 @@ use crate::bootinfo;
 use crate::bootinfo::MemoryRegionType;
 use crate::pagetable;
 use x86::structures::paging::frame::PhysFrame;
-use x86::{PhysAddr, VirtAddr};
+use x86::PhysAddr;
 
 /// Generates page table for long mode
+/// by mapping the first 4 Gib with 2Mb pages that are writable if memory is tagged usable
+/// else these pages are only readable with NX bit set
 pub unsafe fn generate_page_table(
     p4: &'static usize,
     p3: &'static usize,
@@ -38,7 +40,7 @@ pub unsafe fn generate_page_table(
         p3_table.zero();
 
         // Create iterator that on every next() call returns a new mutable pde page table
-        let mut pde_allocator = pagetable::PdeAllocator::new(p2_tables_start, p2_tables_end);
+        let mut pde_allocator = pagetable::PageTableAllocator::new(p2_tables_start, p2_tables_end);
 
         // Identity map first 4Gb with 2Mb pages
         for pdpe_i in 0..4 {
@@ -61,9 +63,6 @@ pub unsafe fn generate_page_table(
                                 pagetable::PageTableFlags::PRESENT
                                     | pagetable::PageTableFlags::WRITABLE
                                     | pagetable::PageTableFlags::HUGE_PAGE
-                            }
-                            MemoryRegionType::BadMemory => {
-                                continue;
                             }
                             _ => {
                                 pagetable::PageTableFlags::PRESENT
@@ -88,11 +87,13 @@ pub unsafe fn generate_page_table(
 }
 
 /// Remaps first 2mb with 4kb pages
+/// Sets everything to NO_EXECUTE and NO_CACHE if possible
 pub unsafe fn remap_first_2mb_with_4kb(
     p3: &'static usize,
     p1: &'static usize,
     stack_guard: &'static usize,
-    boot_info: &bootinfo::BootInfo,
+    smp_trampoline_start: &'static usize,
+    smp_trampoline_end: &'static usize,
 ) {
     let p3_physical = p3 as *const _ as u64;
     let p3_table = &*(p3_physical as *mut pagetable::PageTable);
@@ -107,8 +108,7 @@ pub unsafe fn remap_first_2mb_with_4kb(
     p1_table.zero();
     p2_entry.set_addr(
         p1_physical,
-        pagetable::PageTableFlags::PRESENT
-        | pagetable::PageTableFlags::WRITABLE
+        pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
     );
 
     // Identity map 0Mb - 2Mb in 4Kb pages
@@ -118,34 +118,38 @@ pub unsafe fn remap_first_2mb_with_4kb(
 
         // Skip page before stack_end to know when we overstep stack boundaries
         if addr == (stack_guard as *const _ as u64) {
-            log::debug!("Not id mapping addr is stack guard page:{:#x}", addr);
+            entry.set_addr(addr as u64, pagetable::PageTableFlags::PRESENT);
             continue;
         }
 
-        // Only map usable mem regions
-        if let Some(mem_area) = boot_info.memory_map.get_region_by_addr(addr) {
-            match mem_area.region_type {
-                MemoryRegionType::Usable | MemoryRegionType::UsableButDangerous => {
-                    entry.set_addr(
-                        addr as u64,
-                        pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
-                    );
-                }
-                _ => (),
-            }
+        if addr >= (smp_trampoline_start as *const _ as u64)
+            && addr < (smp_trampoline_end as *const _ as u64)
+        {
+            entry.set_addr(
+                addr as u64,
+                pagetable::PageTableFlags::PRESENT | pagetable::PageTableFlags::WRITABLE,
+            );
+        } else if addr <= crate::ONE_MEG {
+            entry.set_addr(
+                addr as u64,
+                pagetable::PageTableFlags::PRESENT
+                    | pagetable::PageTableFlags::NO_CACHE
+                    | pagetable::PageTableFlags::NO_EXECUTE,
+            );
+        } else {
+            entry.set_addr(addr as u64, pagetable::PageTableFlags::PRESENT);
         }
     }
 
     // Identity map vga address
     // needed because this is marked as non usable memory by grub
-    use x86::structures::paging::{page::Size4KiB, Page};
-    let page = Page::<Size4KiB>::containing_address(VirtAddr::new(0xb8000));
-    let p1_index = (page.start_address().as_u32() >> 12) as usize;
+    let p1_index = 0xb8000 >> 12 & 0o777;
     p1_table[p1_index].set_addr(
-        page.start_address().as_u32() as u64,
+        0xb8000 as u64,
         pagetable::PageTableFlags::PRESENT
             | pagetable::PageTableFlags::WRITABLE
-            | pagetable::PageTableFlags::NO_CACHE,
+            | pagetable::PageTableFlags::NO_CACHE
+            | pagetable::PageTableFlags::NO_EXECUTE,
     );
 }
 
