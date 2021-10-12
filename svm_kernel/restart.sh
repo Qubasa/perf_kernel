@@ -2,7 +2,7 @@
 set -e
 
 
-export CARGO_MANIFEST_DIR=~/Projects/rust-kernel-svm/svm_kernel
+export CARGO_MANIFEST_DIR=$PWD
 cargo build
 ls src/*.rs external/bootloader/src/*.rs | entr -r -n sh -c "
 set -e

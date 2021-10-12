@@ -10,6 +10,7 @@
       xorriso
       grub2
       qemu
+      entr
       hotspot
       llvmPackages_latest.lld
       python3

@@ -83,7 +83,6 @@ If you use qemu with kvm you have to use [hardware breakpoints](https://en.wikip
 In qemu emulation mode just use the normal breakpoints set with `b <address>`
 
 
-
 ## Debug with qemu monitor
 Connect to [qemu monitor](https://qemu.readthedocs.io/en/latest/system/monitor.html) with
 ```
@@ -100,6 +99,48 @@ To switch to a different cpu core, execute:
 The linker generates a linker map where all ELF objects are listed with their respective addresses.
 You can find the file under `<project_root>/svm_kernel/external/bootloader/target/linker.map`.
 
+
+## Debugging MMU with vmsh
+[vmsh](https://github.com/Mic92/vmsh) is a tool that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](https://github.com/Luis-Hebendanz/svm_kernel/blob/master/svm_kernel/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
+
+Excerpt:
+```
+Virt Addr         Phys Addr       Size Perms Cache  NX
+0x0            -> UNMAPPED        4Kb 
+0x1000         -> 0x1000          4Kb  R       PCD NX 
+...
+0x3000         -> 0x3000          4Kb  R       PCD NX 
+0x4000         -> 0x4000          4Kb  W              
+0x5000         -> 0x5000          4Kb  R       PCD NX 
+...
+0xb7000        -> 0xb7000         4Kb  R       PCD NX 
+0xb8000        -> 0xb8000         4Kb  W       PCD NX 
+0xb9000        -> 0xb9000         4Kb  R       PCD NX 
+...
+0xff000        -> 0xff000         4Kb  R       PCD NX 
+0x100000       -> 0x100000        4Kb  R              
+...
+```
+
+## ISO file
+To create a new ISO file, `cargo run` needs to be executed. `cargo build` does not suffice, it only generates a new kernel executable file but not a new ISO file. The path to the ISO is `target/x86_64-os/debug/bootimage-svm_kernel.iso` or if build in release mode `target/x86_64-os/release/bootimage-svm_kernel.iso`. To create a bootable USB stick just flash the image onto the USB device with:
+```bash
+$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/<YourUSB> status=progress
+```
+
+## LLVM assembly
+If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/svm_kernel-*.s`
+
+## Build system
+The build system is highly custom but well integrated into cargo. The [bootimage](https://github.com/Luis-Hebendanz/bootimage/tree/8762ee1484c8bf0c23704fd367644b57f8eaad1a#inner-workings) tool goes into more detail.
+
+Important configuration files for the build system are:
+* [.cargo/config](svm_kernel/.cargo/config)
+* [Cargo.toml](svm_kernel/Cargo.toml)
+* [x86_64-os.json](svm_kernel/x86_64-os.json)
+* [i686-uknown-linux-gnu.json](svm_kernel/external/bootloader/i686-unknown-linux-gnu.json)
+* [linker.ld](svm_kernel/external/bootloader/linker.ld)
+* [build.rs](svm_kernel/external/bootloader/build.rs)
 
 ## Run tests
 To execute tests run:
