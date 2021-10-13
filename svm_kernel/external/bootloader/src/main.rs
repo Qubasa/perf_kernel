@@ -17,8 +17,6 @@ use core::ptr::{addr_of, read_unaligned};
 use multiboot2::MemoryAreaType;
 use smp::BOOT_INFO;
 
-
-
 global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
 global_asm!(include_str!("smp_trampoline.s"));
@@ -68,7 +66,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // kernel. The symbol _kernel_size does not come from the linker script
     // but from objcopy. Read more under `$ man objcopy`
     core::hint::black_box(_kernel_size);
-    
+
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
@@ -337,7 +335,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // also id maps vga address to uncachable
     mmu::remap_first_2mb_with_4kb(&_p3, &_p1_tables_start, &BOOT_INFO);
 
- 
     // Allocate 8Mb stack space for every core
     // + 2 mb guard page at the end
     {
@@ -461,7 +458,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
                 // Populate BOOT_INFO with stack addresses for every core
                 BOOT_INFO.cores[ci as usize].tss.stack_size[i as usize] = stack_size;
-                BOOT_INFO.cores[ci as usize].tss.set_stack_start(i as usize, stack_start);
+                BOOT_INFO.cores[ci as usize]
+                    .tss
+                    .set_stack_start(i as usize, stack_start);
                 BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] = addr + guard_page;
 
                 // Compute p1 index of address
@@ -503,7 +502,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Enable all media extensions
     media_extensions::enable_all();
 
-    // Enable mmu 
+    // Enable mmu
     // and load cr3 register with addr of page table
     mmu::setup_mmu(p4_physical);
 
@@ -514,7 +513,11 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     let kernel_header = get_kernel_header(&__kernel_start);
 
     // We assume first apic id is 0. Get the stack for core 0
-    let stack_addr: u32 = BOOT_INFO.cores[0].get_stack_start().unwrap().try_into().unwrap();
+    let stack_addr: u32 = BOOT_INFO.cores[0]
+        .get_stack_start()
+        .expect("Forgot to instantiate kernel stack")
+        .try_into()
+        .unwrap();
 
     // Read kernel entry point from ELF header
     let entry_addr: u32 = kernel_header.e_entry;
@@ -523,7 +526,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     BOOT_INFO.kernel_entry_addr = entry_addr;
 
     log::debug!("Switching to long mode...");
-    
+
     // Switch to long mode and jump to kernel entry point
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }

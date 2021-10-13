@@ -76,7 +76,6 @@ impl Cores {
             num_cores: 0,
         }
     }
-
 }
 
 impl Deref for Cores {
@@ -132,7 +131,11 @@ impl TSS {
 
     pub fn get_stack_start(&self, index: usize) -> Option<u64> {
         let val = self.stack_start_addr[index];
-        if val == 0 { None } else { Some(val) }
+        if val == 0 {
+            None
+        } else {
+            Some(val)
+        }
     }
 }
 
@@ -152,15 +155,15 @@ impl Core {
 
     pub fn set_stack_start(&mut self, addr: u64) {
         self.stack_start_addr = addr;
-    } 
+    }
 
     pub fn get_stack_start(&self) -> Option<u64> {
         if self.stack_start_addr == 0 {
             None
-        }else {
+        } else {
             Some(self.stack_start_addr)
         }
-    } 
+    }
 }
 
 impl fmt::Debug for Core {
