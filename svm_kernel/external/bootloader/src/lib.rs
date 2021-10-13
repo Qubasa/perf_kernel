@@ -8,11 +8,7 @@
 #![no_std]
 #![feature(global_asm)]
 #![feature(asm)]
-#![allow(incomplete_features)]
-#![feature(adt_const_params)]
-#![feature(generic_const_exprs)]
 #![feature(abi_x86_interrupt)]
-#![feature(naked_functions)]
 #![feature(test)]
 #![feature(bench_black_box)]
 
@@ -44,9 +40,6 @@ pub mod serial;
 pub mod smp;
 #[cfg(target_arch = "x86")]
 pub mod vga;
-
-// TODO: Why does this need to be imported two times?
-global_asm!(include_str!("multiboot2_header.s"));
 
 pub const ONE_MEG: u64 = 1048576;
 pub const TWO_MEG: u64 = ONE_MEG * 2;

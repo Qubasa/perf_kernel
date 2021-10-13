@@ -1,7 +1,7 @@
 use core::arch::x86::__cpuid;
 use x86::addr::PhysAddr;
 use x86::registers::control::{Cr0, Cr0Flags};
-
+use core::convert::TryInto;
 use crate::bootinfo;
 
 pub static mut BOOT_INFO: bootinfo::BootInfo = bootinfo::BootInfo::new();
@@ -42,7 +42,7 @@ unsafe extern "C" fn smp_main() {
     crate::media_extensions::enable_all();
 
     // Get stack address for this core
-    let stack_addr = BOOT_INFO.cores[apic_id() as usize].stack_start_addr as u32;
+    let stack_addr: u32 = BOOT_INFO.cores[apic_id() as usize].get_stack_start().unwrap().try_into().unwrap();
     log::debug!("Stack addr: {:#x}", stack_addr);
 
     // Enable mmu features

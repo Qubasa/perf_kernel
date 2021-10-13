@@ -3,7 +3,6 @@
 #![feature(global_asm)]
 #![feature(asm)]
 #![feature(test)]
-#![allow(unused_imports)]
 #![feature(bench_black_box)]
 
 use bootloader::bootinfo;
@@ -17,9 +16,8 @@ mod media_extensions;
 use core::ptr::{addr_of, read_unaligned};
 use multiboot2::MemoryAreaType;
 use smp::BOOT_INFO;
-use x86::structures::gdt::*;
-use x86::structures::paging::frame::PhysFrame;
-use x86::{PhysAddr, VirtAddr};
+
+
 
 global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
@@ -64,14 +62,13 @@ extern "C" {
 // we need a flame graph / execution hotspot map and start optimizing
 // there. As I do not how well this scales if we have 2Tb+ of memory.
 // I think it should be fine, nonetheless it should be looked after at some point
-// TODO: Make it so that the core state is saved at the index of the apic id
-// so that apic ids don't have to be numbered 0-x but can also start at an arbitrary offset 20-x
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
     // kernel. The symbol _kernel_size does not come from the linker script
     // but from objcopy. Read more under `$ man objcopy`
     core::hint::black_box(_kernel_size);
+    
     // Initialization
     {
         log::set_logger(&LOGGER).unwrap();
@@ -97,12 +94,12 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Parses the multiboot2 header
-    let boot_info = multiboot2::load(mboot2_info_ptr as usize);
+    let parsed_multiboot_headers = multiboot2::load(mboot2_info_ptr as usize);
 
-    // Set num cores early so that debug print of BOOT_INFO is not too much
+    // Save number of cores this cpu has to BOOT_INFO
     BOOT_INFO.cores.num_cores = smp::num_cores();
 
-    // Set smp trampoline
+    // Save smp trampoline addr to BOOT_INFO
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
 
     /*
@@ -112,7 +109,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     let mut existing_ram = 0; // All memory
     let mut available_ram = 0; // Memory that is tagged as 'available'
     {
-        let map_tag = boot_info.memory_map_tag().unwrap();
+        let map_tag = parsed_multiboot_headers.memory_map_tag().unwrap();
         for i in map_tag.all_memory_areas() {
             existing_ram += i.size();
 
@@ -171,7 +168,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    // Set all memory to reserved that is below 1Mib
+    // Set all usable memory that is below 1Mib to UsableButDangerous
     {
         for map in BOOT_INFO.memory_map.iter() {
             if read_unaligned(addr_of!(map.region_type)) == bootinfo::MemoryRegionType::Usable {
@@ -246,7 +243,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Check if enough RAM available
     let min_ram = &__minimum_mem_requirement as *const _ as u64;
     if available_ram < min_ram {
-        panic!("Kernel needs at least {}Kb of usable RAM", min_ram / 1024);
+        panic!("Kernel needs at least {} Kb of usable RAM", min_ram / 1024);
     }
 
     // Check that kernel lies at 2Mb in memory
@@ -260,48 +257,31 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
-    // Map first 4Gb with 2Mb pages that are writable
+    log::info!("Num physical cores: {}", smp::num_cores());
+
+    // Bootloader assumes that the apic_id of the BSP is 0
+    if smp::apic_id() != 0 {
+        panic!("BSP core is non zero. Bootloader did not expect that.");
+    }
+
+    // Map first 4Gb with 2Mb pages that are writable if memory is tagged usable
+    // else pages are set readable with NX bit set.
     let p4_physical =
         mmu::generate_page_table(&_p4, &_p3, &_p2_tables_start, &_p2_tables_end, &BOOT_INFO);
-
-    // Remap first 2Mb with 4Kb pages
-    // sets stack guard page to read only
-    // sets frame zero 0-4Kb to unmapped
-    // also id maps vga address to uncachable
-    mmu::remap_first_2mb_with_4kb(
-        &_p3,
-        &_p1_tables_start,
-        &__stack_guard,
-        &__smp_trampoline_start,
-        &__smp_trampoline_end,
-    );
 
     // Update MEM_MAP
     {
         BOOT_INFO
             .memory_map
+            .partition_memory_region(0, 4096, bootinfo::MemoryRegionType::FrameZero)
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
             .partition_memory_region(
                 &__smp_trampoline_start as *const _ as u64,
                 &__smp_trampoline_end as *const _ as u64,
-                bootinfo::MemoryRegionType::Bootloader,
-            )
-            .unwrap();
-
-        BOOT_INFO
-            .memory_map
-            .partition_memory_region(
-                &__kernel_start as *const _ as u64,
-                &__kernel_end as *const _ as u64,
-                bootinfo::MemoryRegionType::Kernel,
-            )
-            .unwrap();
-
-        BOOT_INFO
-            .memory_map
-            .partition_memory_region(
-                &__bootloader_start as *const _ as u64,
-                &__bootloader_end as *const _ as u64,
-                bootinfo::MemoryRegionType::Bootloader,
+                bootinfo::MemoryRegionType::SmpTrampoline,
             )
             .unwrap();
 
@@ -326,23 +306,38 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         BOOT_INFO
             .memory_map
             .partition_memory_region(
+                &__bootloader_start as *const _ as u64,
+                &__bootloader_end as *const _ as u64,
+                bootinfo::MemoryRegionType::Bootloader,
+            )
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
+                &__kernel_start as *const _ as u64,
+                &__kernel_end as *const _ as u64,
+                bootinfo::MemoryRegionType::Kernel,
+            )
+            .unwrap();
+
+        BOOT_INFO
+            .memory_map
+            .partition_memory_region(
                 &__page_table_start as *const _ as u64,
                 &__page_table_end as *const _ as u64,
                 bootinfo::MemoryRegionType::PageTable,
             )
             .unwrap();
-        BOOT_INFO
-            .memory_map
-            .partition_memory_region(0, 4096, bootinfo::MemoryRegionType::FrameZero)
-            .unwrap();
     }
 
-    log::info!("Num physical cores: {}", smp::num_cores());
+    // Remap first 2Mb with 4Kb pages
+    // sets stack guard page to read only
+    // sets frame zero 0-4Kb to unmapped
+    // also id maps vga address to uncachable
+    mmu::remap_first_2mb_with_4kb(&_p3, &_p1_tables_start, &BOOT_INFO);
 
-    if smp::apic_id() != 0 {
-        panic!("BSP core is non zero. Bootloader did not expect that.");
-    }
-
+ 
     // Allocate 8Mb stack space for every core
     // + 2 mb guard page at the end
     {
@@ -358,7 +353,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 .expect("Not enough memory to allocate stack for all cores");
             let stack_start = addr + stack_size + guard_page;
             BOOT_INFO.cores[i as usize].stack_size = stack_size;
-            BOOT_INFO.cores[i as usize].stack_start_addr = stack_start;
+            BOOT_INFO.cores[i as usize].set_stack_start(stack_start);
             BOOT_INFO.cores[i as usize].stack_end_addr = addr + guard_page;
             log::debug!(
                 "Core {} stack space from: {:#x} to {:#x}",
@@ -420,7 +415,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
         // Iter over number of cores
         for ci in 0..smp::num_cores() {
-            let addr = *usable_frames.peek().expect("Not enough memory to allocate tss stack for all cores");
+            let addr = *usable_frames
+                .peek()
+                .expect("Not enough memory to allocate tss stack for all cores");
             if ci % 2 == 0 {
                 let p = p1_allocator
                     .next()
@@ -464,7 +461,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
                 // Populate BOOT_INFO with stack addresses for every core
                 BOOT_INFO.cores[ci as usize].tss.stack_size[i as usize] = stack_size;
-                BOOT_INFO.cores[ci as usize].tss.stack_start_addr[i as usize] = stack_start;
+                BOOT_INFO.cores[ci as usize].tss.set_stack_start(i as usize, stack_start);
                 BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] = addr + guard_page;
 
                 // Compute p1 index of address
@@ -506,23 +503,28 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Enable all media extensions
     media_extensions::enable_all();
 
-    // Enable mmu features
-    // and set cr3 register with memory map
+    // Enable mmu 
+    // and load cr3 register with addr of page table
     mmu::setup_mmu(p4_physical);
 
+    // Save start addr of page table to BOOT_INFO
     BOOT_INFO.page_table_addr = p4_physical.as_u32();
-
-    log::debug!("Done creating page table.");
 
     // Check that kernel ELF header is correct
     let kernel_header = get_kernel_header(&__kernel_start);
 
-    log::debug!("Switching to long mode...");
+    // We assume first apic id is 0. Get the stack for core 0
+    let stack_addr: u32 = BOOT_INFO.cores[0].get_stack_start().unwrap().try_into().unwrap();
 
-    // Read start addr from ELF header and jump to it
-    let stack_addr = BOOT_INFO.cores[smp::apic_id() as usize].stack_start_addr as u32;
-    let entry_addr = kernel_header.e_entry as u32;
+    // Read kernel entry point from ELF header
+    let entry_addr: u32 = kernel_header.e_entry;
+
+    // Save entry point to BOOT_INFO
     BOOT_INFO.kernel_entry_addr = entry_addr;
+
+    log::debug!("Switching to long mode...");
+    
+    // Switch to long mode and jump to kernel entry point
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 

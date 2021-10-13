@@ -76,6 +76,7 @@ impl Cores {
             num_cores: 0,
         }
     }
+
 }
 
 impl Deref for Cores {
@@ -104,7 +105,7 @@ impl fmt::Debug for Cores {
 #[repr(C, packed)]
 pub struct Core {
     /// Start address of stack for physical core
-    pub stack_start_addr: u64,
+    stack_start_addr: u64,
     /// End address of stack for physical core
     pub stack_end_addr: u64,
     /// Size of stack
@@ -117,11 +118,22 @@ pub struct Core {
 #[repr(C, packed)]
 pub struct TSS {
     /// Stack start addresses for TSS
-    pub stack_start_addr: [u64; 8],
+    stack_start_addr: [u64; 8],
     /// Stack end addresses for TSS
     pub stack_end_addr: [u64; 8],
     /// Stack sizes for TSS
     pub stack_size: [u64; 8],
+}
+
+impl TSS {
+    pub fn set_stack_start(&mut self, index: usize, addr: u64) {
+        self.stack_start_addr[index] = addr;
+    }
+
+    pub fn get_stack_start(&self, index: usize) -> Option<u64> {
+        let val = self.stack_start_addr[index];
+        if val == 0 { None } else { Some(val) }
+    }
 }
 
 impl Core {
@@ -137,6 +149,18 @@ impl Core {
             },
         }
     }
+
+    pub fn set_stack_start(&mut self, addr: u64) {
+        self.stack_start_addr = addr;
+    } 
+
+    pub fn get_stack_start(&self) -> Option<u64> {
+        if self.stack_start_addr == 0 {
+            None
+        }else {
+            Some(self.stack_start_addr)
+        }
+    } 
 }
 
 impl fmt::Debug for Core {

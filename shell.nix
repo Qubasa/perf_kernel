@@ -12,6 +12,7 @@
       qemu
       entr
       hotspot
+      git-extras
       llvmPackages_latest.lld
       python3
     ] ++ (with pkgs.python39Packages; [

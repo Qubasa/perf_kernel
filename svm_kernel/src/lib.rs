@@ -114,12 +114,12 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         pci::init();
     };
 
-    unsafe {
-        let apic = interrupts::APIC.lock();
-        if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-            apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
-        }
-    }
+    // unsafe {
+    //     let apic = interrupts::APIC.lock();
+    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
+    //         apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
+    //     }
+    // }
 
     // Init pci devices
     //TODO: uncomment

@@ -7,7 +7,7 @@ cargo build
 ls src/*.rs external/bootloader/src/*.rs | entr -r -n sh -c "
 set -e
 sh -c 'bootimage runner --grub target/x86_64-os/debug/svm_kernel' &
-sleep 8
+sleep 5
 echo '==Dumping core=='
 
 pid=\$(pgrep svm_kernel)

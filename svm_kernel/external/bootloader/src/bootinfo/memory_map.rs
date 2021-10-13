@@ -343,6 +343,8 @@ pub enum MemoryRegionType {
     PageTable,
     /// Memory used by the bootloader.
     Bootloader,
+    /// SMP trampoline
+    SmpTrampoline,
     /// Frame at address zero.
     ///
     /// (shouldn't be used because it's easy to make mistakes related to null pointers)
