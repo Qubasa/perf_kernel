@@ -73,12 +73,14 @@ pub unsafe fn generate_page_table(
                             PageTableFlags::PRESENT
                                 | PageTableFlags::HUGE_PAGE
                                 | PageTableFlags::NO_EXECUTE
+                                | PageTableFlags::NO_CACHE
                         }
                     }
                 // If page is not specified in Memory Map set to readable with NX
                 } else {
-                    PageTableFlags::PRESENT | PageTableFlags::HUGE_PAGE | PageTableFlags::NO_EXECUTE
+                    PageTableFlags::PRESENT | PageTableFlags::HUGE_PAGE | PageTableFlags::NO_EXECUTE | PageTableFlags::NO_CACHE
                 };
+
                 entry.set_addr(phys_addr, flags);
             }
             // Point 1Gb table to the now populated 2Mb table
@@ -118,7 +120,7 @@ pub unsafe fn remap_first_2mb_with_4kb(
 
     // Identity map 0Mb - 2Mb in 4Kb pages
     // skips first page 0-4Kb and skips stack guard page
-    for (pte_i, entry) in p1_table.iter_mut().enumerate().skip(1) {
+    for (pte_i, entry) in p1_table.iter_mut().enumerate() {
         let addr = pte_i as u64 * 4096u64;
         let mem_type = boot_info.memory_map.get_region_by_addr(addr);
 

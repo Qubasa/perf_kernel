@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
-use crate::acpi::Acpi;
+use crate::{acpi::Acpi};
 use crate::apic_regs::*;
 use crate::interrupts::InterruptIndex;
 use crate::interrupts::PICS;
 use core::ptr::{read_volatile, write_volatile};
 use x86_64::registers::model_specific::Msr;
 use x86_64::structures::paging::page_table::PageTableFlags;
-use x86_64::structures::paging::{FrameAllocator, OffsetPageTable, PhysFrame, Size4KiB};
+use x86_64::structures::paging::{FrameAllocator, OffsetPageTable, PhysFrame, Size2MiB, Size4KiB};
 use x86_64::PhysAddr;
 
 // Other constants
@@ -143,13 +143,18 @@ impl Apic {
             panic!("Apic is not available");
         }
 
-        let frame = PhysFrame::<Size4KiB>::containing_address(PhysAddr::new(APIC_BASE));
+        let frame = PhysFrame::<Size2MiB>::containing_address(PhysAddr::new(APIC_BASE));
         // Map page for apic base address
-        crate::memory::id_map_nocache(
+        crate::memory::id_map(
             mapper,
             frame_allocator,
             frame,
-            Some(PageTableFlags::WRITABLE),
+            Some(
+                PageTableFlags::WRITABLE
+                    | PageTableFlags::NO_CACHE
+                    | PageTableFlags::NO_EXECUTE
+                    | PageTableFlags::HUGE_PAGE,
+            ),
         )
         .unwrap();
 
@@ -157,7 +162,7 @@ impl Apic {
         let mut apic_base_reg = Msr::new(0x0000_001B);
         let mut base_reg = ApicBaseReg::from_bytes(apic_base_reg.read().to_le_bytes());
         base_reg.set_apic_enable(1);
-        base_reg.set_apic_base_addr(0xfee00);
+        base_reg.set_apic_base_addr(APIC_BASE >> 12); // Gets shifted by 12 bits to the left says Documentation
         let payload = u64::from_le_bytes(base_reg.into_bytes());
         apic_base_reg.write(payload);
 

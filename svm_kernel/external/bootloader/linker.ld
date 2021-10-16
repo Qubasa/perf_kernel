@@ -14,7 +14,7 @@ SECTIONS {
     __stack_guard = .;
     . += 0x1000;
     __stack_end = .;
-    . += 0x6000;
+    . += 0x1000 *30;
     __stack_start = .;
 
     . = ALIGN(0x1000);

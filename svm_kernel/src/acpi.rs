@@ -1,7 +1,8 @@
 #![allow(unused_imports)]
 
 use crate::acpi_regs::*;
-use crate::memory::{id_map_nocache, map_and_read_phys};
+
+use crate::memory::read_phys;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::fmt;
@@ -16,16 +17,12 @@ use x86_64::structures::paging::{
     FrameAllocator, Mapper, OffsetPageTable, Page, PhysFrame, Size4KiB,
 };
 use x86_64::{PhysAddr, VirtAddr};
-
 static mut ACPI_TABLES: Option<Acpi> = None;
 
-pub unsafe fn init_acpi_table(
-    mapper: &mut OffsetPageTable,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) {
+pub unsafe fn init_acpi_table() {
     if let None = ACPI_TABLES {
         let mut acpi = Acpi::new();
-        acpi.init(mapper, frame_allocator);
+        acpi.init();
         ACPI_TABLES = Some(acpi);
     } else {
         panic!("Tried to init acpi table twice");
@@ -72,13 +69,8 @@ impl Acpi {
         }
     }
 
-    unsafe fn parse_header(
-        &self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-        addr: PhysAddr,
-    ) -> (Header, PhysAddr, usize) {
-        let head: Header = map_and_read_phys(mapper, frame_allocator, addr);
+    unsafe fn parse_header(&self, addr: PhysAddr) -> (Header, PhysAddr, usize) {
+        let head: Header = read_phys(addr);
 
         let table_len = head
             .length
@@ -88,7 +80,7 @@ impl Acpi {
         // Checksum the table
         let mut sum: u8 = 0;
         for i in addr.as_u64()..addr.as_u64() + head.length as u64 {
-            let byte: u8 = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(i));
+            let byte: u8 = read_phys(PhysAddr::new(i));
             sum = sum.wrapping_add(byte);
         }
 
@@ -99,13 +91,9 @@ impl Acpi {
         (head, addr + size_of::<Header>() as u64, table_len as usize)
     }
 
-    unsafe fn search_rsdp(
-        &self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    ) -> Option<Rsdp> {
+    unsafe fn search_rsdp(&self) -> Option<Rsdp> {
         // Map 0x40e and read ebda
-        let ebda_ptr: u16 = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(0x40e));
+        let ebda_ptr: u16 = read_phys(PhysAddr::new(0x40e));
 
         // Compute the regions we need to scan for the RSDP
         let regions = [
@@ -127,7 +115,7 @@ impl Acpi {
                     break;
                 }
 
-                let table: Rsdp = map_and_read_phys(mapper, frame_allocator, PhysAddr::new(addr));
+                let table: Rsdp = read_phys(PhysAddr::new(addr));
                 if &table.signature != b"RSD PTR " {
                     continue;
                 }
@@ -145,8 +133,7 @@ impl Acpi {
                 // Checksum the extended RSDP if needed
                 if table.revision > 0 {
                     // Read the tables bytes so we can checksum it
-                    let extended_rsdp: RsdpExtended =
-                        map_and_read_phys(mapper, frame_allocator, PhysAddr::new(addr));
+                    let extended_rsdp: RsdpExtended = read_phys(PhysAddr::new(addr));
                     let extended_bytes: &[u8; core::mem::size_of::<RsdpExtended>()] =
                         core::intrinsics::transmute(&extended_rsdp);
 
@@ -165,22 +152,13 @@ impl Acpi {
         return None;
     }
 
-    pub unsafe fn init(
-        &mut self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    ) {
+    pub unsafe fn init(&mut self) {
         // Search for RSDP pointer
-        let rsdp = self
-            .search_rsdp(mapper, frame_allocator)
-            .expect("Failed to find RSDP for ACPI");
+        let rsdp = self.search_rsdp().expect("Failed to find RSDP for ACPI");
 
         // Parse out the RSDT
-        let (rsdt, rsdt_payload, rsdt_size) = self.parse_header(
-            mapper,
-            frame_allocator,
-            PhysAddr::new(rsdp.rsdt_addr.into()),
-        );
+        let (rsdt, rsdt_payload, rsdt_size) =
+            self.parse_header(PhysAddr::new(rsdp.rsdt_addr.into()));
 
         // Check the signature of rsdt
         if &rsdt.signature != b"RSDT" {
@@ -195,9 +173,8 @@ impl Acpi {
             // Get the physical address of the RSDP table entry
             let entry_paddr = rsdt_payload + entry * size_of::<u32>();
 
-            let table_ptr: u32 = map_and_read_phys(mapper, frame_allocator, entry_paddr);
-            let signature: [u8; 4] =
-                map_and_read_phys(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+            let table_ptr: u32 = read_phys(entry_paddr);
+            let signature: [u8; 4] = read_phys(PhysAddr::new(table_ptr as u64));
 
             // Parse MADT
             if &signature == b"APIC" {
@@ -205,8 +182,7 @@ impl Acpi {
                     panic!("Multiple SRAT ACPI table entrie");
                 }
 
-                let result =
-                    self.parse_madt(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+                let result = self.parse_madt(PhysAddr::new(table_ptr as u64));
 
                 if result.0.len() != 0 {
                     self.apics = Some(result.0);
@@ -231,8 +207,7 @@ impl Acpi {
                 if !self.apic_domains.is_none() || !self.memory_domains.is_none() {
                     panic!("Multiple SRAT entries");
                 }
-                let (ad, md) =
-                    self.parse_srat(mapper, frame_allocator, PhysAddr::new(table_ptr as u64));
+                let (ad, md) = self.parse_srat(PhysAddr::new(table_ptr as u64));
                 self.apic_domains = Some(ad);
                 self.memory_domains = Some(md);
             }
@@ -245,8 +220,6 @@ impl Acpi {
     /// Returns a vector of all usable APIC IDs
     unsafe fn parse_madt(
         &self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
         ptr: PhysAddr,
     ) -> (
         Vec<LocalApic>,
@@ -255,9 +228,9 @@ impl Acpi {
         Vec<NonMaskableInts>,
         bool,
     ) {
-        let (_header, payload, size) = self.parse_header(mapper, frame_allocator, ptr);
+        let (_header, payload, size) = self.parse_header(ptr);
 
-        let flags: u32 = map_and_read_phys(mapper, frame_allocator, ptr + 4_u64);
+        let flags: u32 = read_phys(ptr + 4_u64);
 
         // If the first bit is set the spec says we have to mask the pic interrupts
         let mask_pics: bool = flags & 1 == 1;
@@ -287,8 +260,8 @@ impl Acpi {
             }
 
             // Parse out the type and the length of the ICS entry
-            let typ: u8 = map_and_read_phys(mapper, frame_allocator, ics + 0_u64);
-            let len: u8 = map_and_read_phys(mapper, frame_allocator, ics + 1_u64);
+            let typ: u8 = read_phys(ics + 0_u64);
+            let len: u8 = read_phys(ics + 1_u64);
 
             // Make sure there's room for this structure
             if ics + len as u64 > end {
@@ -306,7 +279,7 @@ impl Acpi {
                         panic!("Invalid LAPIC ICS entry");
                     }
                     // Read the struct
-                    let lapic: LocalApic = map_and_read_phys(mapper, frame_allocator, ics);
+                    let lapic: LocalApic = read_phys(ics);
 
                     // If the processor is enabled, or can be enabled, log it as
                     // a valid APIC
@@ -321,7 +294,7 @@ impl Acpi {
                         panic!("Invalid I/O apic entry");
                     }
 
-                    let ioapic: IoApic = map_and_read_phys(mapper, frame_allocator, ics);
+                    let ioapic: IoApic = read_phys(ics);
                     ioapcis.push(ioapic);
                 }
                 // NonMaskableInts
@@ -329,7 +302,7 @@ impl Acpi {
                     if len != 8 {
                         panic!("Invalid NonMaskableInts entry");
                     }
-                    let nmi: NonMaskableInts = map_and_read_phys(mapper, frame_allocator, ics);
+                    let nmi: NonMaskableInts = read_phys(ics);
                     nmis.push(nmi);
                 }
                 // Interrupt overrides
@@ -338,7 +311,7 @@ impl Acpi {
                         panic!("Invalid interrupt override entry");
                     }
 
-                    let int_override: IntOverride = map_and_read_phys(mapper, frame_allocator, ics);
+                    let int_override: IntOverride = read_phys(ics);
 
                     // Filter out identity mappings
                     if int_override.source as u32 != int_override.mapped_to {
@@ -352,7 +325,7 @@ impl Acpi {
                     }
 
                     // Read the struct
-                    let lapic: LocalApic = map_and_read_phys(mapper, frame_allocator, ics);
+                    let lapic: LocalApic = read_phys(ics);
 
                     // If the processor is enabled, or can be enabled, log it as
                     // a valid APIC
@@ -372,14 +345,9 @@ impl Acpi {
         return (lapics, ioapcis, int_overrides, nmis, mask_pics);
     } // end function
 
-    unsafe fn parse_srat(
-        &self,
-        mapper: &mut OffsetPageTable,
-        frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-        ptr: PhysAddr,
-    ) -> (BTreeMap<u32, u32>, BTreeMap<u32, RangeSet>) {
+    unsafe fn parse_srat(&self, ptr: PhysAddr) -> (BTreeMap<u32, u32>, BTreeMap<u32, RangeSet>) {
         // Parse the SRAT header
-        let (_header, payload, size) = self.parse_header(mapper, frame_allocator, ptr);
+        let (_header, payload, size) = self.parse_header(ptr);
 
         // Skip the 12 reserved bytes to get to the SRA structure
         let mut sra = payload + 4_u64 + 8_u64;
@@ -403,8 +371,8 @@ impl Acpi {
             }
 
             // Parse out the type and the length of the ICS entry
-            let typ: u8 = map_and_read_phys(mapper, frame_allocator, sra + 0_u64);
-            let len: u8 = map_and_read_phys(mapper, frame_allocator, sra + 1_u64);
+            let typ: u8 = read_phys(sra + 0_u64);
+            let len: u8 = read_phys(sra + 1_u64);
 
             // Make sure there's room for this structure
             if sra + len as u64 > end {
@@ -422,11 +390,10 @@ impl Acpi {
                     }
 
                     // Extract the fields we care about
-                    let domain_low: u8 = map_and_read_phys(mapper, frame_allocator, sra + 2_u64);
-                    let domain_high: [u8; 3] =
-                        map_and_read_phys(mapper, frame_allocator, sra + 9_u64);
-                    let apic_id: u8 = map_and_read_phys(mapper, frame_allocator, sra + 3_u64);
-                    let flags: u32 = map_and_read_phys(mapper, frame_allocator, sra + 4_u64);
+                    let domain_low: u8 = read_phys(sra + 2_u64);
+                    let domain_high: [u8; 3] = read_phys(sra + 9_u64);
+                    let apic_id: u8 = read_phys(sra + 3_u64);
+                    let flags: u32 = read_phys(sra + 4_u64);
 
                     // Parse the domain low and high parts into an actual `u32`
                     let domain = [domain_low, domain_high[0], domain_high[1], domain_high[2]];
@@ -446,10 +413,10 @@ impl Acpi {
                     }
 
                     // Extract the fields we care about
-                    let domain: u32 = map_and_read_phys(mapper, frame_allocator, sra + 2_u64);
-                    let base: PhysAddr = map_and_read_phys(mapper, frame_allocator, sra + 8_u64);
-                    let size: u64 = map_and_read_phys(mapper, frame_allocator, sra + 16_u64);
-                    let flags: u32 = map_and_read_phys(mapper, frame_allocator, sra + 28_u64);
+                    let domain: u32 = read_phys(sra + 2_u64);
+                    let base: PhysAddr = read_phys(sra + 8_u64);
+                    let size: u64 = read_phys(sra + 16_u64);
+                    let flags: u32 = read_phys(sra + 28_u64);
 
                     // Only process ranges with a non-zero size (observed on
                     // polar and grizzly that some ranges were 0 size)
@@ -476,9 +443,9 @@ impl Acpi {
                     }
 
                     // Extract the fields we care about
-                    let domain: u32 = map_and_read_phys(mapper, frame_allocator, sra + 4_u64);
-                    let apic_id: u32 = map_and_read_phys(mapper, frame_allocator, sra + 8_u64);
-                    let flags: u32 = map_and_read_phys(mapper, frame_allocator, sra + 12_u64);
+                    let domain: u32 = read_phys(sra + 4_u64);
+                    let apic_id: u32 = read_phys(sra + 8_u64);
+                    let flags: u32 = read_phys(sra + 12_u64);
 
                     // Log the affinity record
                     if (flags & FLAGS_ENABLED) != 0 {

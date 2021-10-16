@@ -89,7 +89,7 @@ pub fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
 
     // Parse acpi tables once
     unsafe {
-        acpi::init_acpi_table(&mut mapper, &mut frame_allocator);
+        acpi::init_acpi_table();
     }
     let acpi = acpi::get_acpi_table();
 

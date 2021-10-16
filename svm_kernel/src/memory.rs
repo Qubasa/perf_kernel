@@ -11,8 +11,9 @@ use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
+use x86_64::structures::paging::mapper;
 use x86_64::{
-    structures::paging::{FrameAllocator, PhysFrame, Size1GiB, Size2MiB, Size4KiB},
+    structures::paging::{FrameAllocator, PhysFrame, Size2MiB, Size4KiB},
     PhysAddr,
 };
 
@@ -44,93 +45,24 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
     OffsetPageTable::new(level_4_table, physical_memory_offset)
 }
 
-pub fn print_pagetable(mapper: &OffsetPageTable) {
-    use x86_64::structures::paging::mapper::TranslateError;
-
-    for page_addr in (0x200000..core::u64::MAX).step_by(0x200000) {
-        let addr = Page::<Size2MiB>::from_start_address(VirtAddr::new(page_addr)).unwrap();
-        let res = mapper.translate_page(addr);
-
-        match res {
-            Ok(r) => log::info!("{:?} -> {:?}", addr.start_address(), r.start_address()),
-            Err(TranslateError::InvalidFrameAddress(e)) => {
-                panic!("Invalid frame address: {:?}", e)
-            }
-            _ => (),
-        }
-    }
-    log::info!("Done");
-}
-
 // Identity maps the phys address + type size and volatile reads the type from
 // memory. Does not unmap the page
-pub unsafe fn map_and_read_phys<T: Copy>(
-    mapper: &mut OffsetPageTable,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    addr: PhysAddr,
-) -> T {
-    let size = core::mem::size_of::<T>() as u64;
-    let frame = PhysFrame::<Size4KiB>::containing_address(addr);
-    let frame2 = PhysFrame::<Size4KiB>::containing_address(addr + size);
-
-    // Map the start address
-    id_map(mapper, frame_allocator, frame, None).unwrap();
-
-    if frame != frame2 {
-        id_map(mapper, frame_allocator, frame2, None).unwrap();
-    }
-
-    // NOTE: Can't use read_volatile because pointer is not necesseraly aligned
-    // like in acpi when searching for tables (as by spec)
-    // core::ptr::read_volatile(addr.as_u64() as *const T)
-    let ptr = addr.as_u64() as *const T;
-    *ptr
+pub unsafe fn read_phys<T: Copy>(addr: PhysAddr) -> T {
+    core::ptr::read_unaligned(addr.as_u64() as *const T)
 }
 
 #[derive(Debug)]
 pub enum IdMapError {
     FrameAllocationFailed,
+    FlagUpdateError(mapper::FlagUpdateError),
     MappingIsNotIdentity(PhysAddr, PhysAddr),
-    AlreadyMappedDiffFlags(PageTableFlags),
-}
-
-/// Identity map phys frame
-/// If virt addr already mapped checks if contains requested flags
-/// and correct phys frame addr. Adds default flag NO_CACHE
-pub unsafe fn id_map_nocache<T: PageSize>(
-    mapper: &mut (impl Mapper<T> + Translate),
-    frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
-    my_frame: PhysFrame<T>,
-    add_flags: Option<PageTableFlags>,
-) -> Result<Page<T>, IdMapError> {
-    let my_flags = PageTableFlags::NO_CACHE | (add_flags.unwrap_or(PageTableFlags::empty()));
-    id_map(mapper, frame_allocator, my_frame, Some(my_flags))
-}
-
-pub unsafe fn id_map_nocache_update_flags<T: PageSize>(
-    mapper: &mut (impl Mapper<T> + Translate),
-    frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
-    my_frame: PhysFrame<T>,
-    add_flags: Option<PageTableFlags>,
-) -> Result<Page<T>, IdMapError> {
-    let my_flags = PageTableFlags::NO_CACHE | (add_flags.unwrap_or(PageTableFlags::empty()));
-    match id_map_nocache(mapper, frame_allocator, my_frame, Some(my_flags)) {
-        Ok(i) => Ok(i),
-        Err(IdMapError::AlreadyMappedDiffFlags(_)) => {
-            let addr = VirtAddr::new(my_frame.start_address().as_u64());
-            let page = Page::<T>::from_start_address(addr).unwrap();
-            let my_flags = PageTableFlags::PRESENT | my_flags;
-            mapper.update_flags(page, my_flags).unwrap().flush();
-            Ok(page)
-        }
-        Err(err) => Err(err),
-    }
+    AlreadyMappedDiffSize(PageTableFlags),
 }
 
 /// Identity map phys frame
 /// If virt addr already mapped checks if contains requested flags
 /// and correct phys frame addr
-pub unsafe fn id_map<T: PageSize>(
+pub unsafe fn id_map<T: PageSize + core::fmt::Debug>(
     mapper: &mut (impl Mapper<T> + Translate),
     frame_allocator: &mut (impl FrameAllocator<Size4KiB> + ?Sized),
     my_frame: PhysFrame<T>,
@@ -146,45 +78,50 @@ pub unsafe fn id_map<T: PageSize>(
             .map_err(|_| IdMapError::FrameAllocationFailed)?
             .flush(),
         TranslateResult::InvalidFrameAddress(_) => return Err(IdMapError::FrameAllocationFailed),
-        TranslateResult::Mapped { flags, frame, .. } => match frame {
-            MappedFrame::Size4KiB(frame) => {
-                let my_frame = PhysFrame::<Size4KiB>::containing_address(my_frame.start_address());
-                if my_frame.start_address() != frame.start_address() {
-                    return Err(IdMapError::MappingIsNotIdentity(
-                        my_frame.start_address(),
-                        frame.start_address(),
-                    ));
+        TranslateResult::Mapped { flags, frame, .. } => {
+            match frame {
+                MappedFrame::Size4KiB(frame) => {
+                    if my_frame.size() != frame.size() {
+                        return Err(IdMapError::AlreadyMappedDiffSize(flags));
+                    }
+
+                    if my_frame.start_address() != frame.start_address() {
+                        return Err(IdMapError::MappingIsNotIdentity(
+                            my_frame.start_address(),
+                            frame.start_address(),
+                        ));
+                    }
                 }
-                if !flags.contains(my_flags) {
-                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
+                MappedFrame::Size2MiB(frame) => {
+                    if my_frame.size() != frame.size() {
+                        return Err(IdMapError::AlreadyMappedDiffSize(flags));
+                    }
+
+                    if my_frame.start_address() != frame.start_address() {
+                        return Err(IdMapError::MappingIsNotIdentity(
+                            my_frame.start_address(),
+                            frame.start_address(),
+                        ));
+                    }
                 }
+                MappedFrame::Size1GiB(frame) => {
+                    if my_frame.size() != frame.size() {
+                        return Err(IdMapError::AlreadyMappedDiffSize(flags));
+                    }
+
+                    if my_frame.start_address() != frame.start_address() {
+                        return Err(IdMapError::MappingIsNotIdentity(
+                            my_frame.start_address(),
+                            frame.start_address(),
+                        ));
+                    }
+                }   
             }
-            MappedFrame::Size2MiB(frame) => {
-                if !flags.contains(my_flags) {
-                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
-                }
-                let my_frame = PhysFrame::<Size2MiB>::containing_address(my_frame.start_address());
-                if my_frame.start_address() != frame.start_address() {
-                    return Err(IdMapError::MappingIsNotIdentity(
-                        my_frame.start_address(),
-                        frame.start_address(),
-                    ));
-                }
-            }
-            MappedFrame::Size1GiB(frame) => {
-                if !flags.contains(my_flags) {
-                    return Err(IdMapError::AlreadyMappedDiffFlags(flags));
-                }
-                let my_frame = PhysFrame::<Size1GiB>::containing_address(my_frame.start_address());
-                if my_frame.start_address() != frame.start_address() {
-                    return Err(IdMapError::MappingIsNotIdentity(
-                        my_frame.start_address(),
-                        frame.start_address(),
-                    ));
-                }
-            }
+
+            mapper.update_flags(page, my_flags).map_err(|e| IdMapError::FlagUpdateError(e))?.flush();
         },
     };
+
     Ok(page)
 }
 

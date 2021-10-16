@@ -3,11 +3,12 @@ set -e
 
 
 export CARGO_MANIFEST_DIR=$PWD
-cargo build
+
 ls src/*.rs external/bootloader/src/*.rs | entr -r -n sh -c "
 set -e
+cargo build
 sh -c 'bootimage runner --grub target/x86_64-os/debug/svm_kernel' &
-sleep 5
+sleep 10
 echo '==Dumping core=='
 
 pid=\$(pgrep svm_kernel)

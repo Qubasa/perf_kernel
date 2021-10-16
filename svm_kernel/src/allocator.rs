@@ -1,6 +1,6 @@
 use x86_64::{
     structures::paging::{
-        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
+        mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size2MiB, Size4KiB,
     },
     VirtAddr,
 };
@@ -23,9 +23,9 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
 }
 
 pub fn init_heap(
-    mapper: &mut impl Mapper<Size4KiB>,
-    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-) -> Result<(), MapToError<Size4KiB>> {
+    mapper: &mut impl Mapper<Size2MiB>,
+    frame_allocator: &mut (impl FrameAllocator<Size2MiB> + FrameAllocator<Size4KiB>),
+) -> Result<(), MapToError<Size2MiB>> {
     let page_range = {
         let heap_start = VirtAddr::new(HEAP_START as u64);
         let heap_end = heap_start + HEAP_SIZE - 1u64;
@@ -40,10 +40,9 @@ pub fn init_heap(
         let frame = frame_allocator
             .allocate_frame()
             .ok_or(MapToError::FrameAllocationFailed)?;
-        // log::debug!("Mapping virtual page: {:x?} to {:x?}", page, frame);
-        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+        log::debug!("Mapping virtual page: {:x?} to {:x?}", page, frame);
+        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE;
         unsafe { mapper.map_to(page, frame, flags, frame_allocator)?.flush() };
-        // log::info!("After map_to");
     }
 
     log::debug!("Done init heap");

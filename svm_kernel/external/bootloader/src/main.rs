@@ -60,6 +60,14 @@ extern "C" {
 // we need a flame graph / execution hotspot map and start optimizing
 // there. As I do not how well this scales if we have 2Tb+ of memory.
 // I think it should be fine, nonetheless it should be looked after at some point
+// IMPORTANT: TODO: Set a stack guard for the bootloader.
+// Right now if the stack gets bigger then 4096*30 then we go below 1Mb 
+// where memory devices are mapped
+// and we will get all kinds of undefined behavior
+// TODO: If the bootloader reaches a size that exactly uses all usable space up between bootloader
+// and kernel the bootloader/grub gets stuck.
+// TODO: IMPORTANT: Do not print BOOT_INFO in bootloader as this will copy it to the stack and overflow it
+// TODO: If a cpu starts with apic id 20 instead of 0 the bootloader fails right now. 
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
@@ -76,7 +84,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         bootloader::interrupts::load_idt();
 
         // Checks multiboot2 magic
-        if magic != 0x36d76289 {
+        if magic != multiboot2::MULTIBOOT2_BOOTLOADER_MAGIC {
             panic!(
                 "EAX magic is incorrect. Booted from a non compliant bootloader: {:#x}",
                 magic
@@ -92,7 +100,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Parses the multiboot2 header
-    let parsed_multiboot_headers = multiboot2::load(mboot2_info_ptr as usize);
+    let parsed_multiboot_headers = multiboot2::load(mboot2_info_ptr as usize).expect("Parsing multiboot header failed");
 
     // Save number of cores this cpu has to BOOT_INFO
     BOOT_INFO.cores.num_cores = smp::num_cores();
@@ -394,6 +402,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Allocate eight 132KiB stacks + 8 KiB Guard Page per core for TSS
+    // NOTE: If you want to move this into a separate function don't do it...yet.
+    // We would need a copy/clone of the memory map for the FrameAllocator and this oversteps the stack
+    // we first need a proper stack guard to catch these kinds of bugs in the bootloader
     {
         use core::convert::TryFrom;
         use pagetable::PageTable;
@@ -496,8 +507,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             }
         }
     }
-
-    log::debug!("{:#x?}", BOOT_INFO);
 
     // Enable all media extensions
     media_extensions::enable_all();
