@@ -18,7 +18,9 @@ fn panic(info: &PanicInfo) -> ! {
 entry_point!(main);
 
 fn main(boot_info: &'static BootInfo) -> ! {
-    init(boot_info);
+    unsafe {
+        init(boot_info);
+    }
     test_main();
 
     loop {}

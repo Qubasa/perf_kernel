@@ -1,6 +1,6 @@
 use crate::apic;
-use crate::gdt;
 use crate::print;
+use crate::tss;
 
 use pic8259_simple::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -63,62 +63,69 @@ pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
 pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 
-// Global static IDT
-lazy_static::lazy_static! {
-    static ref IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.simd_floating_point.set_handler_fn(simd_floatingpoint_handler);
-        idt.security_exception.set_handler_fn(security_handler);
-        idt.virtualization.set_handler_fn(virtualization_handler);
-        idt.machine_check.set_handler_fn(machine_check_handler);
-        idt.alignment_check.set_handler_fn(alignment_handler);
-        idt.x87_floating_point.set_handler_fn(x87_floatingpoint_handler);
-        unsafe {
-            idt.page_fault.set_handler_fn(page_fault_handler)
-            // Use a different stack in case of kernel stack overflow
-            .set_stack_index(gdt::PAGE_FAULT_IST_INDEX)
-        };
-        idt.general_protection_fault.set_handler_fn(general_prot_handler);
-        idt.stack_segment_fault.set_handler_fn(stack_segment_handler);
-        idt.segment_not_present.set_handler_fn(segment_not_present_handler);
-        idt.invalid_tss.set_handler_fn(invalid_tss_handler);
-        unsafe {
-            idt.double_fault.set_handler_fn(double_fault_handler)
-            // Use a different stack in case of kernel stack overflow
-            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX)
-        };
-        idt.device_not_available.set_handler_fn(device_not_available_handler);
-        idt.invalid_opcode.set_handler_fn(invalid_op_handler);
-        idt.bound_range_exceeded.set_handler_fn(bound_range_handler);
-        idt.overflow.set_handler_fn(overflow_handler);
-        idt.breakpoint.set_handler_fn(breakpoint_handler);
-        idt.non_maskable_interrupt.set_handler_fn(non_maskable_handler);
-        idt.debug.set_handler_fn(debug_handler);
-        idt.divide_error.set_handler_fn(divide_error_handler);
+static mut IDT: Option<InterruptDescriptorTable> = None;
 
-        crate::default_interrupt::init_default_handlers(&mut idt);
+pub unsafe fn init() {
+    let stacks = tss::TSS_STACK_ITER.as_mut().unwrap();
+    let mut idt = InterruptDescriptorTable::new();
 
-        // User defined
-        idt[InterruptIndex::Timer.as_usize()]
-            .set_handler_fn(timer_interrupt_handler);
-        idt[InterruptIndex::Keyboard.as_usize()]
-            .set_handler_fn(keyboard_interrupt_handler);
-        idt[InterruptIndex::COM2.as_usize()]
-            .set_handler_fn(serial_handler);
-        idt[InterruptIndex::COM1.as_usize()]
-            .set_handler_fn(serial_handler);
-        idt[InterruptIndex::Spurious.as_usize()]
-            .set_handler_fn(spurious_handler);
-        idt[InterruptIndex::SlavePicSpurious.as_usize()]
-            .set_handler_fn(spurious_handler);
-        idt[InterruptIndex::MasterPicSpurious.as_usize()]
-            .set_handler_fn(spurious_handler);
-        idt
-    };
-}
+    idt.simd_floating_point
+        .set_handler_fn(simd_floatingpoint_handler);
+    idt.security_exception.set_handler_fn(security_handler);
+    idt.virtualization
+        .set_handler_fn(virtualization_handler)
+        .set_stack_index(stacks.next().unwrap());
+    idt.machine_check.set_handler_fn(machine_check_handler);
+    idt.alignment_check.set_handler_fn(alignment_handler);
+    idt.x87_floating_point
+        .set_handler_fn(x87_floatingpoint_handler);
 
-pub fn load_idt() {
-    IDT.load();
+    idt.page_fault
+        .set_handler_fn(page_fault_handler)
+        // Use a different stack in case of kernel stack overflow
+        .set_stack_index(stacks.next().unwrap());
+
+    idt.general_protection_fault
+        .set_handler_fn(general_prot_handler)
+        .set_stack_index(stacks.next().unwrap());
+    idt.stack_segment_fault
+        .set_handler_fn(stack_segment_handler);
+    idt.segment_not_present
+        .set_handler_fn(segment_not_present_handler);
+    idt.invalid_tss.set_handler_fn(invalid_tss_handler);
+
+    idt.double_fault
+        .set_handler_fn(double_fault_handler)
+        // Use a different stack in case of kernel stack overflow
+        .set_stack_index(stacks.next().unwrap());
+
+    idt.device_not_available
+        .set_handler_fn(device_not_available_handler);
+    idt.invalid_opcode.set_handler_fn(invalid_op_handler);
+    idt.bound_range_exceeded.set_handler_fn(bound_range_handler);
+    idt.overflow.set_handler_fn(overflow_handler);
+    idt.breakpoint.set_handler_fn(breakpoint_handler);
+    idt.non_maskable_interrupt
+        .set_handler_fn(non_maskable_handler)
+        .set_stack_index(stacks.next().unwrap());
+    idt.debug
+        .set_handler_fn(debug_handler)
+        .set_stack_index(stacks.next().unwrap());
+    idt.divide_error.set_handler_fn(divide_error_handler);
+
+    crate::default_interrupt::init_default_handlers(&mut idt);
+
+    // User defined
+    idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler);
+    idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler);
+    idt[InterruptIndex::COM2.as_usize()].set_handler_fn(serial_handler);
+    idt[InterruptIndex::COM1.as_usize()].set_handler_fn(serial_handler);
+    idt[InterruptIndex::Spurious.as_usize()].set_handler_fn(spurious_handler);
+    idt[InterruptIndex::SlavePicSpurious.as_usize()].set_handler_fn(spurious_handler);
+    idt[InterruptIndex::MasterPicSpurious.as_usize()].set_handler_fn(spurious_handler);
+
+    IDT = Some(idt);
+    IDT.as_ref().unwrap().load();
 }
 
 use crate::hlt_loop;
@@ -171,22 +178,10 @@ extern "x86-interrupt" fn alignment_handler(stack_frame: InterruptStackFrame, er
 // Keyboard handler
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
     use x86_64::instructions::port::Port;
 
-    // Initialize pc_keyboard crate
-    // This will only be called on kernel start don't worry
-    lazy_static::lazy_static! {
-        static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = {
-            // Use US layout & ignore ctrl+key characters
-            Mutex::new(
-                Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore)
-            )
-        };
-    }
-
     // Lock keyboard parser
-    let mut keyboard = KEYBOARD.lock();
+    let mut keyboard = Keyboard::new(layouts::Us104Key, ScancodeSet1, HandleControl::Ignore);
     // Create port on mem addr 0x60 to read keycode
     let mut port = Port::new(0x60);
     // Read keycode from mem
@@ -229,8 +224,8 @@ extern "x86-interrupt" fn invalid_op_handler(stack_frame: InterruptStackFrame) {
 // Serial handler
 extern "x86-interrupt" fn serial_handler(_stack_frame: InterruptStackFrame) {
     // Disable interrupts because we lock the SERIAL_WRITER here
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let data = [crate::serial::SERIAL_WRITER.lock().read(); 1];
+    x86_64::instructions::interrupts::without_interrupts(|| unsafe {
+        let data = [crate::serial::SERIAL_WRITER.as_ref().unwrap().lock().read(); 1];
         print!("{}", alloc::str::from_utf8(&data).unwrap());
     });
 

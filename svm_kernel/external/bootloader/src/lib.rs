@@ -44,6 +44,8 @@ pub mod vga;
 pub const ONE_MEG: u64 = 1048576;
 pub const TWO_MEG: u64 = ONE_MEG * 2;
 pub const ONE_GIG: u64 = 1073741824;
+pub const MAX_CORES: usize = 256;
+pub const TSS_STACKS_PER_CPU: usize = 8;
 
 /// Defines the entry point function.
 ///

@@ -2,6 +2,7 @@ use x86_64::registers::control::Cr3;
 // use x86_64::structures::paging::mapper::MapToError;
 use core::ptr::addr_of;
 use core::ptr::read;
+use x86_64::structures::paging::mapper;
 use x86_64::structures::paging::mapper::MappedFrame;
 use x86_64::structures::paging::mapper::TranslateResult;
 use x86_64::structures::paging::page::PageSize;
@@ -11,7 +12,6 @@ use x86_64::structures::paging::PageTableFlags;
 use x86_64::structures::paging::Translate;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 use x86_64::VirtAddr;
-use x86_64::structures::paging::mapper;
 use x86_64::{
     structures::paging::{FrameAllocator, PhysFrame, Size2MiB, Size4KiB},
     PhysAddr,
@@ -115,11 +115,14 @@ pub unsafe fn id_map<T: PageSize + core::fmt::Debug>(
                             frame.start_address(),
                         ));
                     }
-                }   
+                }
             }
 
-            mapper.update_flags(page, my_flags).map_err(|e| IdMapError::FlagUpdateError(e))?.flush();
-        },
+            mapper
+                .update_flags(page, my_flags)
+                .map_err(|e| IdMapError::FlagUpdateError(e))?
+                .flush();
+        }
     };
 
     Ok(page)

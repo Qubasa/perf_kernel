@@ -61,13 +61,13 @@ extern "C" {
 // there. As I do not how well this scales if we have 2Tb+ of memory.
 // I think it should be fine, nonetheless it should be looked after at some point
 // IMPORTANT: TODO: Set a stack guard for the bootloader.
-// Right now if the stack gets bigger then 4096*30 then we go below 1Mb 
+// Right now if the stack gets bigger then 4096*30 then we go below 1Mb
 // where memory devices are mapped
 // and we will get all kinds of undefined behavior
 // TODO: If the bootloader reaches a size that exactly uses all usable space up between bootloader
 // and kernel the bootloader/grub gets stuck.
 // TODO: IMPORTANT: Do not print BOOT_INFO in bootloader as this will copy it to the stack and overflow it
-// TODO: If a cpu starts with apic id 20 instead of 0 the bootloader fails right now. 
+// TODO: If a cpu starts with apic id 20 instead of 0 the bootloader fails right now.
 #[no_mangle]
 unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Needs to be here or else the linker does not include the
@@ -100,7 +100,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Parses the multiboot2 header
-    let parsed_multiboot_headers = multiboot2::load(mboot2_info_ptr as usize).expect("Parsing multiboot header failed");
+    let parsed_multiboot_headers =
+        multiboot2::load(mboot2_info_ptr as usize).expect("Parsing multiboot header failed");
 
     // Save number of cores this cpu has to BOOT_INFO
     BOOT_INFO.cores.num_cores = smp::num_cores();
@@ -357,9 +358,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 .next()
                 .expect("Not enough memory to allocate stack for all cores");
             let stack_start = addr + stack_size + guard_page;
-            BOOT_INFO.cores[i as usize].stack_size = stack_size;
-            BOOT_INFO.cores[i as usize].set_stack_start(stack_start);
-            BOOT_INFO.cores[i as usize].stack_end_addr = addr + guard_page;
+            BOOT_INFO.cores[i as usize].set_stack_start(stack_start.try_into().unwrap());
+            BOOT_INFO.cores[i as usize].stack_end_addr = (addr + guard_page).try_into().unwrap();
             log::debug!(
                 "Core {} stack space from: {:#x} to {:#x}",
                 i,
@@ -468,11 +468,11 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 let stack_start = addr + stack_size + guard_page;
 
                 // Populate BOOT_INFO with stack addresses for every core
-                BOOT_INFO.cores[ci as usize].tss.stack_size[i as usize] = stack_size;
                 BOOT_INFO.cores[ci as usize]
                     .tss
-                    .set_stack_start(i as usize, stack_start);
-                BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] = addr + guard_page;
+                    .set_stack_start(i as usize, stack_start.try_into().unwrap());
+                BOOT_INFO.cores[ci as usize].tss.stack_end_addr[i as usize] =
+                    (addr + guard_page).try_into().unwrap();
 
                 // Compute p1 index of address
                 let start_index = usize::try_from(addr >> 12 & 0o777).unwrap();

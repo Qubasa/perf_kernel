@@ -59,27 +59,29 @@ pub unsafe fn generate_page_table(
 
                 let phys_addr = virt_addr;
 
-                let flags = if let Some(mem_area) =
-                    boot_info.memory_map.get_region_by_addr(phys_addr)
-                {
-                    match mem_area.region_type {
-                        MemoryRegionType::Usable => {
-                            PageTableFlags::PRESENT
-                                | PageTableFlags::WRITABLE
-                                | PageTableFlags::HUGE_PAGE
+                let flags =
+                    if let Some(mem_area) = boot_info.memory_map.get_region_by_addr(phys_addr) {
+                        match mem_area.region_type {
+                            MemoryRegionType::Usable => {
+                                PageTableFlags::PRESENT
+                                    | PageTableFlags::WRITABLE
+                                    | PageTableFlags::HUGE_PAGE
+                            }
+                            // If page is not usable memory
+                            _ => {
+                                PageTableFlags::PRESENT
+                                    | PageTableFlags::HUGE_PAGE
+                                    | PageTableFlags::NO_EXECUTE
+                                    | PageTableFlags::NO_CACHE
+                            }
                         }
-                        // If page is not usable memory
-                        _ => {
-                            PageTableFlags::PRESENT
-                                | PageTableFlags::HUGE_PAGE
-                                | PageTableFlags::NO_EXECUTE
-                                | PageTableFlags::NO_CACHE
-                        }
-                    }
-                // If page is not specified in Memory Map set to readable with NX
-                } else {
-                    PageTableFlags::PRESENT | PageTableFlags::HUGE_PAGE | PageTableFlags::NO_EXECUTE | PageTableFlags::NO_CACHE
-                };
+                    // If page is not specified in Memory Map set to readable with NX
+                    } else {
+                        PageTableFlags::PRESENT
+                            | PageTableFlags::HUGE_PAGE
+                            | PageTableFlags::NO_EXECUTE
+                            | PageTableFlags::NO_CACHE
+                    };
 
                 entry.set_addr(phys_addr, flags);
             }

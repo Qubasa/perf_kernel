@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{acpi::Acpi};
+use crate::acpi::Acpi;
 use crate::apic_regs::*;
 use crate::interrupts::InterruptIndex;
 use crate::interrupts::PICS;

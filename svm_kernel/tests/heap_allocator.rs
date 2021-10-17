@@ -19,7 +19,9 @@ fn main(boot_info: &'static BootInfo) -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
 
-    svm_kernel::init(boot_info);
+    unsafe {
+        svm_kernel::init(boot_info);
+    }
     println!("===== heap_allocator test =====");
 
     test_main();

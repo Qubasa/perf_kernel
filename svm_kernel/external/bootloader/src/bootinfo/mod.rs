@@ -5,6 +5,7 @@ use core::fmt;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use core::ptr::read_unaligned;
+use crate::TSS_STACKS_PER_CPU;
 
 mod memory_map;
 
@@ -104,11 +105,9 @@ impl fmt::Debug for Cores {
 #[repr(C, packed)]
 pub struct Core {
     /// Start address of stack for physical core
-    stack_start_addr: u64,
+    stack_start_addr: u32,
     /// End address of stack for physical core
-    pub stack_end_addr: u64,
-    /// Size of stack
-    pub stack_size: u64,
+    pub stack_end_addr: u32,
     /// Stacks for tss
     pub tss: TSS,
 }
@@ -117,19 +116,17 @@ pub struct Core {
 #[repr(C, packed)]
 pub struct TSS {
     /// Stack start addresses for TSS
-    stack_start_addr: [u64; 8],
+    stack_start_addr: [u32; TSS_STACKS_PER_CPU],
     /// Stack end addresses for TSS
-    pub stack_end_addr: [u64; 8],
-    /// Stack sizes for TSS
-    pub stack_size: [u64; 8],
+    pub stack_end_addr: [u32; TSS_STACKS_PER_CPU],
 }
 
 impl TSS {
-    pub fn set_stack_start(&mut self, index: usize, addr: u64) {
+    pub fn set_stack_start(&mut self, index: usize, addr: u32) {
         self.stack_start_addr[index] = addr;
     }
 
-    pub fn get_stack_start(&self, index: usize) -> Option<u64> {
+    pub fn get_stack_start(&self, index: usize) -> Option<u32> {
         let val = self.stack_start_addr[index];
         if val == 0 {
             None
@@ -144,20 +141,18 @@ impl Core {
         Self {
             stack_start_addr: 0,
             stack_end_addr: 0,
-            stack_size: 0,
             tss: TSS {
-                stack_start_addr: [0; 8],
-                stack_end_addr: [0; 8],
-                stack_size: [0; 8],
+                stack_start_addr: [0; TSS_STACKS_PER_CPU],
+                stack_end_addr: [0; TSS_STACKS_PER_CPU],
             },
         }
     }
 
-    pub fn set_stack_start(&mut self, addr: u64) {
+    pub fn set_stack_start(&mut self, addr: u32) {
         self.stack_start_addr = addr;
     }
 
-    pub fn get_stack_start(&self) -> Option<u64> {
+    pub fn get_stack_start(&self) -> Option<u32> {
         if self.stack_start_addr == 0 {
             None
         } else {
@@ -177,10 +172,6 @@ impl fmt::Debug for Core {
                 .field(
                     "stack_end_addr",
                     &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_end_addr))),
-                )
-                .field(
-                    "stack_size",
-                    &format_args!("{:#x}", read_unaligned(addr_of!(self.stack_size))),
                 )
                 .finish()
         }
