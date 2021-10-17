@@ -1,13 +1,13 @@
-lazy_static::lazy_static! {
-    // Rust ref keyword explained
-    // http://xion.io/post/code/rust-patterns-ref.html
-    // TODO: Write your own spin lock or locking mechanism
-    pub static ref VGA_WRITER: spin::Mutex<Writer> = spin::Mutex::new(Writer {
+pub static mut VGA_WRITER: Option<Writer> = None;
+
+pub unsafe fn init() {
+    VGA_WRITER = Some(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Black, Color::Yellow),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer)  },
-    });
+        buffer: &mut *(0xb8000 as *mut Buffer),
+    })
 }
+
 
 #[allow(dead_code)]
 #[repr(u8)]
@@ -143,5 +143,7 @@ impl fmt::Write for Writer {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
 
-    VGA_WRITER.lock().write_fmt(args).unwrap();
+    unsafe {
+        VGA_WRITER.as_mut().unwrap().write_fmt(args).unwrap();
+    }
 }

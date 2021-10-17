@@ -77,11 +77,14 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Initialization
     {
+        bootloader::serial::init();
+        bootloader::vga::init();
+
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(LevelFilter::Info);
 
         // Load interrupt handlers for x86 mode
-        bootloader::interrupts::load_idt();
+        bootloader::interrupts::init();
 
         // Checks multiboot2 magic
         if magic != multiboot2::MULTIBOOT2_BOOTLOADER_MAGIC {

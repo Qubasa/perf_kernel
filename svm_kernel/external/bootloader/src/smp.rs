@@ -36,7 +36,7 @@ unsafe extern "C" fn smp_main() {
     log::info!("Core {} says hello", apic_id());
 
     // Load exception handler in case of an error
-    crate::interrupts::load_idt();
+    crate::interrupts::init();
 
     // Enable all media extensions
     crate::media_extensions::enable_all();

@@ -66,65 +66,67 @@ pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 static mut IDT: Option<InterruptDescriptorTable> = None;
 
 pub unsafe fn init() {
-    let stacks = tss::TSS_STACK_ITER.as_mut().unwrap();
-    let mut idt = InterruptDescriptorTable::new();
+    if IDT.is_none() {
+        let stacks = tss::TSS_STACK_ITER.as_mut().unwrap();
+        let mut idt = InterruptDescriptorTable::new();
 
-    idt.simd_floating_point
-        .set_handler_fn(simd_floatingpoint_handler);
-    idt.security_exception.set_handler_fn(security_handler);
-    idt.virtualization
-        .set_handler_fn(virtualization_handler)
-        .set_stack_index(stacks.next().unwrap());
-    idt.machine_check.set_handler_fn(machine_check_handler);
-    idt.alignment_check.set_handler_fn(alignment_handler);
-    idt.x87_floating_point
-        .set_handler_fn(x87_floatingpoint_handler);
+        idt.simd_floating_point
+            .set_handler_fn(simd_floatingpoint_handler);
+        idt.security_exception.set_handler_fn(security_handler);
+        idt.virtualization
+            .set_handler_fn(virtualization_handler)
+            .set_stack_index(stacks.next().unwrap());
+        idt.machine_check.set_handler_fn(machine_check_handler);
+        idt.alignment_check.set_handler_fn(alignment_handler);
+        idt.x87_floating_point
+            .set_handler_fn(x87_floatingpoint_handler);
 
-    idt.page_fault
-        .set_handler_fn(page_fault_handler)
-        // Use a different stack in case of kernel stack overflow
-        .set_stack_index(stacks.next().unwrap());
+        idt.page_fault
+            .set_handler_fn(page_fault_handler)
+            // Use a different stack in case of kernel stack overflow
+            .set_stack_index(stacks.next().unwrap());
 
-    idt.general_protection_fault
-        .set_handler_fn(general_prot_handler)
-        .set_stack_index(stacks.next().unwrap());
-    idt.stack_segment_fault
-        .set_handler_fn(stack_segment_handler);
-    idt.segment_not_present
-        .set_handler_fn(segment_not_present_handler);
-    idt.invalid_tss.set_handler_fn(invalid_tss_handler);
+        idt.general_protection_fault
+            .set_handler_fn(general_prot_handler)
+            .set_stack_index(stacks.next().unwrap());
+        idt.stack_segment_fault
+            .set_handler_fn(stack_segment_handler);
+        idt.segment_not_present
+            .set_handler_fn(segment_not_present_handler);
+        idt.invalid_tss.set_handler_fn(invalid_tss_handler);
 
-    idt.double_fault
-        .set_handler_fn(double_fault_handler)
-        // Use a different stack in case of kernel stack overflow
-        .set_stack_index(stacks.next().unwrap());
+        idt.double_fault
+            .set_handler_fn(double_fault_handler)
+            // Use a different stack in case of kernel stack overflow
+            .set_stack_index(stacks.next().unwrap());
 
-    idt.device_not_available
-        .set_handler_fn(device_not_available_handler);
-    idt.invalid_opcode.set_handler_fn(invalid_op_handler);
-    idt.bound_range_exceeded.set_handler_fn(bound_range_handler);
-    idt.overflow.set_handler_fn(overflow_handler);
-    idt.breakpoint.set_handler_fn(breakpoint_handler);
-    idt.non_maskable_interrupt
-        .set_handler_fn(non_maskable_handler)
-        .set_stack_index(stacks.next().unwrap());
-    idt.debug
-        .set_handler_fn(debug_handler)
-        .set_stack_index(stacks.next().unwrap());
-    idt.divide_error.set_handler_fn(divide_error_handler);
+        idt.device_not_available
+            .set_handler_fn(device_not_available_handler);
+        idt.invalid_opcode.set_handler_fn(invalid_op_handler);
+        idt.bound_range_exceeded.set_handler_fn(bound_range_handler);
+        idt.overflow.set_handler_fn(overflow_handler);
+        idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.non_maskable_interrupt
+            .set_handler_fn(non_maskable_handler)
+            .set_stack_index(stacks.next().unwrap());
+        idt.debug
+            .set_handler_fn(debug_handler)
+            .set_stack_index(stacks.next().unwrap());
+        idt.divide_error.set_handler_fn(divide_error_handler);
 
-    crate::default_interrupt::init_default_handlers(&mut idt);
+        crate::default_interrupt::init_default_handlers(&mut idt);
 
-    // User defined
-    idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler);
-    idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler);
-    idt[InterruptIndex::COM2.as_usize()].set_handler_fn(serial_handler);
-    idt[InterruptIndex::COM1.as_usize()].set_handler_fn(serial_handler);
-    idt[InterruptIndex::Spurious.as_usize()].set_handler_fn(spurious_handler);
-    idt[InterruptIndex::SlavePicSpurious.as_usize()].set_handler_fn(spurious_handler);
-    idt[InterruptIndex::MasterPicSpurious.as_usize()].set_handler_fn(spurious_handler);
+        // User defined
+        idt[InterruptIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler);
+        idt[InterruptIndex::Keyboard.as_usize()].set_handler_fn(keyboard_interrupt_handler);
+        idt[InterruptIndex::COM2.as_usize()].set_handler_fn(serial_handler);
+        idt[InterruptIndex::COM1.as_usize()].set_handler_fn(serial_handler);
+        idt[InterruptIndex::Spurious.as_usize()].set_handler_fn(spurious_handler);
+        idt[InterruptIndex::SlavePicSpurious.as_usize()].set_handler_fn(spurious_handler);
+        idt[InterruptIndex::MasterPicSpurious.as_usize()].set_handler_fn(spurious_handler);
 
-    IDT = Some(idt);
+        IDT = Some(idt);
+    }
     IDT.as_ref().unwrap().load();
 }
 

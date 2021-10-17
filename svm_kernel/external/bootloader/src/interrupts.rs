@@ -1,17 +1,17 @@
 use x86::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-lazy_static::lazy_static! {
-    pub static ref IDT: InterruptDescriptorTable = {
+static mut IDT: Option<InterruptDescriptorTable> = None;
+
+pub unsafe fn init() {
+
+    if IDT.is_none() {
         let mut idt = InterruptDescriptorTable::new();
         idt.page_fault.set_handler_fn(page_fault_handler::<14>);
         crate::default_interrupt::init_default_handlers(&mut idt);
         idt.invalid_opcode.set_handler_fn(invalid_op);
-        idt
-    };
-}
-
-pub fn load_idt() {
-    IDT.load();
+        IDT = Some(idt);
+    }
+    IDT.as_ref().unwrap().load();
 }
 
 #[allow(dead_code)]

@@ -22,7 +22,9 @@ impl log::Log for HWLogger {
     }
 
     fn flush(&self) {
-        SERIAL_WRITER.lock().send(0xC); // TODO: Does not clear screen
-        VGA_WRITER.lock().flush();
+        unsafe {
+            SERIAL_WRITER.as_mut().unwrap().send(0xC); // TODO: Does not clear screen
+            VGA_WRITER.as_mut().unwrap().flush();
+        }
     }
 }

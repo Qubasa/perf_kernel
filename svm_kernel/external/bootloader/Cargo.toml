@@ -9,18 +9,12 @@ edition = "2018"
 
 [dependencies]
 uart_16550 = { path = "../uart_16550"  }
-bitflags = "1.0.4"
+bitflags = "1.3.2"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
 x86 = { path = "../x86", features=["instructions"]  }
-spin = "0.6.0"
 log = {version = "0.4.11", features = ["release_max_level_trace"] }
 multiboot2 = "0.12.2"
-
-
-[dependencies.lazy_static]
-version = "1.4.0"
-features = ["spin_no_std"]
 
 [build-dependencies]
 llvm-tools = { version = "0.1" }
