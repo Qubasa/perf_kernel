@@ -29,7 +29,7 @@ pub mod media_extensions;
 #[cfg(target_arch = "x86")]
 pub mod mmu;
 #[cfg(target_arch = "x86")]
-pub mod mylog;
+pub mod klog;
 #[cfg(target_arch = "x86")]
 pub mod pagetable;
 #[cfg(target_arch = "x86")]

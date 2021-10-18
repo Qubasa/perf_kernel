@@ -8,7 +8,7 @@
 use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;
 use bootloader::mmu;
-use bootloader::{mylog::LOGGER, pagetable, smp};
+use bootloader::{klog::LOGGER, pagetable, smp};
 use core::convert::TryInto;
 use log::LevelFilter;
 use multiboot2;

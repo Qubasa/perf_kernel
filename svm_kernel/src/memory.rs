@@ -34,15 +34,35 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr) -> &'static mut
     &mut *page_table_ptr // unsafe
 }
 
+static mut PAGE_TABLE: Option<spin::Mutex<OffsetPageTable>> = None;
+static mut FRAME_ALLOCATOR: Option<spin::Mutex<BootInfoFrameAllocator>> = None;
+
 /// Initialize a new OffsetPageTable.
 ///
 /// This function is unsafe because the caller must guarantee that the
 /// complete physical memory is mapped to virtual memory at the passed
 /// `physical_memory_offset`. Also, this function must be only called once
 /// to avoid aliasing `&mut` references (which is undefined behavior).
-pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static> {
+pub unsafe fn init(
+    boot_info: &'static bootloader::bootinfo::BootInfo,
+) -> (
+    &'static spin::Mutex<OffsetPageTable>,
+    &'static spin::Mutex<BootInfoFrameAllocator>,
+) {
+    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let level_4_table = active_level_4_table(physical_memory_offset);
-    OffsetPageTable::new(level_4_table, physical_memory_offset)
+    PAGE_TABLE = Some(spin::Mutex::new(OffsetPageTable::new(
+        level_4_table,
+        physical_memory_offset,
+    )));
+    FRAME_ALLOCATOR = Some(spin::Mutex::new(BootInfoFrameAllocator::new(
+        &boot_info.memory_map,
+    )));
+
+    (
+        PAGE_TABLE.as_ref().unwrap(),
+        FRAME_ALLOCATOR.as_ref().unwrap(),
+    )
 }
 
 // Identity maps the phys address + type size and volatile reads the type from

@@ -4,7 +4,30 @@ pub const MAX_CORES: usize = 1024;
 //TODO: Understand PCID in CR3 for TLB sharing in smp
 // https://stackoverflow.com/questions/47116141/why-each-logical-cpu-has-its-own-cr3-register-in-case-of-multithreading
 
-pub static mut BSPCORE_STATE: Option<CoreState> = None;
+static mut BSPCORE_STATE: Option<CoreState> = None;
+
+
+pub unsafe fn check_corestate() {
+    let curr_core_state = CoreState::new();
+    let bsp_state = BSPCORE_STATE.as_ref().unwrap();
+    if &curr_core_state != bsp_state {
+        log::info!("First one is BSP second one is core 1");
+        bsp_state.diff_print(&curr_core_state);
+        panic!("Different core states. This will create issues.");
+    }
+}
+
+
+pub unsafe fn save_corestate() {
+
+    BSPCORE_STATE = Some(CoreState::new());
+
+    let corestate = BSPCORE_STATE.as_ref().unwrap();
+    if log::log_enabled!(log::Level::Debug) {
+        corestate.print_fixed_mtrrs();
+    }
+    corestate.print_variable_mtrrs();
+}
 
 /// Different states for APICs to be in
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

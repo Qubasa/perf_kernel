@@ -21,7 +21,7 @@ pub mod bench;
 pub mod default_interrupt;
 pub mod interrupts;
 pub mod memory;
-pub mod mylog;
+pub mod klog;
 pub mod pci;
 pub mod print;
 pub mod serial;
@@ -32,7 +32,6 @@ pub mod vga;
 
 extern crate alloc;
 
-use x86_64::structures::paging::OffsetPageTable;
 /*
  * Use an exit code different from 0 and 1 to
  * differentiate between qemu error or kernel quit
@@ -58,8 +57,6 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
 // All kernel inits summed up
 pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
-    use x86_64::VirtAddr;
-
     // Check support of hardware features needed for benchmarking
     bench::check_support();
 
@@ -76,28 +73,27 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
 
     // Create OffsetPageTable instance by
     // calculating address with: Cr3::read() + offset from bootloader
-    let mut mapper: OffsetPageTable = memory::init(VirtAddr::new(boot_info.physical_memory_offset));
-
-    // Create FrameAllocator instance
-    let mut frame_allocator = memory::BootInfoFrameAllocator::new(&boot_info.memory_map);
+    let (mapper, frame_allocator) = memory::init(boot_info);
 
     // Initialize the heap allocator
     // by mapping the heap pages
-    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap init failed");
+    allocator::init_heap(
+        mapper.lock().deref_mut(),
+        frame_allocator.lock().deref_mut(),
+    )
+    .expect("heap init failed");
 
     // Parse acpi tables once
     acpi::init_acpi_table();
     let acpi = acpi::get_acpi_table();
 
-    // TODO: Map in bootloader the apic page
-    // TODO: Read the apic id as soon as possible
-    // TODO: Make core local storage globally available
-
     log::info!("Init apic controller");
     // Initialize apic controller
-    interrupts::APIC
-        .lock()
-        .init(&mut mapper, &mut frame_allocator, &acpi);
+    interrupts::APIC.lock().init(
+        mapper.lock().deref_mut(),
+        frame_allocator.lock().deref_mut(),
+        &acpi,
+    );
 
     // Enable interrupts
     log::info!("Enabling interrupts");
@@ -129,7 +125,7 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
  */
 #[cfg(test)]
 use bootloader::{bootinfo::BootInfo, entry_point};
-use core::panic::PanicInfo;
+use core::{ops::DerefMut, panic::PanicInfo};
 // Entry point for `cargo test`
 #[cfg(test)]
 entry_point!(kernel_test_main);

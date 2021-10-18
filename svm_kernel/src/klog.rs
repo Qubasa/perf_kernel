@@ -6,7 +6,16 @@ use crate::vga::VGA_WRITER;
 
 pub struct HWLogger;
 
-pub static LOGGER: HWLogger = HWLogger;
+static LOGGER: HWLogger = HWLogger;
+
+pub unsafe fn init() {
+    crate::serial::init();
+    crate::vga::init();
+
+    // Init & set logger level
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(log::LevelFilter::Info);
+}
 
 impl log::Log for HWLogger {
     // Enable logging at level Trace if cond is met

@@ -23,11 +23,11 @@
  * family: 0x17h, model: 0x18h
  */
 
-use svm_kernel::mylog::LOGGER;
 
 use bootloader::bootinfo;
 use bootloader::entry_point;
 use svm_kernel::smp;
+use svm_kernel::klog;
 extern crate alloc;
 
 /*
@@ -39,37 +39,19 @@ extern crate alloc;
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     unsafe {
-        svm_kernel::serial::init();
-        svm_kernel::vga::init();
+        klog::init();
+        smp::save_corestate();
     }
 
     // Check if this is a smp core
     // TODO: apic id's don't have to start at 0
-    if svm_kernel::smp::apic_id() != 0 {
+    if smp::apic_id() != 0 {
         smp_main(_boot_info);
     }
 
-    // Get state of bsp core for later to make sure other
-    // cores arrive here with the same state
-    unsafe {
-        smp::BSPCORE_STATE = Some(smp::CoreState::new());
-    };
-
-    // Init & set logger level
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
     // log::info!("Kernel going to loop now xoxo");
     // svm_kernel::hlt_loop();
     log::debug!("bootinfo: {:#x?}", _boot_info.memory_map);
-
-    // Check state integrity of bsp core
-    unsafe {
-        let corestate = smp::BSPCORE_STATE.unwrap();
-        if log::log_enabled!(log::Level::Debug) {
-            corestate.print_fixed_mtrrs();
-        }
-        corestate.print_variable_mtrrs();
-    }
 
     unsafe {
         // Initialize routine for kernel
@@ -88,17 +70,10 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 }
 
 fn smp_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
-    // TODO: Check that stacks for multicore in tss are okay
-    // TODO: Make the whole init process like the bsp
+
     // Make sure bsp core state is the same as smp core state
-    {
-        let curr_core_state = smp::CoreState::new();
-        let bsp_state = unsafe { smp::BSPCORE_STATE.unwrap() };
-        if curr_core_state != bsp_state {
-            log::info!("First one is BSP second one is core 1");
-            bsp_state.diff_print(&curr_core_state);
-            panic!("Different core states. This will create issues.");
-        }
+    unsafe {
+        smp::check_corestate();
     }
 
     svm_kernel::hlt_loop();
