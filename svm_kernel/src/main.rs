@@ -25,9 +25,7 @@
 
 use bootloader::bootinfo;
 use bootloader::entry_point;
-use svm_kernel::apic;
 use svm_kernel::klog;
-use svm_kernel::smp;
 extern crate alloc;
 
 /*
@@ -42,11 +40,11 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
 
     // Check if this is a smp core
     // TODO: apic id's don't have to start at 0
-    if apic::is_bsp() {
-        smp::save_corestate();
-    } else {
-        smp::check_corestate();
-    }
+    // if apic::is_bsp() {
+    //     smp::save_corestate();
+    // } else {
+    //     smp::check_corestate();
+    // }
 
     // log::info!("Kernel going to loop now xoxo");
     // svm_kernel::hlt_loop();

@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 
 use crate::acpi_regs::*;
 
@@ -7,16 +6,8 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::fmt;
 use core::mem::size_of;
-use core::ptr::{read_volatile, write_volatile};
-use core::sync::atomic::{AtomicU32, AtomicU8, Ordering};
-use modular_bitfield::prelude::*;
 use rangeset::{Range, RangeSet};
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::PageSize;
-use x86_64::structures::paging::{
-    FrameAllocator, Mapper, OffsetPageTable, Page, PhysFrame, Size4KiB,
-};
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{PhysAddr};
 static mut ACPI_TABLES: Option<Acpi> = None;
 
 pub unsafe fn init() -> &'static Acpi {
