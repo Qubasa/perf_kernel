@@ -6,15 +6,21 @@ use crate::vga::VGA_WRITER;
 
 pub struct HWLogger;
 
-static LOGGER: HWLogger = HWLogger;
+static mut LOGGER: Option<HWLogger> = None;
 
-pub unsafe fn init() {
-    crate::serial::init();
-    crate::vga::init();
+pub fn init() {
+    unsafe {
+        crate::serial::init();
+        crate::vga::init();
 
-    // Init & set logger level
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
+        if LOGGER.is_none() {
+            LOGGER = Some(HWLogger);
+            // Init & set logger level
+            log::set_logger(LOGGER.as_ref().unwrap()).unwrap();
+        }
+
+        log::set_max_level(log::LevelFilter::Info);
+    }
 }
 
 impl log::Log for HWLogger {

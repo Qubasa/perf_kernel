@@ -11,12 +11,12 @@ use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use svm_kernel::{allocator::HEAP_START, bench::Bench, mylog::LOGGER, print, println};
+use svm_kernel::{allocator::HEAP_START, bench::Bench, klog, print, println};
 
 entry_point!(main);
 
 fn main(boot_info: &'static BootInfo) -> ! {
-    log::set_logger(&LOGGER).unwrap();
+    klog::init();
     log::set_max_level(log::LevelFilter::Debug);
 
     unsafe {

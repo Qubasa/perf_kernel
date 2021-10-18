@@ -19,18 +19,13 @@ use x86_64::structures::paging::{
 use x86_64::{PhysAddr, VirtAddr};
 static mut ACPI_TABLES: Option<Acpi> = None;
 
-pub unsafe fn init_acpi_table() {
-    if let None = ACPI_TABLES {
+pub unsafe fn init() -> &'static Acpi {
+    if ACPI_TABLES.is_none() {
         let mut acpi = Acpi::new();
         acpi.init();
         ACPI_TABLES = Some(acpi);
-    } else {
-        panic!("Tried to init acpi table twice");
     }
-}
-
-pub fn get_acpi_table() -> &'static Acpi {
-    unsafe { ACPI_TABLES.as_ref().unwrap() }
+    ACPI_TABLES.as_ref().unwrap()
 }
 
 pub struct Acpi {

@@ -23,11 +23,11 @@
  * family: 0x17h, model: 0x18h
  */
 
-
 use bootloader::bootinfo;
 use bootloader::entry_point;
-use svm_kernel::smp;
+use svm_kernel::apic;
 use svm_kernel::klog;
+use svm_kernel::smp;
 extern crate alloc;
 
 /*
@@ -38,15 +38,14 @@ extern crate alloc;
 //TODO: rsp has to be 16 byte aligned
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
-    unsafe {
-        klog::init();
-        smp::save_corestate();
-    }
+    klog::init();
 
     // Check if this is a smp core
     // TODO: apic id's don't have to start at 0
-    if smp::apic_id() != 0 {
-        smp_main(_boot_info);
+    if apic::is_bsp() {
+        smp::save_corestate();
+    } else {
+        smp::check_corestate();
     }
 
     // log::info!("Kernel going to loop now xoxo");
@@ -62,20 +61,7 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    // Busy loop don't crash
-    // log::info!("Quitting kernel...");
-    // svm_kernel::exit_qemu(svm_kernel::QemuExitCode::Success);
     log::info!("Kernel going to loop now xoxo");
-    svm_kernel::hlt_loop();
-}
-
-fn smp_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
-
-    // Make sure bsp core state is the same as smp core state
-    unsafe {
-        smp::check_corestate();
-    }
-
     svm_kernel::hlt_loop();
 }
 

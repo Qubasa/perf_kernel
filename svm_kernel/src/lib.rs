@@ -20,8 +20,8 @@ pub mod apic_regs;
 pub mod bench;
 pub mod default_interrupt;
 pub mod interrupts;
-pub mod memory;
 pub mod klog;
+pub mod memory;
 pub mod pci;
 pub mod print;
 pub mod serial;
@@ -57,39 +57,40 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
 // All kernel inits summed up
 pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
-    // Check support of hardware features needed for benchmarking
-    bench::check_support();
-
     // Load gdt into current cpu with lgdt
     // Also set code and tss segment selector registers
-
     tss::init(boot_info);
 
     // Load idt into the current cpu with lidt
     interrupts::init();
 
-    // Measure speed of rtsc once
-    time::calibrate();
-
     // Create OffsetPageTable instance by
     // calculating address with: Cr3::read() + offset from bootloader
     let (mapper, frame_allocator) = memory::init(boot_info);
 
-    // Initialize the heap allocator
-    // by mapping the heap pages
-    allocator::init_heap(
-        mapper.lock().deref_mut(),
-        frame_allocator.lock().deref_mut(),
-    )
-    .expect("heap init failed");
+    if apic::is_bsp() {
+        // Measure speed of rtsc once
+        time::calibrate();
 
-    // Parse acpi tables once
-    acpi::init_acpi_table();
-    let acpi = acpi::get_acpi_table();
+        // Check support of hardware features needed for benchmarking
+        bench::check_support();
+
+        // Initialize the heap allocator
+        // by mapping the heap pages
+        allocator::init_heap(
+            mapper.lock().deref_mut(),
+            frame_allocator.lock().deref_mut(),
+        )
+        .expect("heap init failed");
+    }
 
     log::info!("Init apic controller");
-    // Initialize apic controller
-    interrupts::APIC.lock().init(
+
+    // Parse acpi tables once
+    let acpi = acpi::init();
+
+    // Initialize lapic controller
+    apic::init(
         mapper.lock().deref_mut(),
         frame_allocator.lock().deref_mut(),
         &acpi,
@@ -99,16 +100,14 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     log::info!("Enabling interrupts");
     x86_64::instructions::interrupts::enable();
 
+    let id = apic::apic_id();
+
+    if id < acpi.apics.as_ref().unwrap().last().unwrap().id {
+        apic::mp_init(id + 1, boot_info.smp_trampoline);
+    }
+
     // Search for pci devices
-    pci::init();
-
-    // unsafe {
-    //     let apic = interrupts::APIC.lock();
-    //     if apic.id.unwrap() < acpi.apics.as_ref().unwrap().last().unwrap().id {
-    //         apic.mp_init(apic.id.unwrap() + 1, boot_info.smp_trampoline);
-    //     }
-    // }
-
+    //pci::init();
     // Init pci devices
     //TODO: uncomment
     // x86_64::instructions::interrupts::without_interrupts(|| unsafe {

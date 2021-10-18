@@ -61,7 +61,6 @@ impl InterruptIndex {
 }
 pub static PICS: spin::Mutex<ChainedPics> =
     spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
-pub static APIC: spin::Mutex<apic::Apic> = spin::Mutex::new(apic::Apic::new());
 
 static mut IDT: Option<InterruptDescriptorTable> = None;
 

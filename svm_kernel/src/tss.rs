@@ -37,7 +37,7 @@ static mut TSS_ARR: [Option<TaskStateSegment>; bootloader::MAX_CORES] =
     [None; bootloader::MAX_CORES];
 
 pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
-    let apic_id = apic::local_apic_id() as usize;
+    let apic_id = apic::apic_id() as usize;
     log::info!("Local Apic id is: {}", apic_id);
 
     TSS_STACK_ITER = Some(StackIter::new(

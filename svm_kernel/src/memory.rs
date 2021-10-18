@@ -49,15 +49,20 @@ pub unsafe fn init(
     &'static spin::Mutex<OffsetPageTable>,
     &'static spin::Mutex<BootInfoFrameAllocator>,
 ) {
-    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let level_4_table = active_level_4_table(physical_memory_offset);
-    PAGE_TABLE = Some(spin::Mutex::new(OffsetPageTable::new(
-        level_4_table,
-        physical_memory_offset,
-    )));
-    FRAME_ALLOCATOR = Some(spin::Mutex::new(BootInfoFrameAllocator::new(
-        &boot_info.memory_map,
-    )));
+    if PAGE_TABLE.is_none() {
+        let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
+        let level_4_table = active_level_4_table(physical_memory_offset);
+        PAGE_TABLE = Some(spin::Mutex::new(OffsetPageTable::new(
+            level_4_table,
+            physical_memory_offset,
+        )));
+    }
+
+    if FRAME_ALLOCATOR.is_none() {
+        FRAME_ALLOCATOR = Some(spin::Mutex::new(BootInfoFrameAllocator::new(
+            &boot_info.memory_map,
+        )));
+    }
 
     (
         PAGE_TABLE.as_ref().unwrap(),

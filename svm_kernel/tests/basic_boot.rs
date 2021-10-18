@@ -6,11 +6,11 @@
 
 use core::panic::PanicInfo;
 use log::{debug, error, info, trace, warn};
-use svm_kernel::{mylog::LOGGER, println};
+use svm_kernel::{klog, println};
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn _start() -> ! {
-    log::set_logger(&LOGGER).unwrap();
+    klog::init();
     log::set_max_level(log::LevelFilter::Trace);
     println!("==== test_logging ====");
     test_main();

@@ -6,10 +6,9 @@ pub const MAX_CORES: usize = 1024;
 
 static mut BSPCORE_STATE: Option<CoreState> = None;
 
-
-pub unsafe fn check_corestate() {
+pub fn check_corestate() {
     let curr_core_state = CoreState::new();
-    let bsp_state = BSPCORE_STATE.as_ref().unwrap();
+    let bsp_state = unsafe { BSPCORE_STATE.as_ref().unwrap() };
     if &curr_core_state != bsp_state {
         log::info!("First one is BSP second one is core 1");
         bsp_state.diff_print(&curr_core_state);
@@ -17,16 +16,16 @@ pub unsafe fn check_corestate() {
     }
 }
 
+pub fn save_corestate() {
+    unsafe {
+        BSPCORE_STATE = Some(CoreState::new());
 
-pub unsafe fn save_corestate() {
-
-    BSPCORE_STATE = Some(CoreState::new());
-
-    let corestate = BSPCORE_STATE.as_ref().unwrap();
-    if log::log_enabled!(log::Level::Debug) {
-        corestate.print_fixed_mtrrs();
+        let corestate = BSPCORE_STATE.as_ref().unwrap();
+        if log::log_enabled!(log::Level::Debug) {
+            corestate.print_fixed_mtrrs();
+        }
+        corestate.print_variable_mtrrs();
     }
-    corestate.print_variable_mtrrs();
 }
 
 /// Different states for APICs to be in
@@ -550,12 +549,4 @@ impl CoreState {
             );
         }
     }
-}
-
-pub fn apic_id() -> u8 {
-    unsafe {
-        let res = core::arch::x86_64::__cpuid(0x0000_0001);
-        let core_id = (res.ebx >> 24) as u8;
-        return core_id;
-    };
 }
