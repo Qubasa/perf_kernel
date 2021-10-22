@@ -250,6 +250,17 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         panic!("Bootloader is too big. The bootloader needs to fit between address 1Mb - 2Mb");
     }
 
+    if BOOT_INFO.cores.num_cores > bootloader::MAX_CORES.try_into().unwrap() {
+        panic!(
+            "CPU has more then {} cores. Recompile with different MAX_CORES constant",
+            bootloader::MAX_CORES
+        );
+    }
+
+    if BOOT_INFO.cores.num_cores == 0 {
+        panic!("Invalid value zero for MAX_CORES constant");
+    }
+
     // Check if enough RAM available
     let min_ram = &__minimum_mem_requirement as *const _ as u64;
     if available_ram < min_ram {
@@ -512,7 +523,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Enable all media extensions
-    media_extensions::enable_all();
+    //media_extensions::enable_all();
 
     // Enable mmu
     // and load cr3 register with addr of page table

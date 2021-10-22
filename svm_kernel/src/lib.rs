@@ -10,6 +10,7 @@
 #![feature(const_mut_refs)]
 #![feature(asm)]
 #![feature(test)]
+#![feature(maybe_uninit_uninit_array)]
 #![no_std]
 
 pub mod acpi;
@@ -18,6 +19,7 @@ pub mod allocator;
 pub mod apic;
 pub mod apic_regs;
 pub mod bench;
+pub mod corestate;
 pub mod default_interrupt;
 pub mod interrupts;
 pub mod klog;
@@ -57,6 +59,20 @@ pub fn exit_qemu(exit_code: QemuExitCode) -> ! {
 
 // All kernel inits summed up
 pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
+    klog::init();
+
+    // Make sure that other cores have the same register state like bsp
+    // if apic::is_bsp() {
+    //     corestate::save_corestate();
+    // } else {
+    //     //smp::check_corestate();
+    // }
+
+    // Init online status of cores
+    smp::init();
+
+    log::debug!("bootinfo: {:#x?}", boot_info.memory_map);
+
     // Load gdt into current cpu with lgdt
     // Also set code and tss segment selector registers
     tss::init(boot_info);
@@ -94,17 +110,18 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         mapper.lock().deref_mut(),
         frame_allocator.lock().deref_mut(),
         &acpi,
+        boot_info,
     );
 
     // Enable interrupts
-    log::info!("Enabling interrupts");
+    log::info!("Enabling interrupts for core {}", apic::apic_id());
     x86_64::instructions::interrupts::enable();
 
     let id = apic::apic_id();
 
-    if id < acpi.apics.as_ref().unwrap().last().unwrap().id {
-        apic::mp_init(id + 1, boot_info.smp_trampoline);
-    }
+    // if id < acpi.apics.as_ref().unwrap().last().unwrap().id {
+    //     apic::mp_init(id + 1, boot_info.smp_trampoline);
+    // }
 
     // Search for pci devices
     //pci::init();

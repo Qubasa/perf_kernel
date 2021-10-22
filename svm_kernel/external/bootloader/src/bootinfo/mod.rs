@@ -1,11 +1,11 @@
 //! Provides boot information to the kernel.
 
 pub use self::memory_map::*;
+use crate::TSS_STACKS_PER_CPU;
 use core::fmt;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use core::ptr::read_unaligned;
-use crate::TSS_STACKS_PER_CPU;
 
 mod memory_map;
 

@@ -25,7 +25,6 @@
 
 use bootloader::bootinfo;
 use bootloader::entry_point;
-use svm_kernel::klog;
 extern crate alloc;
 
 /*
@@ -36,20 +35,6 @@ extern crate alloc;
 //TODO: rsp has to be 16 byte aligned
 entry_point!(kernel_main);
 fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
-    klog::init();
-
-    // Check if this is a smp core
-    // TODO: apic id's don't have to start at 0
-    // if apic::is_bsp() {
-    //     smp::save_corestate();
-    // } else {
-    //     smp::check_corestate();
-    // }
-
-    // log::info!("Kernel going to loop now xoxo");
-    // svm_kernel::hlt_loop();
-    log::debug!("bootinfo: {:#x?}", _boot_info.memory_map);
-
     unsafe {
         // Initialize routine for kernel
         svm_kernel::init(_boot_info);

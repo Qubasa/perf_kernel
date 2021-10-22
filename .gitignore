@@ -1,5 +1,6 @@
 .vscode
 kernel_inspector/target
+pxe/target
 .envrc
 svm_kernel/out/
 .nat_network

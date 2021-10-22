@@ -1,4 +1,3 @@
-
 use crate::acpi_regs::*;
 
 use crate::memory::read_phys;
@@ -7,7 +6,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::mem::size_of;
 use rangeset::{Range, RangeSet};
-use x86_64::{PhysAddr};
+use x86_64::PhysAddr;
 static mut ACPI_TABLES: Option<Acpi> = None;
 
 pub unsafe fn init() -> &'static Acpi {

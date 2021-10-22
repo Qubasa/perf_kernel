@@ -10,10 +10,10 @@ static mut LOGGER: Option<HWLogger> = None;
 
 pub fn init() {
     unsafe {
-        crate::serial::init();
-        crate::vga::init();
-
         if LOGGER.is_none() {
+            crate::serial::init();
+            crate::vga::init();
+
             LOGGER = Some(HWLogger);
             // Init & set logger level
             log::set_logger(LOGGER.as_ref().unwrap()).unwrap();

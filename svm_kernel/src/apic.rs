@@ -14,7 +14,7 @@ use x86_64::PhysAddr;
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
 
 pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
-    log::info!("Booting core {}", apic_id);
+    log::info!("Booting new core {}", apic_id);
     // Send INIT ipi
     let low = InterCmdRegLow::new()
             .with_vec(0) // INIT needs vec to be zero
@@ -52,6 +52,8 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
             .with_msg_type(0b110) // STARTUP type
             .with_level(1) // 1 for everything else
             ;
+    //TODO: Read spec again and implement wait here
+
     let high = InterCmdRegHigh::new().with_dest(apic_id);
     send_ipi(&low, &high);
 }
@@ -114,6 +116,7 @@ pub unsafe fn init(
     mapper: &mut OffsetPageTable,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     acpi: &Acpi,
+    boot_info: &'static bootloader::bootinfo::BootInfo,
 ) {
     if !is_supported() {
         panic!("Apic is not available");
@@ -137,6 +140,23 @@ pub unsafe fn init(
     // Enable apic by writing MSR base reg
     let mut apic_base_reg = Msr::new(0x0000_001B);
     let mut base_reg = ApicBaseReg::from_bytes(apic_base_reg.read().to_le_bytes());
+
+    // Verify LAPIC base address with saved constant APIC_BASE.
+    let mut base_addr: u64 = base_reg.apic_base_addr() << 12;
+    if base_addr != APIC_BASE {
+        log::warn!("APIC base address is different {:#x} then normally {:#x}. Make sure that we do not map LAPIC into usable memory!!",  base_addr, APIC_BASE);
+        base_addr = APIC_BASE;
+    }
+    // Make sure LAPIC base does not lie in usable memory
+    if let Some(region) = boot_info.memory_map.get_region_by_addr(base_addr) {
+        use bootloader::bootinfo::MemoryRegionType;
+        if core::ptr::read_unaligned(core::ptr::addr_of!(region.region_type))
+            == MemoryRegionType::Usable
+        {
+            panic!("LAPIC is mapped into usable memory!");
+        }
+    }
+    // Enable LAPIC and set base address to constant APIC_BASE
     base_reg.set_apic_enable(1);
     base_reg.set_apic_base_addr(APIC_BASE >> 12); // Gets shifted by 12 bits to the left says Documentation
     let payload = u64::from_le_bytes(base_reg.into_bytes());
@@ -164,12 +184,16 @@ pub unsafe fn init(
     // Read, parse & save apic version
     let apic_version = read_apic(Register::ApicVersion);
     let version = ApicVersion::from_bytes(apic_version.to_le_bytes());
-    log::info!(
-        "APIC version: {}, max lvt entries: {}, extendend: {}",
-        version.ver(),
-        version.max_lvt_entries(),
-        version.extended_apic_space(),
-    );
+
+    // Only execute if bootstrap core
+    if base_reg.bootstrap_core() == 1 {
+        log::info!(
+            "APIC version: {}, max lvt entries: {}, extendend: {}",
+            version.ver(),
+            version.max_lvt_entries(),
+            version.extended_apic_space(),
+        );
+    }
 
     // Allow all interrupts
     write_apic(Register::TaskPrioReg, 0);

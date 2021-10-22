@@ -3,7 +3,6 @@ use x86::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFa
 static mut IDT: Option<InterruptDescriptorTable> = None;
 
 pub unsafe fn init() {
-
     if IDT.is_none() {
         let mut idt = InterruptDescriptorTable::new();
         idt.page_fault.set_handler_fn(page_fault_handler::<14>);

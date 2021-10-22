@@ -21,15 +21,19 @@
 pub mod bootinfo;
 
 #[cfg(target_arch = "x86")]
+pub mod acpi;
+#[cfg(target_arch = "x86")]
+pub mod acpi_regs;
+#[cfg(target_arch = "x86")]
 pub mod default_interrupt;
 #[cfg(target_arch = "x86")]
 pub mod interrupts;
 #[cfg(target_arch = "x86")]
+pub mod klog;
+#[cfg(target_arch = "x86")]
 pub mod media_extensions;
 #[cfg(target_arch = "x86")]
 pub mod mmu;
-#[cfg(target_arch = "x86")]
-pub mod klog;
 #[cfg(target_arch = "x86")]
 pub mod pagetable;
 #[cfg(target_arch = "x86")]

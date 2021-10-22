@@ -1,0 +1,12 @@
+[package]
+name = "pxe"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+smoltcp = { version = "0.7.5",default-features = false, features = ["std", "phy-tap_interface","phy-raw_socket", "proto-ipv4", "proto-dhcpv4", "socket-raw"]}
+getopts = "0.2"
+log = { version = "0.4.4" }
+env_logger = "0.5"

@@ -163,6 +163,10 @@ pub unsafe fn remap_first_2mb_with_4kb(
     );
 }
 
+pub unsafe fn read_phys<T: Copy>(addr: PhysAddr) -> T {
+    core::ptr::read_unaligned(addr.as_u64() as *const T)
+}
+
 /// Enable write protection
 /// no execute bit
 /// and set cr3 register
