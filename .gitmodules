@@ -13,3 +13,6 @@
 [submodule "vmsh"]
 	path = vmsh
 	url = git@github.com:Luis-Hebendanz/vmsh.git
+[submodule "pxe/external/smoltcp"]
+	path = pxe/external/smoltcp
+	url = git@github.com:Luis-Hebendanz/smoltcp.git

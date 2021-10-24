@@ -1,23 +1,19 @@
 #![allow(dead_code)]
 
-use std::cell::RefCell;
+use env_logger::Builder;
+use getopts::{Matches, Options};
+use log::*;
 use std::env;
 use std::fs::File;
 use std::io::{self, Write};
 use std::process;
-use std::rc::Rc;
 use std::str::{self, FromStr};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use env_logger::Builder;
-use getopts::{Matches, Options};
-use log::{trace, Level, LevelFilter};
-
-use smoltcp::phy::{Device, EthernetTracer, FaultInjector};
-
 use smoltcp::phy::RawSocket;
-use smoltcp::phy::TapInterface;
-use smoltcp::phy::{PcapLinkType, PcapMode, PcapSink, PcapWriter};
+use smoltcp::phy::TunTapInterface;
+use smoltcp::phy::{Device, FaultInjector, Medium, Tracer};
+use smoltcp::phy::{PcapMode, PcapWriter};
 use smoltcp::time::{Duration, Instant};
 
 pub fn setup_logging_with_clock<F>(filter: &str, since_startup: F)
@@ -54,14 +50,14 @@ where
                 )
             }
         })
-        .filter(None, LevelFilter::Trace)
+        .filter(None, LevelFilter::Debug)
         .parse(filter)
         .parse(&env::var("RUST_LOG").unwrap_or_else(|_| "".to_owned()))
         .init();
 }
 
 pub fn setup_logging(filter: &str) {
-    setup_logging_with_clock(filter, move || Instant::now())
+    setup_logging_with_clock(filter, Instant::now)
 }
 
 pub fn create_options() -> (Options, Vec<&'static str>) {
@@ -95,18 +91,14 @@ pub fn parse_options(options: &Options, free: Vec<&str>) -> Matches {
     }
 }
 
-pub fn add_tap_options(_opts: &mut Options, free: &mut Vec<&str>) {
-    free.push("INTERFACE");
-}
-
-pub fn parse_tap_options(matches: &mut Matches) -> TapInterface {
-    let interface = matches.free.remove(0);
-    TapInterface::new(&interface).unwrap()
-}
-
-pub fn parse_raw_socket_options(matches: &mut Matches) -> RawSocket {
-    let interface = matches.free.remove(0);
-    RawSocket::new(&interface).unwrap()
+pub fn parse_tuntap_options(matches: &mut Matches) -> TunTapInterface {
+    let tun = matches.opt_str("tun");
+    let tap = matches.opt_str("tap");
+    match (tun, tap) {
+        (Some(tun), None) => TunTapInterface::new(&tun, Medium::Ip).unwrap(),
+        (None, Some(tap)) => TunTapInterface::new(&tap, Medium::Ethernet).unwrap(),
+        _ => panic!("You must specify exactly one of --tun or --tap"),
+    }
 }
 
 pub fn add_middleware_options(opts: &mut Options, _free: &mut Vec<&str>) {
@@ -155,7 +147,7 @@ pub fn parse_middleware_options<D>(
     matches: &mut Matches,
     device: D,
     loopback: bool,
-) -> FaultInjector<EthernetTracer<PcapWriter<D, Rc<dyn PcapSink>>>>
+) -> FaultInjector<Tracer<PcapWriter<D, Box<dyn io::Write>>>>
 where
     D: for<'a> Device<'a>,
 {
@@ -198,17 +190,18 @@ where
 
     let device = PcapWriter::new(
         device,
-        Rc::new(RefCell::new(pcap_writer)) as Rc<dyn PcapSink>,
+        pcap_writer,
         if loopback {
             PcapMode::TxOnly
         } else {
             PcapMode::Both
         },
-        PcapLinkType::Ethernet,
     );
-    let device = EthernetTracer::new(device, |_timestamp, _printer| {
+
+    let device = Tracer::new(device, |_timestamp, _printer| {
         trace!("{}", _printer);
     });
+
     let mut device = FaultInjector::new(device, seed);
     device.set_drop_chance(drop_chance);
     device.set_corrupt_chance(corrupt_chance);
