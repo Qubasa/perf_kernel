@@ -3,22 +3,24 @@
   }:
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
-      llvmPackages_latest.llvm
-      llvmPackages_latest.bintools
       zlib.out
       rustup
       xorriso
+      pixiecore
       grub2
       qemu
       entr
-      hotspot
       git-extras
-      llvmPackages_latest.lld
       python3
     ] ++ (with pkgs.python39Packages; [
       pyelftools
       intervaltree
+    ]) ++ (with pkgs.llvmPackages_latest; [
+      lld
+      bintools
+      llvm
     ]);
+
     RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
     # https://github.com/rust-lang/rust-bindgen#environment-variables
     LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
