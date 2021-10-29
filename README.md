@@ -129,6 +129,18 @@ To create a new ISO file, `cargo run` needs to be executed. `cargo build` does n
 $ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/<YourUSB> status=progress
 ```
 
+## PXE boot
+To PXE boot the kernel execute:
+```bash
+$ sudo pixiecore boot <project_root>/svm_kernel/target/x86_64-os/debug/isofiles/boot/kernel.elf --ipxe-bios $IPXE/undionly.kpxe --dhcp-no-bind
+```
+You may wonder where the environment variable `$IPXE` came from. Look into `shell.nix` in there we build a pinned version of ipxe with a custom ipxe script that fixes an issue in `pixiecore's` chain loading.
+
+If you experience issues with PXE failing to get a DHCP offer then make sure that no iptables rule is in the way. A hacky way to check that is by executing:
+```bash
+$ iptables -F
+```
+
 ## LLVM assembly
 If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/svm_kernel-*.s`
 

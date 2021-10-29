@@ -1,12 +1,24 @@
   { sources ? import ./nix/sources.nix
   , pkgs ? import sources.nixpkgs {}
   }:
+
+  let 
+  myipxe = pkgs.ipxe.override {
+        embedScript = pkgs.writeText "ipxe_script" ''
+          #!ipxe
+          dhcp
+          autoboot
+          shell
+        '';
+      };
+  in 
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
       zlib.out
       rustup
       xorriso
       pixiecore
+      myipxe
       grub2
       qemu
       entr
@@ -20,7 +32,7 @@
       bintools
       llvm
     ]);
-
+    IPXE =  myipxe;
     RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
     # https://github.com/rust-lang/rust-bindgen#environment-variables
     LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
