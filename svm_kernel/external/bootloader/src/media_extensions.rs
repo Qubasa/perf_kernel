@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub unsafe fn enable_all() {
     use core::arch::x86::{__cpuid, __cpuid_count};
     use x86::registers::control::{Cr0, Cr0Flags, Cr4, Cr4Flags};

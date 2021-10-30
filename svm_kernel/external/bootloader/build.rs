@@ -207,7 +207,7 @@ struct Elf64_Shdr {
     sh_entsize: u64,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(C, packed)]
 struct Elf64_Phdr {
     p_type: u32,
@@ -231,7 +231,17 @@ impl Ord for Elf64_Phdr {
     }
 }
 
-use std::fmt;
+impl PartialOrd for Elf64_Phdr {
+    fn partial_cmp(&self, other: &Elf64_Phdr) -> Option<Ordering> {
+        unsafe {
+            let x = read_unaligned(addr_of!(other.p_vaddr));
+            let r = read_unaligned(addr_of!(self.p_vaddr)).cmp(&x);
+            Some(r)
+        }
+    }
+}
+
+use std::{cmp::Ordering, fmt};
 impl fmt::Display for Elf64_Shdr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         unsafe {

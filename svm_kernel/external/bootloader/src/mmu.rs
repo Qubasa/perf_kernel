@@ -94,7 +94,7 @@ pub unsafe fn generate_page_table(
             p3_table[pdpe_i] = entry;
         }
     }
-    return p4_physical;
+    p4_physical
 }
 
 /// Remaps first 2mb with 4kb pages
@@ -155,7 +155,7 @@ pub unsafe fn remap_first_2mb_with_4kb(
     // needed because this is marked as non usable memory by grub
     let p1_index = 0xb8000 >> 12 & 0o777;
     p1_table[p1_index].set_addr(
-        0xb8000 as u64,
+        0xb8000,
         PageTableFlags::PRESENT
             | PageTableFlags::WRITABLE
             | PageTableFlags::NO_CACHE
@@ -164,7 +164,7 @@ pub unsafe fn remap_first_2mb_with_4kb(
 }
 
 pub unsafe fn read_phys<T: Copy>(addr: PhysAddr) -> T {
-    core::ptr::read_unaligned(addr.as_u64() as *const T)
+    core::ptr::read_unaligned(addr.as_u32() as *const T)
 }
 
 /// Enable write protection

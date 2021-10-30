@@ -20,7 +20,7 @@ pub unsafe fn init() {
 enum IndexToException {
     Divide_Error = 0,
     Debug,
-    NMI,
+    Nmi,
     Breakpoint,
     Overflow,
     Bound_Range_Exceeded,

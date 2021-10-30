@@ -49,7 +49,7 @@ impl MemoryMap {
                 return Some(i);
             }
         }
-        return None;
+        None
     }
 
     pub fn partition_memory_region(
@@ -70,14 +70,12 @@ impl MemoryMap {
             return Err(PartitionError::AddrIsNotAligned(end_addr));
         }
 
-        let end_region = self
+        let end_region = *self
             .get_region_by_addr(end_addr - 1)
-            .ok_or(PartitionError::AddrDoesNotExist)?
-            .clone();
-        let region = self
+            .ok_or(PartitionError::AddrDoesNotExist)?;
+        let region = *self
             .get_region_by_addr(start_addr)
-            .ok_or(PartitionError::AddrDoesNotExist)?
-            .clone();
+            .ok_or(PartitionError::AddrDoesNotExist)?;
         if region != end_region {
             return Err(PartitionError::NotSameRegion(region, end_region));
         }
@@ -129,7 +127,7 @@ impl MemoryMap {
             }
         }
 
-        return Ok(regions);
+        Ok(regions)
     }
 
     /// Remove memory region
@@ -147,9 +145,9 @@ impl MemoryMap {
         if found {
             self.next_entry_index -= 1;
             self.sort();
-            return Ok(());
+            Ok(())
         } else {
-            return Err(RemoveError::RegionDoesNotExist);
+            Err(RemoveError::RegionDoesNotExist)
         }
     }
 
@@ -284,7 +282,7 @@ impl FrameRange {
 
     /// Checks if the supplied address lies inbetween the frame range
     pub fn intersects(&self, addr: u64) -> bool {
-        return self.start_addr() <= addr && self.end_addr() > addr;
+        self.start_addr() <= addr && self.end_addr() > addr
     }
 
     pub fn set_start_addr(&mut self, addr: u64) {

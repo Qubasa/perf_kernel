@@ -1,6 +1,5 @@
 use crate::bootinfo;
 use core::arch::x86::__cpuid;
-use core::convert::TryInto;
 use x86::addr::PhysAddr;
 use x86::registers::control::{Cr0, Cr0Flags};
 
@@ -18,16 +17,15 @@ extern "C" {
 pub fn num_cores() -> u32 {
     unsafe {
         let res = __cpuid(0x8000_0008);
-        return (res.ecx & 0xFF) + 1;
-    };
+        (res.ecx & 0xFF) + 1
+    }
 }
 
 pub fn apic_id() -> u8 {
     unsafe {
         let res = __cpuid(0x0000_0001);
-        let core_id = (res.ebx >> 24) as u8;
-        return core_id;
-    };
+        (res.ebx >> 24) as u8
+    }
 }
 
 #[no_mangle]
@@ -44,9 +42,7 @@ unsafe extern "C" fn smp_main() {
     // Get stack address for this core
     let stack_addr: u32 = BOOT_INFO.cores[apic_id() as usize]
         .get_stack_start()
-        .expect("Forgot to instantiate kernel stack")
-        .try_into()
-        .unwrap();
+        .expect("Forgot to instantiate kernel stack");
     log::debug!("Stack addr: {:#x}", stack_addr);
 
     // Enable mmu features

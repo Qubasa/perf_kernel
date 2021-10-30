@@ -1,6 +1,7 @@
 use crate::acpi_regs::*;
 
 use crate::mmu::read_phys;
+use core::convert::TryInto;
 use core::mem::size_of;
 use x86::PhysAddr;
 
@@ -14,7 +15,7 @@ unsafe fn parse_header(addr: PhysAddr) -> (Header, PhysAddr, usize) {
 
     // Checksum the table
     let mut sum: u8 = 0;
-    for i in addr.as_u64()..addr.as_u64() + head.length as u64 {
+    for i in addr.as_u32()..addr.as_u32() + head.length as u32 {
         let byte: u8 = read_phys(PhysAddr::new(i));
         sum = sum.wrapping_add(byte);
     }
@@ -23,7 +24,7 @@ unsafe fn parse_header(addr: PhysAddr) -> (Header, PhysAddr, usize) {
         panic!("Checksum invalid: {}", sum);
     }
 
-    (head, addr + size_of::<Header>() as u64, table_len as usize)
+    (head, addr + size_of::<Header>() as u32, table_len as usize)
 }
 
 unsafe fn search_rsdp() -> Option<Rsdp> {
@@ -33,7 +34,7 @@ unsafe fn search_rsdp() -> Option<Rsdp> {
     // Compute the regions we need to scan for the RSDP
     let regions = [
         // First 1 KiB of the EBDA
-        (ebda_ptr as u64, ebda_ptr as u64 + 1024 - 1),
+        (ebda_ptr as u32, ebda_ptr as u32 + 1024 - 1),
         // From 0xe0000 to 0xfffff
         (0xe0000, 0xfffff),
     ];
@@ -43,7 +44,7 @@ unsafe fn search_rsdp() -> Option<Rsdp> {
         let start = x86::addr::align_up(start, 16);
         for addr in (start..=end).step_by(16) {
             // Compute the end address of RSDP structure
-            let struct_end = start + size_of::<Rsdp>() as u64 - 1;
+            let struct_end = start + size_of::<Rsdp>() as u32 - 1;
 
             // Break out of the scan if we are out of bounds of this region
             if struct_end > end {
@@ -84,15 +85,15 @@ unsafe fn search_rsdp() -> Option<Rsdp> {
             return Some(table);
         }
     }
-    return None;
+    None
 }
 
-pub unsafe fn init() {
+pub unsafe fn init(lapic_arr: &mut [LocalApic]) {
     // Search for RSDP pointer
     let rsdp = search_rsdp().expect("Failed to find RSDP for ACPI");
 
     // Parse out the RSDT
-    let (rsdt, rsdt_payload, rsdt_size) = parse_header(PhysAddr::new(rsdp.rsdt_addr.into()));
+    let (rsdt, rsdt_payload, rsdt_size) = parse_header(PhysAddr::new(rsdp.rsdt_addr));
 
     // Check the signature of rsdt
     if &rsdt.signature != b"RSDT" {
@@ -105,40 +106,30 @@ pub unsafe fn init() {
 
     for entry in 0..rsdt_entries {
         // Get the physical address of the RSDP table entry
-        let entry_paddr = rsdt_payload + entry * size_of::<u32>();
+        let entry_paddr = rsdt_payload + (entry * size_of::<u32>()).try_into().unwrap();
 
         let table_ptr: u32 = read_phys(entry_paddr);
-        let signature: [u8; 4] = read_phys(PhysAddr::new(table_ptr as u64));
+        let signature: [u8; 4] = read_phys(PhysAddr::new(table_ptr));
 
         // Parse MADT
         if &signature == b"APIC" {
-            let result = parse_madt(PhysAddr::new(table_ptr as u64));
+            parse_madt(PhysAddr::new(table_ptr), lapic_arr);
         }
     } // enf for rsdt_entries
 } // end fn init
 
 /// Parse the MADT out of the ACPI tables
 /// Returns a vector of all usable APIC IDs
-unsafe fn parse_madt(
-    ptr: PhysAddr,
-) {
+unsafe fn parse_madt(ptr: PhysAddr, lapic_arr: &mut [LocalApic]) {
     let (_header, payload, size) = parse_header(ptr);
-
-    let flags: u32 = read_phys(ptr + 4_u64);
-
-    // If the first bit is set the spec says we have to mask the pic interrupts
-    let mask_pics: bool = flags & 1 == 1;
 
     // Skip the local interrupt controller address and the flags to get the
     // physical address of the ICS
-    let mut ics = payload + 4u64 + 4u64;
-    let end = payload + size as u64;
+    let mut ics = payload + 4u32 + 4u32;
+    let end = payload + size as u32;
 
     // Create a new structure to hold the APICs that are usable
-    let mut lapics = Vec::new();
-    let mut ioapcis = Vec::new();
-    let mut int_overrides = Vec::new();
-    let mut nmis = Vec::new();
+    let mut lapics_iter = lapic_arr.iter_mut();
 
     loop {
         /// Processor is ready for use
@@ -149,16 +140,16 @@ unsafe fn parse_madt(
         const APIC_ONLINE_CAPABLE: u32 = 1 << 1;
 
         // Make sure there's room for the type and the length
-        if ics + 2_u64 > end {
+        if ics + 2_u32 > end {
             break;
         }
 
         // Parse out the type and the length of the ICS entry
-        let typ: u8 = read_phys(ics + 0_u64);
-        let len: u8 = read_phys(ics + 1_u64);
+        let typ: u8 = read_phys(ics);
+        let len: u8 = read_phys(ics + 1_u32);
 
         // Make sure there's room for this structure
-        if ics + len as u64 > end {
+        if ics + len as u32 > end {
             break;
         }
 
@@ -178,37 +169,7 @@ unsafe fn parse_madt(
                 // If the processor is enabled, or can be enabled, log it as
                 // a valid APIC
                 if (lapic.flags & APIC_ENABLED) != 0 || (lapic.flags & APIC_ONLINE_CAPABLE) != 0 {
-                    lapics.push(lapic);
-                }
-            }
-            // I/O APIC
-            1 => {
-                if len != 12 {
-                    panic!("Invalid I/O apic entry");
-                }
-
-                let ioapic: IoApic = read_phys(ics);
-                ioapcis.push(ioapic);
-            }
-            // NonMaskableInts
-            3 => {
-                if len != 8 {
-                    panic!("Invalid NonMaskableInts entry");
-                }
-                let nmi: NonMaskableInts = read_phys(ics);
-                nmis.push(nmi);
-            }
-            // Interrupt overrides
-            2 => {
-                if len != 10 {
-                    panic!("Invalid interrupt override entry");
-                }
-
-                let int_override: IntOverride = read_phys(ics);
-
-                // Filter out identity mappings
-                if int_override.source as u32 != int_override.mapped_to {
-                    int_overrides.push(int_override);
+                    *lapics_iter.next().expect("lapic buffer is too small") = lapic;
                 }
             }
             // x2apic entry
@@ -223,7 +184,7 @@ unsafe fn parse_madt(
                 // If the processor is enabled, or can be enabled, log it as
                 // a valid APIC
                 if (lapic.flags & APIC_ENABLED) != 0 || (lapic.flags & APIC_ONLINE_CAPABLE) != 0 {
-                    lapics.push(lapic);
+                    *lapics_iter.next().expect("lapic buffer is too small") = lapic;
                 }
             }
             _ => {
@@ -231,8 +192,6 @@ unsafe fn parse_madt(
             }
         }
         // Go to the next ICS entry
-        ics = ics + len as u64;
+        ics += len as u32;
     } // end loop
-
-    return (lapics, ioapcis, int_overrides, nmis, mask_pics);
 } // end function

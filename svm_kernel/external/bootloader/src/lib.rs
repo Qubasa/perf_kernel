@@ -11,6 +11,7 @@
 #![feature(abi_x86_interrupt)]
 #![feature(test)]
 #![feature(bench_black_box)]
+#![allow(clippy::missing_safety_doc)]
 
 // The dependencies here are set to target_arch = x86 because
 // the 'bootimage' command first builds this crate as dependencie of the kernel

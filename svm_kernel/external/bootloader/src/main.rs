@@ -11,7 +11,7 @@ use bootloader::mmu;
 use bootloader::{klog::LOGGER, pagetable, smp};
 use core::convert::TryInto;
 use log::LevelFilter;
-use multiboot2;
+
 mod media_extensions;
 use core::ptr::{addr_of, read_unaligned};
 use multiboot2::MemoryAreaType;
@@ -211,16 +211,16 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Checks that the current loaded image lies in available (good) physical memory
     {
         for i in BOOT_INFO.memory_map.iter() {
-            check(&i, &__smp_trampoline_start as *const usize as u64);
-            check(&i, &__smp_trampoline_end as *const usize as u64);
-            check(&i, &__stack_start as *const usize as u64);
-            check(&i, &__stack_end as *const usize as u64);
-            check(&i, &__bootloader_start as *const usize as u64);
-            check(&i, &__bootloader_end as *const usize as u64);
-            check(&i, &__kernel_start as *const usize as u64);
-            check(&i, &__kernel_end as *const usize as u64);
-            check(&i, &__page_table_start as *const usize as u64);
-            check(&i, &__page_table_end as *const usize as u64);
+            check(i, &__smp_trampoline_start as *const usize as u64);
+            check(i, &__smp_trampoline_end as *const usize as u64);
+            check(i, &__stack_start as *const usize as u64);
+            check(i, &__stack_end as *const usize as u64);
+            check(i, &__bootloader_start as *const usize as u64);
+            check(i, &__bootloader_end as *const usize as u64);
+            check(i, &__kernel_start as *const usize as u64);
+            check(i, &__kernel_end as *const usize as u64);
+            check(i, &__page_table_start as *const usize as u64);
+            check(i, &__page_table_end as *const usize as u64);
         }
 
         fn check(region: &bootloader::bootinfo::MemoryRegion, addr: u64) {
@@ -472,6 +472,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 p1_table = Some(p);
             }
 
+            #[allow(clippy::needless_option_as_deref)]
             let p1_table: &mut PageTable = p1_table.as_deref_mut().unwrap();
 
             // Iter over number of stacks for TSS
@@ -538,9 +539,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // We assume first apic id is 0. Get the stack for core 0
     let stack_addr: u32 = BOOT_INFO.cores[0]
         .get_stack_start()
-        .expect("Forgot to instantiate kernel stack")
-        .try_into()
-        .unwrap();
+        .expect("Forgot to instantiate kernel stack");
 
     // Read kernel entry point from ELF header
     let entry_addr: u32 = kernel_header.e_entry;
@@ -554,7 +553,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     switch_to_long_mode(&BOOT_INFO, entry_addr, stack_addr);
 }
 
-pub unsafe fn get_kernel_header(kernel_start: &'static usize) -> &Elf32Header {
+unsafe fn get_kernel_header(kernel_start: &'static usize) -> &Elf32Header {
     // Check that kernel ELF header is correct
     let kernel_header = core::mem::transmute::<&usize, &Elf32Header>(kernel_start);
     let magic = [
@@ -567,7 +566,7 @@ pub unsafe fn get_kernel_header(kernel_start: &'static usize) -> &Elf32Header {
         }
         panic!("\n Invalid ELF header magic of kernel!");
     }
-    return kernel_header;
+    kernel_header
 }
 
 #[derive(Clone, Copy, Debug)]

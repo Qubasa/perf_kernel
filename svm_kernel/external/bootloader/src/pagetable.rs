@@ -338,8 +338,7 @@ impl BootInfoFrameAllocator {
         // map each region to its address range
         let addr_ranges = adjusted_regions.map(|r| r.range.start_addr()..r.range.end_addr());
         // transform to an iterator of frame start addresses
-        let frame_addresses = addr_ranges.flat_map(move |r| r.step_by(xsize.try_into().unwrap()));
-        frame_addresses
+        addr_ranges.flat_map(move |r| r.step_by(xsize.try_into().unwrap()))
     }
 }
 

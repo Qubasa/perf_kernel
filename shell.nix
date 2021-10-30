@@ -4,6 +4,9 @@
 
   let 
   myipxe = pkgs.ipxe.override {
+        # pixiecore with the flag --ipxe-ipxe delivers a custom
+        # ipxe payload, and the embedded ipxe script sucks. This
+        # is my fix. 
         embedScript = pkgs.writeText "ipxe_script" ''
           #!ipxe
           dhcp
