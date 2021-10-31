@@ -45,7 +45,8 @@ wait_for_stack:
   jz wait_for_stack
   mov byte ptr [stack_avail], 0
 
-  mov esp, offset __stack_start
+  mov esp, offset STACK_ARRAY
+  add esp, STACK_SIZE
   call smp_main
 
 spin:

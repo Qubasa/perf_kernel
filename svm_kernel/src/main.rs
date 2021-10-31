@@ -44,7 +44,6 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    log::info!("Kernel going to loop now xoxo");
     svm_kernel::hlt_loop();
 }
 

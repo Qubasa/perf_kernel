@@ -3,6 +3,8 @@
 .global switch_to_long_mode
 .global jump_to_long_mode
 .global gdt_64_pointer
+.global STACK_ARRAY
+.global STACK_SIZE
 
 .code32
 _start_bootloader:
@@ -13,7 +15,8 @@ switch_protected_mode:
     mov dx, 32 # Set ds to 32-bit data segment
     mov ds, dx
     mov ss, dx
-    mov esp, offset __stack_start
+    mov esp, offset STACK_ARRAY
+    add esp, STACK_SIZE
     push ebx
     push eax
     call bootloader_main

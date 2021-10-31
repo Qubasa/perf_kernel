@@ -33,6 +33,7 @@ pub mod time;
 pub mod tss;
 pub mod vga;
 
+use core::ptr::*;
 extern crate alloc;
 
 /*
@@ -101,7 +102,7 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         .expect("heap init failed");
     }
 
-    log::info!("Init apic controller");
+    log::debug!("Init apic controller");
 
     // Parse acpi tables once
     let acpi = acpi::init();
@@ -115,14 +116,18 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     );
 
     // Enable interrupts
-    log::info!("Enabling interrupts for core {}", apic::apic_id());
+    log::info!(
+        "Enabling interrupts for core {}",
+        read(addr_of!(boot_info.cores.num_booted_cores)) - 1
+    );
     x86_64::instructions::interrupts::enable();
 
-    //let id = apic::apic_id();
-
-    // if id < acpi.apics.as_ref().unwrap().last().unwrap().id {
-    //     apic::mp_init(id + 1, boot_info.smp_trampoline);
-    // }
+    if apic::is_bsp() {
+        for lapic in acpi.apics.as_ref().unwrap().iter().skip(1) {
+            apic::mp_init(lapic.id, boot_info.smp_trampoline);
+            time::sleep(1000);
+        }
+    }
 
     // Search for pci devices
     //pci::init();
@@ -194,7 +199,7 @@ pub fn hlt_loop() -> ! {
  * in the logs when executing cargo test
  */
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T
@@ -206,4 +211,10 @@ where
         self();
         println!("[ok]");
     }
+}
+
+#[test_case]
+#[allow(clippy::eq_op)]
+fn trivial_assertion() {
+    assert_eq!(1, 1);
 }

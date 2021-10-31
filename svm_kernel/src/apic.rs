@@ -14,7 +14,7 @@ use x86_64::PhysAddr;
 const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
 
 pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
-    log::info!("Booting new core {}", apic_id);
+    log::info!("Booting core {}", apic_id);
     // Send INIT ipi
     let low = InterCmdRegLow::new()
             .with_vec(0) // INIT needs vec to be zero

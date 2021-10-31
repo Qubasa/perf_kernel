@@ -67,6 +67,7 @@ impl BootInfo {
 #[repr(C, packed)]
 pub struct Cores {
     cores: [Core; 256],
+    pub num_booted_cores: u16,
     pub num_cores: u32,
 }
 
@@ -75,13 +76,14 @@ impl Cores {
         Self {
             cores: [Core::empty(); 256],
             num_cores: 0,
+            num_booted_cores: 0,
         }
     }
 
-    pub fn get_by_apic_id(&self, id: u8) -> Option<&Core> {
-        for i in self.cores.iter().take(self.num_cores as usize) {
-            if i.apic_id == id.into() {
-                return Some(i);
+    pub fn get_by_apic_id(&self, id: u8) -> Option<(&Core, usize)> {
+        for (i, core) in self.cores.iter().take(self.num_cores as usize).enumerate() {
+            if core.apic_id == id.into() {
+                return Some((core, i));
             }
         }
         None

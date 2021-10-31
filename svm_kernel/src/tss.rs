@@ -1,6 +1,5 @@
 use core::convert::TryInto;
 
-use crate::apic;
 use x86_64::instructions::segmentation::{Segment, CS};
 use x86_64::instructions::tables::load_tss;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable};
@@ -37,8 +36,10 @@ static mut TSS_ARR: [Option<TaskStateSegment>; bootloader::MAX_CORES] =
     [None; bootloader::MAX_CORES];
 
 pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
-    let apic_id = apic::apic_id() as usize;
-    log::info!("Local Apic id is: {}", apic_id);
+    let (core, core_index) = boot_info
+        .cores
+        .get_by_apic_id(crate::apic::apic_id())
+        .unwrap();
 
     TSS_STACK_ITER = Some(StackIter::new(
         bootloader::TSS_STACKS_PER_CPU.try_into().unwrap(),
@@ -46,7 +47,6 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
 
     let mut tss = TaskStateSegment::new();
     for i in 0..bootloader::TSS_STACKS_PER_CPU {
-        let core = &boot_info.cores[apic_id as usize];
         let stack_start = core.tss.get_stack_start(i).unwrap();
 
         if i < 7 {
@@ -54,17 +54,19 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         }
     }
 
-    TSS_ARR[apic_id] = Some(tss);
-    GDT_ARR[apic_id] = Some(GlobalDescriptorTable::new());
-    let code_selector = GDT_ARR[apic_id]
+    TSS_ARR[core_index] = Some(tss);
+    GDT_ARR[core_index] = Some(GlobalDescriptorTable::new());
+    let code_selector = GDT_ARR[core_index]
         .as_mut()
         .unwrap()
         .add_entry(Descriptor::kernel_code_segment());
-    let tss_selector = GDT_ARR[apic_id]
+    let tss_selector = GDT_ARR[core_index]
         .as_mut()
         .unwrap()
-        .add_entry(Descriptor::tss_segment(TSS_ARR[apic_id].as_ref().unwrap()));
-    GDT_ARR[apic_id].as_ref().unwrap().load();
+        .add_entry(Descriptor::tss_segment(
+            TSS_ARR[core_index].as_ref().unwrap(),
+        ));
+    GDT_ARR[core_index].as_ref().unwrap().load();
     CS::set_reg(code_selector);
     load_tss(tss_selector);
 }

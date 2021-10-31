@@ -21,6 +21,12 @@ global_asm!(include_str!("multiboot2_header.s"));
 global_asm!(include_str!("start.s"));
 global_asm!(include_str!("smp_trampoline.s"));
 
+type StackT = [u16; 0x1000 * 15];
+#[no_mangle]
+pub static STACK_SIZE: usize =  core::mem::size_of::<StackT>();
+#[no_mangle]
+pub static mut STACK_ARRAY: StackT = [0; 0x1000 * 15];
+
 /*
  * Important: The variables defined below are NOT pointers
  * to the section but usize slices of the section data itself.
@@ -36,9 +42,6 @@ extern "C" {
     static __smp_trampoline_start: usize;
     static __smp_trampoline_end: usize;
     static __identity_map_offset: usize;
-    static __stack_guard: usize;
-    static __stack_end: usize;
-    static __stack_start: usize;
     static _start_bootloader: usize;
     static __bootloader_end: usize;
     static __kernel_start: usize;
@@ -101,10 +104,18 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             panic!("Processor does not support x86_64 instruction set");
         }
     }
+    log::info!("mboot_info_ptr: {:#x}", mboot2_info_ptr);
 
+    let esp: u32;
+    asm!("mov {}, esp", out(reg)esp);
+    log::error!("Stack pointer is at: {:#x}", esp);
     // Parses the multiboot2 header
-    let parsed_multiboot_headers =
-        multiboot2::load(mboot2_info_ptr as usize).expect("Parsing multiboot header failed");
+    let parsed_multiboot_headers = match multiboot2::load(mboot2_info_ptr as usize) {
+        Ok(i) => i,
+        Err(e) => {
+            panic!("Parsing multiboot header failed {:#?}", e);
+        }
+    };
 
     // Save smp trampoline addr to BOOT_INFO
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
@@ -212,10 +223,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             &__smp_trampoline_end as *const usize as u64,
         );
         check(
-            &__stack_end as *const usize as u64,
-            &__stack_start as *const usize as u64,
-        );
-        check(
             &__bootloader_start as *const usize as u64,
             &__bootloader_end as *const usize as u64,
         );
@@ -303,24 +310,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 &__smp_trampoline_start as *const _ as u64,
                 &__smp_trampoline_end as *const _ as u64,
                 bootinfo::MemoryRegionType::SmpTrampoline,
-            )
-            .unwrap();
-
-        BOOT_INFO
-            .memory_map
-            .partition_memory_region(
-                &__stack_guard as *const _ as u64, // Stack guard page
-                &__stack_end as *const _ as u64,
-                bootinfo::MemoryRegionType::GuardPage,
-            )
-            .unwrap();
-
-        BOOT_INFO
-            .memory_map
-            .partition_memory_region(
-                &__stack_end as *const _ as u64, // Stack guard page
-                &__stack_start as *const _ as u64,
-                bootinfo::MemoryRegionType::KernelStack,
             )
             .unwrap();
 
@@ -542,7 +531,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Enable all media extensions
-    //media_extensions::enable_all();
+    media_extensions::enable_all();
 
     // Enable mmu
     // and load cr3 register with addr of page table
@@ -550,6 +539,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Save start addr of page table to BOOT_INFO
     BOOT_INFO.page_table_addr = p4_physical.as_u32();
+
+    // Add boot 0 to booted cores
+    BOOT_INFO.cores.num_booted_cores += 1;
 
     // Check that kernel ELF header is correct
     let kernel_header = get_kernel_header(&__kernel_start);

@@ -1,5 +1,6 @@
 use crate::bootinfo;
 use core::arch::x86::__cpuid;
+use core::ptr::*;
 use x86::addr::PhysAddr;
 use x86::registers::control::{Cr0, Cr0Flags};
 
@@ -24,7 +25,11 @@ pub fn apic_id() -> u8 {
 #[no_mangle]
 unsafe extern "C" fn smp_main() {
     // Load interrupt handlers for x86 mode
-    log::info!("Core {} says hello", apic_id());
+    log::debug!(
+        "Core {} with apic id {} says hello",
+        read_unaligned(addr_of!(BOOT_INFO.cores.num_booted_cores)),
+        apic_id()
+    );
 
     // Load exception handler in case of an error
     crate::interrupts::init();
@@ -32,7 +37,7 @@ unsafe extern "C" fn smp_main() {
     // Enable all media extensions
     crate::media_extensions::enable_all();
 
-    let core = BOOT_INFO
+    let (core, _) = BOOT_INFO
         .cores
         .get_by_apic_id(apic_id())
         .expect("Couldn't find core with apic id");
@@ -53,6 +58,9 @@ unsafe extern "C" fn smp_main() {
     cr0.remove(Cr0Flags::NOT_WRITE_THROUGH);
     cr0.remove(Cr0Flags::CACHE_DISABLE);
     Cr0::write(cr0);
+
+    // Add boot 0 to booted cores
+    BOOT_INFO.cores.num_booted_cores += 1;
 
     // Switch to long mode
     let entry_addr = BOOT_INFO.kernel_entry_addr;
