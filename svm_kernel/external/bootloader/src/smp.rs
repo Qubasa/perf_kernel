@@ -14,13 +14,6 @@ extern "C" {
     ) -> !;
 }
 
-pub fn num_cores() -> u32 {
-    unsafe {
-        let res = __cpuid(0x8000_0008);
-        (res.ecx & 0xFF) + 1
-    }
-}
-
 pub fn apic_id() -> u8 {
     unsafe {
         let res = __cpuid(0x0000_0001);
@@ -39,8 +32,13 @@ unsafe extern "C" fn smp_main() {
     // Enable all media extensions
     crate::media_extensions::enable_all();
 
+    let core = BOOT_INFO
+        .cores
+        .get_by_apic_id(apic_id())
+        .expect("Couldn't find core with apic id");
+
     // Get stack address for this core
-    let stack_addr: u32 = BOOT_INFO.cores[apic_id() as usize]
+    let stack_addr: u32 = core
         .get_stack_start()
         .expect("Forgot to instantiate kernel stack");
     log::debug!("Stack addr: {:#x}", stack_addr);

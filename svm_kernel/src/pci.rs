@@ -1,7 +1,6 @@
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::any::Any;
-use core::convert::TryInto;
 use core::mem::size_of;
 use spin;
 
@@ -123,6 +122,7 @@ pub unsafe fn init() {
             // For each possible function ID
             for function in 0..8 {
                 // Compute the address to select this BDF combination
+                #[allow(clippy::identity_op)]
                 let pci_addr = (bus << 8) | (device << 3) | (function << 0);
 
                 // Compute the PCI selection address
@@ -204,7 +204,7 @@ pub unsafe fn init() {
 
             // Attempt to find a driver for this device
             for probe in DRIVERS {
-                if let Some(_driver) = probe(&device, addr.try_into().unwrap()) {
+                if let Some(_driver) = probe(&device, addr) {
                     // Found a handler, go to the next function during the PCI
                     // enumeration
                     //DEVICES.lock().push(driver);

@@ -252,11 +252,10 @@ extern "x86-interrupt" fn spurious_handler(_stack_frame: InterruptStackFrame) {
 
     // Check if this is a pic8259_simple spurious interrupt or a legitimate interrupt
     unsafe {
-        if PICS.lock().is_spurious_interrupt(|| {
+        let res = PICS.lock().is_spurious_interrupt(|| {
             log::info!("This is a pic8259_simple spurious interrupt");
-        }) {
-            return;
-        } else {
+        });
+        if !res {
             panic!("Not a spurious interrupt, that's bad :o");
         }
     }

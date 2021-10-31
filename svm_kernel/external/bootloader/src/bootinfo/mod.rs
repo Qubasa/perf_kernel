@@ -77,6 +77,15 @@ impl Cores {
             num_cores: 0,
         }
     }
+
+    pub fn get_by_apic_id(&self, id: u8) -> Option<&Core> {
+        for i in self.cores.iter().take(self.num_cores as usize) {
+            if i.apic_id == id.into() {
+                return Some(i);
+            }
+        }
+        None
+    }
 }
 
 impl Deref for Cores {
@@ -104,6 +113,7 @@ impl fmt::Debug for Cores {
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, packed)]
 pub struct Core {
+    apic_id: u16,
     /// Start address of stack for physical core
     stack_start_addr: u32,
     /// End address of stack for physical core
@@ -139,12 +149,25 @@ impl TSS {
 impl Core {
     pub const fn empty() -> Self {
         Self {
+            apic_id: u16::MAX,
             stack_start_addr: 0,
             stack_end_addr: 0,
             tss: TSS {
                 stack_start_addr: [0; TSS_STACKS_PER_CPU],
                 stack_end_addr: [0; TSS_STACKS_PER_CPU],
             },
+        }
+    }
+
+    pub fn set_apic_id(&mut self, addr: u8) {
+        self.apic_id = addr as u16;
+    }
+
+    pub fn get_apic_id(&self) -> Option<u8> {
+        if self.apic_id == u16::MAX {
+            None
+        } else {
+            Some(self.apic_id as u8)
         }
     }
 

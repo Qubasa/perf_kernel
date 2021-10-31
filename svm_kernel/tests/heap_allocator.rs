@@ -25,7 +25,7 @@ fn main(boot_info: &'static BootInfo) -> ! {
     println!("===== heap_allocator test =====");
 
     test_main();
-    loop {}
+    svm_kernel::hlt_loop();
 }
 use core::fmt::LowerHex;
 fn print_heap<T>(offset: isize, size: isize)

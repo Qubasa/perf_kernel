@@ -16,7 +16,7 @@ pub struct StackIter {
 
 impl StackIter {
     pub fn new(max: u16) -> StackIter {
-        Self { curr: 0, max: max }
+        Self { curr: 0, max }
     }
 }
 
@@ -27,7 +27,7 @@ impl core::iter::Iterator for StackIter {
             self.curr += 1;
             return Some(self.curr);
         }
-        return None;
+        None
     }
 }
 

@@ -30,14 +30,14 @@ pub struct Acpi {
 
 impl fmt::Debug for Acpi {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Acpi tables:\n").unwrap();
-        write!(f, "apics: {:?}\n", self.apics).unwrap();
-        write!(f, "ioapics: {:?}\n", self.ioapics).unwrap();
-        write!(f, "int overrides: {:?}\n", self.int_overrides).unwrap();
-        write!(f, "non maskable ints: {:?}\n", self.nmis).unwrap();
-        write!(f, "apic domains: {:?}\n", self.apic_domains).unwrap();
-        write!(f, "memory domains: {:?}\n", self.memory_domains).unwrap();
-        write!(f, "mask pics: {:?}\n", self.mask_pics)
+        writeln!(f, "Acpi tables:").unwrap();
+        writeln!(f, "apics: {:?}", self.apics).unwrap();
+        writeln!(f, "ioapics: {:?}", self.ioapics).unwrap();
+        writeln!(f, "int overrides: {:?}", self.int_overrides).unwrap();
+        writeln!(f, "non maskable ints: {:?}", self.nmis).unwrap();
+        writeln!(f, "apic domains: {:?}", self.apic_domains).unwrap();
+        writeln!(f, "memory domains: {:?}", self.memory_domains).unwrap();
+        writeln!(f, "mask pics: {:?}", self.mask_pics)
     }
 }
 
@@ -134,7 +134,7 @@ impl Acpi {
                 return Some(table);
             }
         }
-        return None;
+        None
     }
 
     pub unsafe fn init(&mut self) {
@@ -163,24 +163,24 @@ impl Acpi {
 
             // Parse MADT
             if &signature == b"APIC" {
-                if !self.apics.is_none() {
+                if self.apics.is_some() {
                     panic!("Multiple SRAT ACPI table entrie");
                 }
 
                 let result = self.parse_madt(PhysAddr::new(table_ptr as u64));
 
-                if result.0.len() != 0 {
+                if !result.0.is_empty() {
                     self.apics = Some(result.0);
                 }
-                if result.1.len() != 0 {
+                if !result.1.is_empty() {
                     self.ioapics = Some(result.1);
                 }
 
-                if result.2.len() != 0 {
+                if !result.2.is_empty() {
                     self.int_overrides = Some(result.2);
                 }
 
-                if result.3.len() != 0 {
+                if !result.3.is_empty() {
                     self.nmis = Some(result.3);
                 }
 
@@ -189,7 +189,7 @@ impl Acpi {
             // Parse SRAT
             } else if &signature == b"SRAT" {
                 log::info!("FOUND SRAT STRUCTURE");
-                if !self.apic_domains.is_none() || !self.memory_domains.is_none() {
+                if self.apic_domains.is_some() || self.memory_domains.is_some() {
                     panic!("Multiple SRAT entries");
                 }
                 let (ad, md) = self.parse_srat(PhysAddr::new(table_ptr as u64));
@@ -245,7 +245,7 @@ impl Acpi {
             }
 
             // Parse out the type and the length of the ICS entry
-            let typ: u8 = read_phys(ics + 0_u64);
+            let typ: u8 = read_phys(ics);
             let len: u8 = read_phys(ics + 1_u64);
 
             // Make sure there's room for this structure
@@ -324,10 +324,10 @@ impl Acpi {
                 }
             }
             // Go to the next ICS entry
-            ics = ics + len as u64;
+            ics += len as u64;
         } // end loop
 
-        return (lapics, ioapcis, int_overrides, nmis, mask_pics);
+        (lapics, ioapcis, int_overrides, nmis, mask_pics)
     } // end function
 
     unsafe fn parse_srat(&self, ptr: PhysAddr) -> (BTreeMap<u32, u32>, BTreeMap<u32, RangeSet>) {
@@ -356,7 +356,7 @@ impl Acpi {
             }
 
             // Parse out the type and the length of the ICS entry
-            let typ: u8 = read_phys(sra + 0_u64);
+            let typ: u8 = read_phys(sra);
             let len: u8 = read_phys(sra + 1_u64);
 
             // Make sure there's room for this structure
@@ -385,10 +385,10 @@ impl Acpi {
                     let domain = u32::from_le_bytes(domain);
 
                     // Log the affinity record
-                    if (flags & FLAGS_ENABLED) != 0 {
-                        if !apic_affinities.insert(apic_id as u32, domain).is_none() {
-                            panic!("Duplicate LAPIC affinity domain");
-                        }
+                    if (flags & FLAGS_ENABLED) != 0
+                        && apic_affinities.insert(apic_id as u32, domain).is_some()
+                    {
+                        panic!("Duplicate LAPIC affinity domain");
                     }
                 }
                 1 => {
@@ -410,7 +410,7 @@ impl Acpi {
                         if (flags & FLAGS_ENABLED) != 0 {
                             memory_affinities
                                 .entry(domain)
-                                .or_insert_with(|| RangeSet::new())
+                                .or_insert_with(RangeSet::new)
                                 .insert(Range {
                                     start: base.as_u64(),
                                     end: base
@@ -443,7 +443,7 @@ impl Acpi {
                 _ => {}
             } // end match
 
-            sra = sra + len as u64;
+            sra += len as u64;
         } // end loop
         (apic_affinities, memory_affinities)
     } // end func

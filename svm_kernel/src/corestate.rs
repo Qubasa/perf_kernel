@@ -104,6 +104,7 @@ pub struct CoreState {
 }
 
 impl CoreState {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             xcr0: XCr0::read(),

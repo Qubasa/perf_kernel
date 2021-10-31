@@ -32,7 +32,7 @@ impl FixedSizeBlockAllocator {
     pub const fn new(heap_start: usize) -> Self {
         FixedSizeBlockAllocator {
             arr: [None; HEAP_SIZE / ALLOC_STEPS],
-            heap_start: heap_start,
+            heap_start,
         }
     }
 
@@ -137,7 +137,7 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
             0,
             layout.align_to(ALLOC_STEPS).unwrap().pad_to_align().size(),
         );
-        return ptr;
+        ptr
     }
 
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
@@ -158,30 +158,31 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
         //     new_size,
         // );
 
+        use core::cmp::Ordering;
         // Make buffer smaller
-        if old_size > new_size {
-            let arr_data =
-                u16::try_from(new_size as usize / ALLOC_STEPS).expect("alloc size is too big");
-            alloc.arr[index] = Some(arr_data);
-            return ptr;
-
-        // Make buffer bigger
-        } else if old_size < new_size {
-            alloc.dealloc(ptr, &layout);
-            let new_ptr = alloc.alloc(&new_layout);
-
-            // ptr is the same == buffer increased forward
-            if new_ptr == ptr {
-                log::trace!("realloc: ptr is the same == buffer increased forward");
-            } else {
-                core::intrinsics::copy_nonoverlapping(ptr, new_ptr, layout.size());
+        match old_size.cmp(&new_size) {
+            Ordering::Equal => {
+                log::warn!("Called realloc with same size as previous buffer");
+                ptr
             }
-            return new_ptr;
+            Ordering::Greater => {
+                let arr_data =
+                    u16::try_from(new_size as usize / ALLOC_STEPS).expect("alloc size is too big");
+                alloc.arr[index] = Some(arr_data);
+                ptr
+            }
+            Ordering::Less => {
+                alloc.dealloc(ptr, &layout);
+                let new_ptr = alloc.alloc(&new_layout);
 
-        // After aligning new_size to ALLOC_STEPS buffer remains at the same size
-        } else {
-            log::warn!("Called realloc with same size as previous buffer");
-            return ptr;
+                // ptr is the same == buffer increased forward
+                if new_ptr == ptr {
+                    log::trace!("realloc: ptr is the same == buffer increased forward");
+                } else {
+                    core::intrinsics::copy_nonoverlapping(ptr, new_ptr, layout.size());
+                }
+                new_ptr
+            }
         }
     }
 }

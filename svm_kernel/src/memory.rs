@@ -95,7 +95,7 @@ pub unsafe fn id_map<T: PageSize + core::fmt::Debug>(
 ) -> Result<Page<T>, IdMapError> {
     let addr = VirtAddr::new(my_frame.start_address().as_u64());
     let page = Page::<T>::from_start_address(addr).unwrap();
-    let my_flags = PageTableFlags::PRESENT | (add_flags.unwrap_or(PageTableFlags::empty()));
+    let my_flags = PageTableFlags::PRESENT | add_flags.unwrap_or_else(PageTableFlags::empty);
 
     match mapper.translate(addr) {
         TranslateResult::NotMapped => mapper
@@ -145,7 +145,7 @@ pub unsafe fn id_map<T: PageSize + core::fmt::Debug>(
 
             mapper
                 .update_flags(page, my_flags)
-                .map_err(|e| IdMapError::FlagUpdateError(e))?
+                .map_err(IdMapError::FlagUpdateError)?
                 .flush();
         }
     };

@@ -13,7 +13,7 @@ use svm_kernel::{exit_qemu, init, println, QemuExitCode};
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     exit_qemu(QemuExitCode::Success);
-    loop {}
+    svm_kernel::hlt_loop();
 }
 entry_point!(main);
 
@@ -23,7 +23,7 @@ fn main(boot_info: &'static BootInfo) -> ! {
     }
     test_main();
 
-    loop {}
+    svm_kernel::hlt_loop();
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {

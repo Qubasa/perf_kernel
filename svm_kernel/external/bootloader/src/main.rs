@@ -5,9 +5,9 @@
 #![feature(test)]
 #![feature(bench_black_box)]
 
-use bootloader::bootinfo;
 use bootloader::bootinfo::MemoryRegionType;
 use bootloader::mmu;
+use bootloader::{acpi, bootinfo};
 use bootloader::{klog::LOGGER, pagetable, smp};
 use core::convert::TryInto;
 use log::LevelFilter;
@@ -105,9 +105,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Parses the multiboot2 header
     let parsed_multiboot_headers =
         multiboot2::load(mboot2_info_ptr as usize).expect("Parsing multiboot header failed");
-
-    // Save number of cores this cpu has to BOOT_INFO
-    BOOT_INFO.cores.num_cores = smp::num_cores();
 
     // Save smp trampoline addr to BOOT_INFO
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
@@ -210,35 +207,51 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
 
     // Checks that the current loaded image lies in available (good) physical memory
     {
-        for i in BOOT_INFO.memory_map.iter() {
-            check(i, &__smp_trampoline_start as *const usize as u64);
-            check(i, &__smp_trampoline_end as *const usize as u64);
-            check(i, &__stack_start as *const usize as u64);
-            check(i, &__stack_end as *const usize as u64);
-            check(i, &__bootloader_start as *const usize as u64);
-            check(i, &__bootloader_end as *const usize as u64);
-            check(i, &__kernel_start as *const usize as u64);
-            check(i, &__kernel_end as *const usize as u64);
-            check(i, &__page_table_start as *const usize as u64);
-            check(i, &__page_table_end as *const usize as u64);
-        }
+        check(
+            &__smp_trampoline_start as *const usize as u64,
+            &__smp_trampoline_end as *const usize as u64,
+        );
+        check(
+            &__stack_end as *const usize as u64,
+            &__stack_start as *const usize as u64,
+        );
+        check(
+            &__bootloader_start as *const usize as u64,
+            &__bootloader_end as *const usize as u64,
+        );
+        check(
+            &__kernel_start as *const usize as u64,
+            &__kernel_end as *const usize as u64,
+        );
+        check(
+            &__page_table_start as *const usize as u64,
+            &__page_table_end as *const usize as u64,
+        );
 
-        fn check(region: &bootloader::bootinfo::MemoryRegion, addr: u64) {
+        fn check(addr: u64, addr_end: u64) {
             if addr % 4096 != 0 {
-                panic!("Region is not page aligned: {:#?}", region);
+                panic!("Addr is not page aligned: {:#?}", addr);
             }
 
-            if region.range.intersects(addr) {
+            if addr_end <= addr {
+                panic!("addr_end is smaller or equal to addr");
+            }
+
+            for addr in (addr..addr_end).step_by(4096) {
                 unsafe {
-                    let mem_type = read_unaligned(addr_of!(region.region_type));
-                    if mem_type != MemoryRegionType::Usable
-                        && mem_type != MemoryRegionType::UsableButDangerous
-                    {
-                        panic!(
-                            "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
-                            addr,
-                            region,
-                        );
+                    if let Some(region) = BOOT_INFO.memory_map.get_region_by_addr(addr) {
+                        let mem_type = read_unaligned(addr_of!(region.region_type));
+                        if mem_type != MemoryRegionType::Usable
+                            && mem_type != MemoryRegionType::UsableButDangerous
+                        {
+                            panic!(
+                                "Part of loaded image lies in non usable memory! Addr: {:#x} with region: {:#?}",
+                                addr,
+                                region,
+                            );
+                        }
+                    } else {
+                        panic!("Region not in memory map. Unusable memorys");
                     }
                 }
             }
@@ -248,17 +261,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // Check that bootloader is not bigger then 1Mb
     if &__bootloader_end as *const _ as u64 >= bootloader::TWO_MEG {
         panic!("Bootloader is too big. The bootloader needs to fit between address 1Mb - 2Mb");
-    }
-
-    if BOOT_INFO.cores.num_cores > bootloader::MAX_CORES.try_into().unwrap() {
-        panic!(
-            "CPU has more then {} cores. Recompile with different MAX_CORES constant",
-            bootloader::MAX_CORES
-        );
-    }
-
-    if BOOT_INFO.cores.num_cores == 0 {
-        panic!("Invalid value zero for MAX_CORES constant");
     }
 
     // Check if enough RAM available
@@ -277,8 +279,6 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             );
         }
     }
-
-    log::info!("Num physical cores: {}", smp::num_cores());
 
     // Bootloader assumes that the apic_id of the BSP is 0
     if smp::apic_id() != 0 {
@@ -367,18 +367,25 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         let guard_page = bootloader::TWO_MEG;
         let mut iter = allocator.usable_xsize_frames(stack_size + guard_page, bootloader::TWO_MEG);
 
-        for i in 0..smp::num_cores() {
+        // Generates an iterator to get Lapic structs on every next() call
+        let lapic_iter = acpi::LapicIter::new().expect("Couldn't find acpi table");
+
+        for (i, lapic) in lapic_iter.enumerate() {
+            BOOT_INFO.cores.num_cores += 1;
+
             let addr = iter
                 .next()
                 .expect("Not enough memory to allocate stack for all cores");
             let stack_start = addr + stack_size + guard_page;
             BOOT_INFO.cores[i as usize].set_stack_start(stack_start.try_into().unwrap());
             BOOT_INFO.cores[i as usize].stack_end_addr = (addr + guard_page).try_into().unwrap();
+            BOOT_INFO.cores[i as usize].set_apic_id(lapic.id);
             log::debug!(
-                "Core {} stack space from: {:#x} to {:#x}",
+                "Core {} stack space from: {:#x} to {:#x} with apic id: {}",
                 i,
                 addr + guard_page,
                 stack_start,
+                lapic.id
             );
 
             // Set 2Mb guard page to readable with NX bit set
@@ -415,6 +422,17 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     }
 
+    if BOOT_INFO.cores.num_cores > bootloader::MAX_CORES.try_into().unwrap() {
+        panic!(
+            "CPU has more then {} cores. Recompile with different MAX_CORES constant",
+            bootloader::MAX_CORES
+        );
+    }
+
+    if BOOT_INFO.cores.num_cores == 0 {
+        panic!("Invalid value zero for MAX_CORES constant");
+    }
+
     // Allocate eight 132KiB stacks + 8 KiB Guard Page per core for TSS
     // NOTE: If you want to move this into a separate function don't do it...yet.
     // We would need a copy/clone of the memory map for the FrameAllocator and this oversteps the stack
@@ -436,7 +454,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             .peekable();
 
         // Iter over number of cores
-        for ci in 0..smp::num_cores() {
+        for ci in 0..BOOT_INFO.cores.num_cores {
             let addr = *usable_frames
                 .peek()
                 .expect("Not enough memory to allocate tss stack for all cores");

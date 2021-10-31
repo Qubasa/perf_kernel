@@ -29,7 +29,7 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
     let trampoline = trampoline as u64;
 
     // Check if trampoline in first MB
-    if trampoline >= 0x100_000 {
+    if trampoline >= 0x0010_0000 {
         panic!("Trampoline is outside the 1MB reachable space");
     }
 
@@ -41,7 +41,7 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
     // Convert trampoline func pointer to u8
     let to_vec = (trampoline >> 12) as u8;
 
-    if to_vec >= 0xA0 && to_vec <= 0xBF {
+    if (0xA0..=0xBF).contains(&to_vec) {
         panic!("Trampoline vector can't use 0xA0-0xBF. Reserved by spec.");
     }
 
@@ -62,7 +62,7 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
 fn ipi_pending() -> bool {
     unsafe {
         let r = InterCmdRegLow::from_bytes(read_apic(Register::InterCmdRegLow).to_le_bytes());
-        return r.delivery_status() == 1;
+        r.delivery_status() == 1
     }
 }
 
@@ -85,7 +85,7 @@ fn is_supported() -> bool {
     use core::arch::x86_64::__cpuid;
     let feature = unsafe { __cpuid(0x0000_0001) };
     let feature = feature.edx & (1 << 9);
-    return feature != 0;
+    feature != 0
 }
 
 // IMPORTANT: Fix to be migrated
@@ -248,7 +248,7 @@ pub fn is_bsp() -> bool {
     let apic_base_reg = Msr::new(0x0000_001B);
     unsafe {
         let base_reg = ApicBaseReg::from_bytes(apic_base_reg.read().to_le_bytes());
-        return base_reg.bootstrap_core() == 1;
+        base_reg.bootstrap_core() == 1
     }
 }
 
@@ -256,5 +256,5 @@ pub fn apic_id() -> u8 {
     use core::arch::x86_64::__cpuid;
     let res = unsafe { __cpuid(0x0000_0001) };
 
-    return (res.ebx >> 24) as u8;
+    (res.ebx >> 24) as u8
 }

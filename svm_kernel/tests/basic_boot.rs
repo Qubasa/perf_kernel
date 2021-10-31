@@ -15,7 +15,7 @@ pub extern "C" fn _start() -> ! {
     println!("==== test_logging ====");
     test_main();
 
-    loop {}
+    svm_kernel::hlt_loop();
 }
 
 #[panic_handler]

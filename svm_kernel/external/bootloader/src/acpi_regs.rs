@@ -61,7 +61,7 @@ impl fmt::Debug for IoApic {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(C, packed)]
 pub struct LocalApic {
     pub typ: u8,

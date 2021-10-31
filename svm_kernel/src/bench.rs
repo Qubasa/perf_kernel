@@ -2,6 +2,7 @@ use crate::println;
 use crate::time::{elapsed, rdtsc};
 use core::arch::x86_64::__cpuid;
 
+#[repr(u32)]
 pub enum CpuidIndex {
     TscInvariant = 0x8000_0007,
     Rdtscp = 0x8000_0001,
@@ -9,6 +10,7 @@ pub enum CpuidIndex {
     TLBInfo1GbPages = 0x8000_0019,
 }
 
+#[allow(clippy::wrong_self_convention)]
 impl CpuidIndex {
     fn as_u32(self) -> u32 {
         self as u32
@@ -44,17 +46,17 @@ pub fn overflow() {
 
 pub fn max_num_4kib_pages() -> u8 {
     let res = unsafe { __cpuid(CpuidIndex::TLBInfo.as_u32()) };
-    return ((res.ebx & (0xff << 16)) >> 16) as u8;
+    ((res.ebx & (0xff << 16)) >> 16) as u8
 }
 
 pub fn max_num_2mib_pages() -> u8 {
     let res = unsafe { __cpuid(CpuidIndex::TLBInfo.as_u32()) };
-    return ((res.eax & (0xff << 16)) >> 16) as u8;
+    ((res.eax & (0xff << 16)) >> 16) as u8
 }
 
 pub fn max_num_1gib_pages() -> u16 {
     let res = unsafe { __cpuid(CpuidIndex::TLBInfo1GbPages.as_u32()) };
-    return ((res.eax & (0xfff << 16)) >> 16) as u16;
+    ((res.eax & (0xfff << 16)) >> 16) as u16
 }
 
 pub fn check_support() {
