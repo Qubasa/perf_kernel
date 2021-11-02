@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(svm_kernel::test_runner)]
+#![test_runner(perf_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(bench_black_box)]
 
@@ -11,7 +11,7 @@ use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use svm_kernel::{allocator::HEAP_START, bench::Bench, klog, print, println};
+use perf_kernel::{allocator::HEAP_START, bench::Bench, klog, print, println};
 
 entry_point!(main);
 
@@ -20,12 +20,12 @@ fn main(boot_info: &'static BootInfo) -> ! {
     log::set_max_level(log::LevelFilter::Debug);
 
     unsafe {
-        svm_kernel::init(boot_info);
+        perf_kernel::init(boot_info);
     }
     println!("===== heap_allocator test =====");
 
     test_main();
-    svm_kernel::hlt_loop();
+    perf_kernel::hlt_loop();
 }
 use core::fmt::LowerHex;
 fn print_heap<T>(offset: isize, size: isize)
@@ -44,7 +44,7 @@ where
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     print_heap::<u16>(0, 10);
-    svm_kernel::test_panic_handler(info)
+    perf_kernel::test_panic_handler(info)
 }
 
 use alloc::alloc::{alloc, alloc_zeroed, dealloc, realloc, Layout};
@@ -190,7 +190,7 @@ fn large_vec() {
     bench.end();
 }
 
-use svm_kernel::allocator::HEAP_SIZE;
+use perf_kernel::allocator::HEAP_SIZE;
 
 #[test_case]
 fn many_boxes() {

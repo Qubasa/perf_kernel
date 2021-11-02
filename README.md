@@ -29,13 +29,13 @@ $ nix-shell shell.nix
 Then install cargo dependencies:
 ```bash
 $ cd <project_root>
-$ cargo install --path bootimage
+$ cargo install --path tools/glue_gun
 $ rustup component add llvm-tools-preview rust-src
 ```
 
 Now compile & run the kernel in qemu with:
 ```bash
-$ cd <project_root>/svm_kernel
+$ cd <project_root>/kernel
 $ cargo run
 ```
 Close the instance with CTRL+C
@@ -48,11 +48,11 @@ $ cargo watch
 
 ## View assembly with radare2
 ```bash
-$ cd <project_root>/svm_kernel
+$ cd <project_root>/kernel
 $ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # View bootloader asm
 ```
 ```bash
-$ cd <project_root>/svm_kernel
+$ cd <project_root>/kernel
 $ r2 target/x86_64-os/debug/svm_kernel # View kernel asm
 ```
 

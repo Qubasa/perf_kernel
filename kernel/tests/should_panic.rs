@@ -6,14 +6,14 @@
 
 use bootloader::{bootinfo::BootInfo, entry_point};
 use core::panic::PanicInfo;
-use svm_kernel::{exit_qemu, init, println, QemuExitCode};
+use perf_kernel::{exit_qemu, init, println, QemuExitCode};
 
 #[allow(unreachable_code)]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     println!("[ok]");
     exit_qemu(QemuExitCode::Success);
-    svm_kernel::hlt_loop();
+    perf_kernel::hlt_loop();
 }
 
 entry_point!(main);
@@ -23,7 +23,7 @@ fn main(boot_info: &'static BootInfo) -> ! {
     };
     test_main();
 
-    svm_kernel::hlt_loop();
+    perf_kernel::hlt_loop();
 }
 
 pub fn test_runner(tests: &[&dyn Fn()]) {
