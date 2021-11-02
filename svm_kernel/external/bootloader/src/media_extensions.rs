@@ -127,7 +127,7 @@ pub unsafe fn enable_all() {
         use x86::registers::xcontrol::{XCr0, XCr0Flags};
         let mut flags = XCr0::read();
         flags.set(XCr0Flags::SSE, true);
-        flags.set(XCr0Flags::YMM, true);
+        flags.set(XCr0Flags::AVX, true);
         XCr0::write(flags);
     }
 }

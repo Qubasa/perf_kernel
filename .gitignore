@@ -2,6 +2,7 @@
 kernel_inspector/target
 pxe/target
 .envrc
+**/target
 svm_kernel/out/
 .nat_network
 *.idea
