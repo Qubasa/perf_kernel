@@ -17,6 +17,7 @@
   in 
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
+      rust-analyzer
       zlib.out
       rustup
       xorriso
@@ -25,6 +26,7 @@
       grub2
       qemu
       entr
+      netcat-gnu
       git-extras
       python3
     ] ++ (with pkgs.python39Packages; [

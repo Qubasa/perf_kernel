@@ -53,25 +53,25 @@ $ r2 target/x86_64-os/debug/isofiles/boot/kernel.elf # View bootloader asm
 ```
 ```bash
 $ cd <project_root>/kernel
-$ r2 target/x86_64-os/debug/svm_kernel # View kernel asm
+$ r2 target/x86_64-os/debug/perf_kernel # View kernel asm
 ```
 
-Look into [svm_kernel/external/bootloader/linker.ld](svm_kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
+Look into [kernel/external/bootloader/linker.ld](kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
 
 ## Debug with gdb
 
-Edit [Cargo.toml](./svm_kernel/Cargo.toml)
+Edit [Cargo.toml](./kernel/Cargo.toml)
 and uncomment the `run-command` line to the line with `"-s", "-S"` at the end.  
 Debugging the *bootloader* with gdb
 ```bash
-$ cd <project_root>/svm_kernel
+$ cd <project_root>/perf_kernel
 $ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/isofiles/boot/kernel.elf"
 ```
 
 Debugging the *kernel* with gdb
 ```bash
-$ cd <project_root>/svm_kernel
-$ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/svm_kernel"
+$ cd <project_root>/perf_kernel
+$ gdb -ex "target remote: 1234" -ex "symbol-file target/x86_64-os/debug/perf_kernel"
 ```
 
 ### Debugging a different cpu core 
@@ -98,11 +98,11 @@ To switch to a different cpu core, execute:
 
 ## Linker map
 The linker generates a linker map where all ELF objects are listed with their respective addresses.
-You can find the file under `<project_root>/svm_kernel/external/bootloader/target/linker.map`.
+You can find the file under `<project_root>/perf_kernel/external/bootloader/target/linker.map`.
 
 
 ## Debugging MMU with vmsh
-[vmsh](https://github.com/Mic92/vmsh) is a tool that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](https://github.com/Luis-Hebendanz/svm_kernel/blob/master/svm_kernel/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
+[vmsh](https://github.com/Luis-Hebendanz/vmsh/tree/kernel_inspector) is a tool that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](https://github.com/Luis-Hebendanz/perf_kernel/blob/master/perf_kernel/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
 
 Excerpt:
 ```
@@ -124,15 +124,15 @@ Virt Addr         Phys Addr       Size Perms Cache  NX
 ```
 
 ## ISO file
-To create a new ISO file, `cargo run` needs to be executed. `cargo build` does not suffice, it only generates a new kernel executable file but not a new ISO file. The path to the ISO is `target/x86_64-os/debug/bootimage-svm_kernel.iso` or if build in release mode `target/x86_64-os/release/bootimage-svm_kernel.iso`. To create a bootable USB stick just flash the image onto the USB device with:
+To create a new ISO file, `cargo run` needs to be executed. `cargo build` does not suffice, it only generates a new kernel executable file but not a new ISO file. The path to the ISO is `target/x86_64-os/debug/bootimage-perf_kernel.iso` or if build in release mode `target/x86_64-os/release/bootimage-perf_kernel.iso`. To create a bootable USB stick just flash the image onto the USB device with:
 ```bash
-$ dd bs=5M if=target/x86_64-os/release/bootimage-svm_kernel.iso of=/dev/<YourUSB> status=progress
+$ dd bs=5M if=target/x86_64-os/release/bootimage-perf_kernel.iso of=/dev/<YourUSB> status=progress
 ```
 
 ## PXE boot
 To PXE boot the kernel execute:
 ```bash
-$ sudo pixiecore boot <project_root>/svm_kernel/target/x86_64-os/debug/isofiles/boot/kernel.elf --ipxe-bios $IPXE/undionly.kpxe --dhcp-no-bind
+$ sudo pixiecore boot <project_root>/perf_kernel/target/x86_64-os/debug/isofiles/boot/kernel.elf --ipxe-bios $IPXE/undionly.kpxe --dhcp-no-bind
 ```
 You may wonder where the environment variable `$IPXE` came from. Look into `shell.nix` in there we build a pinned version of ipxe with a custom ipxe script that fixes an issue in `pixiecore's` chain loading.
 
@@ -142,24 +142,24 @@ $ iptables -F
 ```
 
 ## LLVM assembly
-If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/svm_kernel-*.s`
+If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/perf_kernel-*.s`
 
 ## Build system
-The build system is highly custom but well integrated into cargo. The [bootimage](https://github.com/Luis-Hebendanz/bootimage#inner-workings) tool goes into more detail.
+The build system is highly custom but well integrated into cargo. The [glue_gun](tools/glue_gun/README.md) tool goes into more detail.
 
 Important configuration files for the build system are:
-* [.cargo/config](svm_kernel/.cargo/config)
-* [Cargo.toml](svm_kernel/Cargo.toml)
-* [x86_64-os.json](svm_kernel/x86_64-os.json)
-* [i686-uknown-linux-gnu.json](svm_kernel/external/bootloader/i686-unknown-linux-gnu.json)
-* [linker.ld](svm_kernel/external/bootloader/linker.ld)
-* [build.rs](svm_kernel/external/bootloader/build.rs)
+* [.cargo/config](kernel/.cargo/config)
+* [Cargo.toml](kernel/Cargo.toml)
+* [x86_64-os.json](kernel/x86_64-os.json)
+* [i686-uknown-linux-gnu.json](kernel/external/bootloader/i686-unknown-linux-gnu.json)
+* [linker.ld](kernel/external/bootloader/linker.ld)
+* [build.rs](kernel/external/bootloader/build.rs)
 * [rust-toolchain](rust-toolchain)
 
 ## Run tests
 To execute tests run:
 ```
-$ cd <project_root>/svm_kernel
+$ cd <project_root>/perf_kernel
 $ cargo test
 ```
 Run specific test:

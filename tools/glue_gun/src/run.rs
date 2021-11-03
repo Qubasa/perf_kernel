@@ -11,16 +11,26 @@ use wait_timeout::ChildExt;
 /// commands defined in the given `Config`. Since test executables are treated
 /// differently (run with a timeout and match exit status), the caller needs to
 /// specify whether the given disk image is a test or not.
-pub fn run(config: Config, image_path: &Path, is_test: bool) -> Result<i32, RunError> {
-    let mut run_command: Vec<_> = config
-        .run_command
-        .iter()
-        .map(|arg| arg.replace("{}", &format!("{}", image_path.display())))
-        .collect();
+pub fn run(
+    config: Config,
+    image_path: &Path,
+    is_test: bool,
+    is_debug: bool,
+) -> Result<i32, RunError> {
+    let mut run_command: Vec<_> = if is_debug {
+        config
+            .debug_run_command
+            .iter()
+            .map(|arg| arg.replace("{}", &format!("{}", image_path.display())))
+            .collect()
+    } else {
+        config
+            .run_command
+            .iter()
+            .map(|arg| arg.replace("{}", &format!("{}", image_path.display())))
+            .collect()
+    };
     if is_test {
-        if config.test_no_reboot {
-            run_command.push("-no-reboot".to_owned());
-        }
         if let Some(args) = config.test_args {
             run_command.extend(args);
         }

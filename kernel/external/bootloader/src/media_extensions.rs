@@ -132,44 +132,44 @@ pub unsafe fn enable_all() {
     }
 }
 
-#[allow(dead_code)]
-pub unsafe fn test_all_extensions() {
-    use core::arch::x86::*;
-    // SSE v1 test
-    let val: __m256 = _mm256_setzero_ps();
-    let hiaddr = &mut [0f32; 4];
-    let loaddr = &mut [0f32; 4];
-    _mm256_storeu2_m128(hiaddr.as_mut_ptr(), loaddr.as_mut_ptr(), val);
-    core::hint::black_box(val);
-    core::hint::black_box(hiaddr);
-    core::hint::black_box(loaddr);
+// #[allow(dead_code)]
+// pub unsafe fn test_all_extensions() {
+//     use core::arch::x86::*;
+//     // SSE v1 test
+//     let val: __m256 = _mm256_setzero_ps();
+//     let hiaddr = &mut [0f32; 4];
+//     let loaddr = &mut [0f32; 4];
+//     _mm256_storeu2_m128(hiaddr.as_mut_ptr(), loaddr.as_mut_ptr(), val);
+//     core::hint::black_box(val);
+//     core::hint::black_box(hiaddr);
+//     core::hint::black_box(loaddr);
 
-    // SSE v2 test
-    let val: __m256d = _mm256_setzero_pd();
-    let hiaddr = &mut [0f64; 2];
-    let loaddr = &mut [0f64; 2];
-    _mm256_storeu2_m128d(hiaddr.as_mut_ptr(), loaddr.as_mut_ptr(), val);
-    core::hint::black_box(val);
-    core::hint::black_box(hiaddr);
-    core::hint::black_box(loaddr);
+//     // SSE v2 test
+//     let val: __m256d = _mm256_setzero_pd();
+//     let hiaddr = &mut [0f64; 2];
+//     let loaddr = &mut [0f64; 2];
+//     _mm256_storeu2_m128d(hiaddr.as_mut_ptr(), loaddr.as_mut_ptr(), val);
+//     core::hint::black_box(val);
+//     core::hint::black_box(hiaddr);
+//     core::hint::black_box(loaddr);
 
-    // SSE v3 test
-    let val: __m128i = _mm_setzero_si128();
-    let res = _mm_abs_epi8(val);
-    core::hint::black_box(res);
+//     // SSE v3 test
+//     let val: __m128i = _mm_setzero_si128();
+//     let res = _mm_abs_epi8(val);
+//     core::hint::black_box(res);
 
-    // SSE v4.2 test
-    let val1: __m128i = _mm_setzero_si128();
-    let val2: __m128i = _mm_setzero_si128();
-    let res = _mm_cmpgt_epi64(val1, val2);
-    core::hint::black_box(res);
+//     // SSE v4.2 test
+//     let val1: __m128i = _mm_setzero_si128();
+//     let val2: __m128i = _mm_setzero_si128();
+//     let res = _mm_cmpgt_epi64(val1, val2);
+//     core::hint::black_box(res);
 
-    // AVX
-    _mm256_zeroall();
+//     // AVX
+//     _mm256_zeroall();
 
-    // AVX 256
-    let val1: __m256i = _mm256_setzero_si256();
-    let val2: __m256i = _mm256_setzero_si256();
-    let res = _mm256_xor_si256(val1, val2);
-    core::hint::black_box(res);
-}
+//     // AVX 256
+//     let val1: __m256i = _mm256_setzero_si256();
+//     let val2: __m256i = _mm256_setzero_si256();
+//     let res = _mm256_xor_si256(val1, val2);
+//     core::hint::black_box(res);
+// }

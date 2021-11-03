@@ -1,47 +1,47 @@
-//! Parses the `package.metadata.bootimage` configuration table
+//! Parses the `package.metadata.glue_gun` configuration table
 
 use anyhow::{anyhow, Context, Result};
 use std::path::Path;
 use toml::Value;
 
-/// Represents the `package.metadata.bootimage` configuration table
+/// Represents the `package.metadata.glue_gun` configuration table
 ///
-/// The bootimage crate can be configured through a `package.metadata.bootimage` table
+/// The glue_gun crate can be configured through a `package.metadata.glue_gun` table
 /// in the `Cargo.toml` file of the kernel. This struct represents the parsed configuration
 /// options.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Config {
-    /// The cargo subcommand that is used for building the kernel for `cargo bootimage`.
+    /// The cargo subcommand that is used for building the kernel for `cargo glue_gun`.
     ///
     /// Defaults to `build`.
     pub build_command: Vec<String>,
-    /// The run command that is invoked on `bootimage run` or `bootimage runner`
+    /// The run command that is invoked on `glue_gun run --debug`
+    ///
+    /// The substring "{}" will be replaced with the path to the bootable disk image.
+    pub debug_run_command: Vec<String>,
+    /// The run command that is invoked on `glue_gun run`
     ///
     /// The substring "{}" will be replaced with the path to the bootable disk image.
     pub run_command: Vec<String>,
     /// Additional arguments passed to the runner for not-test binaries
     ///
-    /// Applies to `bootimage run` and `bootimage runner`.
+    /// Applies to `glue_gun run` and `glue_gun run`.
     pub run_args: Option<Vec<String>>,
     /// Additional arguments passed to the runner for test binaries
     ///
-    /// Applies to `bootimage runner`.
+    /// Applies to `glue_gun run`.
     pub test_args: Option<Vec<String>>,
-    /// The timeout for running an test through `bootimage test` or `bootimage runner` in seconds
+    /// The timeout for running an test through `glue_gun test` or `glue_gun runner` in seconds
     pub test_timeout: u32,
     /// An exit code that should be considered as success for test executables (applies to
-    /// `bootimage runner`)
+    /// `glue_gun runner`)
     pub test_success_exit_code: Option<i32>,
-    /// Whether the `-no-reboot` flag should be passed to test executables
-    ///
-    /// Defaults to `true`
-    pub test_no_reboot: bool,
 }
 
-/// Reads the configuration from a `package.metadata.bootimage` in the given Cargo.toml.
+/// Reads the configuration from a `package.metadata.glue_gun` in the given Cargo.toml.
 pub fn read_config(manifest_path: &Path) -> Result<Config> {
-    read_config_inner(manifest_path).context("Failed to read bootimage configuration")
+    read_config_inner(manifest_path).context("Failed to read glue_gun configuration")
 }
 
 fn read_config_inner(manifest_path: &Path) -> Result<Config> {
@@ -60,14 +60,15 @@ fn read_config_inner(manifest_path: &Path) -> Result<Config> {
     let metadata = cargo_toml
         .get("package")
         .and_then(|table| table.get("metadata"))
-        .and_then(|table| table.get("bootimage"));
+        .and_then(|table| table.get("glue_gun"));
     let metadata = match metadata {
         None => {
+            log::warn!("Couldn't find package.metadata.glue_gun attribute using defaults...");
             return Ok(ConfigBuilder::default().into());
         }
         Some(metadata) => metadata
             .as_table()
-            .ok_or_else(|| anyhow!("Bootimage configuration invalid: {:?}", metadata))?,
+            .ok_or_else(|| anyhow!("glue_gun configuration invalid: {:?}", metadata))?,
     };
 
     let mut config = ConfigBuilder::default();
@@ -89,18 +90,18 @@ fn read_config_inner(manifest_path: &Path) -> Result<Config> {
             ("run-command", Value::Array(array)) => {
                 config.run_command = Some(parse_string_array(array, "run-command")?);
             }
+            ("debug-run-command", Value::Array(array)) => {
+                config.debug_run_command = Some(parse_string_array(array, "debug-run-command")?);
+            }
             ("run-args", Value::Array(array)) => {
                 config.run_args = Some(parse_string_array(array, "run-args")?);
             }
             ("test-args", Value::Array(array)) => {
                 config.test_args = Some(parse_string_array(array, "test-args")?);
             }
-            ("test-no-reboot", Value::Boolean(no_reboot)) => {
-                config.test_no_reboot = Some(no_reboot);
-            }
             (key, value) => {
                 return Err(anyhow!(
-                    "unexpected `package.metadata.bootimage` \
+                    "unexpected `package.metadata.glue_gun` \
                  key `{}` with value `{}`",
                     key,
                     value
@@ -130,25 +131,39 @@ struct ConfigBuilder {
     test_args: Option<Vec<String>>,
     test_timeout: Option<u32>,
     test_success_exit_code: Option<i32>,
-    test_no_reboot: Option<bool>,
+    debug_run_command: Option<Vec<String>>,
 }
 
 impl From<ConfigBuilder> for Config {
     fn from(s: ConfigBuilder) -> Config {
         Config {
             build_command: s.build_command.unwrap_or_else(|| vec!["build".into()]),
+            debug_run_command: s.debug_run_command.unwrap_or_else(|| {
+                vec![
+                    "qemu-system-x86_64".into(),
+                    "-cdrom".into(),
+                    "{}".into(),
+                    "-serial".into(),
+                    "stdio".into(),
+                    "-no-reboot".into(),
+                    "-s".into(),
+                    "-S".into(),
+                ]
+            }),
             run_command: s.run_command.unwrap_or_else(|| {
                 vec![
                     "qemu-system-x86_64".into(),
-                    "-drive".into(),
-                    "format=raw,file={}".into(),
+                    "-cdrom".into(),
+                    "{}".into(),
+                    "-serial".into(),
+                    "stdio".into(),
+                    "-no-reboot".into(),
                 ]
             }),
             run_args: s.run_args,
-            test_args: s.test_args,
+            test_args: s.test_args.or_else(|| Some(vec!["-no-reboot".into()])),
             test_timeout: s.test_timeout.unwrap_or(60 * 5),
             test_success_exit_code: s.test_success_exit_code,
-            test_no_reboot: s.test_no_reboot.unwrap_or(true),
         }
     }
 }

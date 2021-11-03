@@ -9,7 +9,9 @@ fn main() {
         process::{self, Command},
     };
 
-    if std::env::var("CARGO_CFG_TARGET_ARCH").unwrap() == "x86_64" {
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    if arch != "x86" {
+        eprintln!("Building binary in incorrect architecture: {}", arch);
         process::exit(1);
     }
 

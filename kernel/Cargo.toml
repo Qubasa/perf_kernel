@@ -26,13 +26,10 @@ x86_64 = {path= "external/x86_64"}
 bootloader = { path="external/bootloader" }
 
 # cargo run command options
-[package.metadata.bootimage]
-#run-command = ["qemu-system-x86_64","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=3", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
-#run-command = ["qemu-system-x86_64", "-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
-run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
-#run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
-# run-command = ["qemu-kvm","-cpu","host", "-m", "4G", "-smp","cores=4", "-cdrom", "{}","-serial", "stdio" ]
-build-command = ["build"]
-test-args = ["-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+[package.metadata.glue_gun]
+run-command = ["qemu-system-x86_64","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=3", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
+debug-run-command = ["qemu-system-x86_64", "-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
+#run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
+#debug_run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=2", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
 test-success-exit-code = 33         # (0x10 << 1) | 1
 test-timeout = 55          # (in seconds)

@@ -104,11 +104,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
             panic!("Processor does not support x86_64 instruction set");
         }
     }
-    log::info!("mboot_info_ptr: {:#x}", mboot2_info_ptr);
 
-    let esp: u32;
-    asm!("mov {}, esp", out(reg)esp);
-    log::error!("Stack pointer is at: {:#x}", esp);
     // Parses the multiboot2 header
     let parsed_multiboot_headers = match multiboot2::load(mboot2_info_ptr as usize) {
         Ok(i) => i,
@@ -531,7 +527,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Enable all media extensions
-    media_extensions::enable_all();
+    //media_extensions::enable_all();
 
     // Enable mmu
     // and load cr3 register with addr of page table

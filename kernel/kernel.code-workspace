@@ -5,6 +5,44 @@
 		}
 	],
 	"settings": {
-		"rust-analyzer.checkOnSave.command": "clippy"
+		"rust-analyzer.checkOnSave.command": "clippy",
+		"lldb.verboseLogging": true,
+		"lldb.displayFormat": "hex",
+		"lldb.dereferencePointers": true,
+		"lldb.showDisassembly": "always"
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"type": "cargo",
+				"command": "run",
+				"problemMatcher": [
+					"$rustc"
+				],
+				"label": "Run kernel"
+			},
+			{
+				"type": "cargo",
+				"command": "run",
+				"args": ["--", "-d"],
+				"problemMatcher": [
+					"$rustc"
+				],
+				"label": "Debug kernel"
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Remote attach",
+				"type": "lldb",
+				"request": "custom",
+				"targetCreateCommands": ["target create ${workspaceFolder}/target/x86_64-os/debug/perf_kernel"],
+				"processCreateCommands": ["gdb-remote localhost:1234", "continue"]
+			}
+		]
 	}
 }

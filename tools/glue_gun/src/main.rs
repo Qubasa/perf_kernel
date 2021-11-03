@@ -40,6 +40,12 @@ fn main() {
                         .help("Enables verbose mode")
                         .short("v")
                         .takes_value(false),
+                )
+                .arg(
+                    Arg::with_name("debug")
+                        .help("Runs kernel with debug run command")
+                        .short("d")
+                        .takes_value(false),
                 ),
         )
         .get_matches();
@@ -147,6 +153,7 @@ fn run(matches: &ArgMatches) {
         let features = ["binary"];
         let exes = cargo_build(
             bootloader_crate,
+            &config,
             is_release,
             Some(&features),
             Some(&env_vars),
@@ -175,7 +182,7 @@ fn run(matches: &ArgMatches) {
         glue_grub(&iso_dir, &iso_img, &merged_exe);
     }
 
-    run::run(config, &iso_img, is_test).unwrap();
+    run::run(config, &iso_img, is_test, matches.is_present("debug")).unwrap();
 }
 
 fn glue_grub(iso_dir: &PathBuf, iso_img: &PathBuf, executable: &PathBuf) {
@@ -247,6 +254,7 @@ fn glue_grub(iso_dir: &PathBuf, iso_img: &PathBuf, executable: &PathBuf) {
 
 fn cargo_build(
     target_crate: &Path,
+    config: &config::Config,
     is_release: bool,
     features: Option<&[&str]>,
     env: Option<&[(&str, &str)]>,
@@ -262,7 +270,7 @@ fn cargo_build(
         }
         debug!("Env vars: {:?}", env);
     }
-    cmd.arg("build");
+    cmd.args(config.build_command.clone());
     if let Some(features) = features {
         cmd.arg(format!(
             "--features={}",

@@ -16,7 +16,7 @@ runner = "glue_gun run"
 [alias]
 # llvm-arg list: https://llvm.org/docs/CommandGuide/llc.html
 # release asm
-asm = ["rustc","--bin","svm_kernel", "--release","--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
+asm = ["rustc","--bin","perf_kernel", "--release","--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
 
 # debug asm
 # asm = ["rustc","--bin","svm_kernel", "--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
