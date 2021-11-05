@@ -1,12 +1,10 @@
-## Description
-==== WORK IN PROGRESS ====
+## ==== WORK IN PROGRESS ====
 
 Working SMP/multicore support, there is still some work to be done.
 
 
-### Goal
-x86_64 AMD kernel optimized for extreme performance by not implementing  mitigation & security measures in the kernel but instead expecting the Rust compiler to handle that. 
-In the future this should become a hypervisor.
+### End Goal
+x86_64 rust multicore kernel optimized for extreme performance at any cost. This means no spectre or meltdown patches or any kind of user/kernel separation. There is only one process and at most two threads per core allowed. This means there is no need for a classical scheduler which reduces performance. A cooperative scheduler is provided by the kernel, this means `async/wait` can be used. The allocator is cache optimized and the MMU uses huge pages to reduce memory access latency. The kernel itself is build with sse and avx optimizations. Performance registers are enabled and exposed over KVM and a perf like tool plots performance statistics of the kernel code. 
 
 ## Setup & Debug Build
 Clone the repo with submodules:
@@ -19,6 +17,8 @@ The installation script requires that you have `sudo` access to `root`.
 ```bash
 $ curl -L https://nixos.org/nix/install | sh
 ```
+You may ask yourself why I use this weird package manager. The answer is simple: A completely reproducable and pinned development environment that works across every Linux distribution the same. Also through nix installed packages are contained and have no side effects on your system. 
+
 
 To download all required pinned dependencies just execute:
 ```bash
@@ -26,7 +26,7 @@ $ cd <project_root>
 $ nix-shell shell.nix
 ```
 
-Then install cargo dependencies:
+Then install some cargo dependencies:
 ```bash
 $ cd <project_root>
 $ cargo install --path tools/glue_gun
@@ -38,13 +38,23 @@ Now compile & run the kernel in qemu with:
 $ cd <project_root>/kernel
 $ cargo run
 ```
-Close the instance with CTRL+C
 
 To build on filechange:
 ```bash
-$ cargo install cargo-watch
-$ cargo watch
+$ ./tools/restart.sh
 ```
+
+## Integrated code editor
+This projects ships with a customized & pinned vscodium (vscode without telemetry) with all the necessary addons. Included features are:
+- in editor kernel debugging with source code breakpoints and variables window
+- rust analyzer completion support of kernel code
+- clippy linting
+- rust optimized dark theme 
+
+### Keyboard shortcuts
+- `F4` builds and runs the kernel in qemu awaiting a debugger
+- `F5` attaches debugger to running kernel
+- `F6` builds and runs the kernel normally
 
 ## View assembly with radare2
 ```bash

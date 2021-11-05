@@ -21,7 +21,7 @@ let
 
 
   vscodeWithConfiguration = import ./vscodeWithConfiguration.nix {
-    inherit lib writeShellScriptBin extensionsFromVscodeMarketplace writeScript;
+    inherit lib writeShellScriptBin extensionsFromVscodeMarketplace writeScript jq;
     vscodeDefault = vscode;
   }{ inherit nixExtensions vscodeExtsFolderName user-data-dir; };
 

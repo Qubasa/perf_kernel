@@ -47,9 +47,7 @@
       terminal.integrated.fontSize = 16;
       lldb.displayFormat = "hex";
       breadcrumbs.enabled = false;
-      # files.associations = {
-      #   "*.s" = "asm-intel-x86-generic";
-      # };
+      files.associations."*.s" = "asm-intel-x86-generic";
       rust-analyzer.inlayHints.parameterHints = false;
     };
 

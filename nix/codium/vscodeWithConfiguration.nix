@@ -2,6 +2,7 @@
 { lib
 , writeShellScriptBin
 , writeScript
+, jq
 , extensionsFromVscodeMarketplace
 , vscodeDefault
 }:
@@ -14,7 +15,7 @@
 }:
 let
   nixExtsDrvs = nixExtensions;
-  vscodeExtName = import ./vscodeExtName.nix { inherit lib; inherit writeScript; };
+  vscodeExtName = import ./vscodeExtName.nix { inherit lib; inherit writeScript; inherit jq; };
 
   #removed not defined extensions
   rmExtensions =  lib.optionalString (nixExtensions != null && lib.length nixExtensions != 0) ''
