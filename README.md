@@ -70,8 +70,11 @@ Look into [kernel/external/bootloader/linker.ld](kernel/external/bootloader/link
 
 ## Debug with gdb
 
-Edit [Cargo.toml](./kernel/Cargo.toml)
-and uncomment the `run-command` line to the line with `"-s", "-S"` at the end.  
+To run the kernel in debugger await mode execute:
+```bash
+$ cargo run -- -d
+```
+
 Debugging the *bootloader* with gdb
 ```bash
 $ cd <project_root>/perf_kernel
