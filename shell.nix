@@ -3,6 +3,42 @@
   }:
 
   let 
+  vscodeEnv = pkgs.callPackage ./nix/codium/vscodeEnv.nix {
+    extensionsFromVscodeMarketplace = pkgs.vscode-utils.extensionsFromVscodeMarketplace;
+    vscodeDefault = pkgs.vscodium;
+  };
+
+  myvscode = vscodeEnv {
+   nixExtensions =  pkgs.vscode-utils.extensionsFromVscodeMarketplace [
+      {
+        name = "vscode-rusty-onedark";
+        publisher = "jeraldson";
+        version = "1.0.3";
+        sha256 = "sha256-BuARy+Va+BtF8UqceNDRWHhwaV/PtRePKmd0pJn1DZg=";
+      }
+      {
+        name = "language-x86-64-assembly";
+        publisher = "13xforever";
+        version = "3.0.0";
+        sha256 = "sha256-wIsY6Fuhs676EH8rSz4fTHemVhOe5Se9SY3Q9iAqr1M=";
+      }
+      {
+        name = "llvm";
+        publisher = "rreverser";
+        version = "0.1.1";
+        sha256 = "sha256-MPY854kj34ijQqAZQCSvdszanBPYzxx1D7m+3b+DqGQ=";
+      }
+    ] ++ (with pkgs.vscode-extensions;  [
+      yzhang.markdown-all-in-one
+      timonwong.shellcheck
+      tamasfe.even-better-toml
+      serayuzgur.crates
+      jnoortheen.nix-ide
+      matklad.rust-analyzer
+      #ms-python.python
+    ]);
+  };
+
   myipxe = pkgs.ipxe.override {
         # pixiecore with the flag --ipxe-ipxe delivers a custom
         # ipxe payload, and the embedded ipxe script sucks. This
@@ -17,6 +53,7 @@
   in 
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
+      myvscode
       rust-analyzer
       zlib.out
       rustup
@@ -26,6 +63,7 @@
       grub2
       qemu
       entr
+      glibc.dev
       netcat-gnu
       git-extras
       python3
