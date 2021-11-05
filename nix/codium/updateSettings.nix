@@ -7,34 +7,16 @@
 ##User Input
 { settings      ? {}
 # if marked as true will create an empty json file if does not exist
-, createIfDoesNotExists ? true
-, vscodeSettingsFile ? ".vscode/settings.json"
-, userSettingsFolder ? ""
-, symlinkFromUserSetting ? false
+, vscodeSettingsFile
+, vscodeBaseDir
 }:
 let
-
-  updateVSCodeSettingsCmd = ''
-  (
-    echo 'updateSettings.nix: Updating ${vscodeSettingsFile}...'
-    oldSettings=$(cat ${vscodeSettingsFile})
-    echo $oldSettings' ${builtins.toJSON settings}' | ${jq}/bin/jq -s add > ${vscodeSettingsFile}
-  )'';
-
-  createEmptySettingsCmd = ''mkdir -p .vscode && echo "{}" > ${vscodeSettingsFile}'';
-  fileName = builtins.baseNameOf vscodeSettingsFile;
-  symlinkFromUserSettingCmd = lib.optionalString symlinkFromUserSetting
-    '' && mkdir -p "${userSettingsFolder}" && ln -sfv "$(pwd)/${vscodeSettingsFile}" "${userSettingsFolder}/" '';
+  vscodeUserDir = vscodeBaseDir + "/User";
+  vscodeSettingsFilePath = vscodeUserDir + "/" + vscodeSettingsFile;
 in
 
-  writeShellScriptBin ''vscodeNixUpdate-${lib.removeSuffix ".json" (fileName)}''
-  ("\n" +
-  (lib.optionalString (settings != {})
-    (if createIfDoesNotExists then ''
-      [ ! -f "${vscodeSettingsFile}" ] && ${createEmptySettingsCmd}
-      ${updateVSCodeSettingsCmd} ${symlinkFromUserSettingCmd}
-    ''
-    else ''[ -f "${vscodeSettingsFile}" ] && ${updateVSCodeSettingsCmd} ${symlinkFromUserSettingCmd}
-    ''
-    )
-  ))
+  writeShellScriptBin ''vscodeNixUpdate-${lib.removeSuffix ".json" (vscodeSettingsFile)}''
+  ''
+    mkdir -p ${vscodeUserDir}
+    echo '${builtins.toJSON settings}' | ${jq}/bin/jq > ${vscodeSettingsFilePath}
+  ''

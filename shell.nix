@@ -9,6 +9,7 @@
   };
 
   myvscode = vscodeEnv {
+   vscodeBaseDir = toString ./.vscode;
    nixExtensions =  pkgs.vscode-utils.extensionsFromVscodeMarketplace [
       {
         name = "vscode-rusty-onedark";
@@ -35,12 +36,39 @@
       serayuzgur.crates
       jnoortheen.nix-ide
       matklad.rust-analyzer
-      #ms-python.python
+      vadimcn.vscode-lldb
+      #ms-python.python # Broken on nixos unstable
     ]);
+    settings = {
+      workbench.colorTheme = "Rusty One Dark";
+      window.menuBarVisibility = "toggle";
+      window.zoomLevel = 0;
+      editor.fontSize = 16;
+      terminal.integrated.fontSize = 16;
+      lldb.displayFormat = "hex";
+      breadcrumbs.enabled = false;
+      # files.associations = {
+      #   "*.s" = "asm-intel-x86-generic";
+      # };
+      rust-analyzer.inlayHints.parameterHints = false;
+    };
+
+    keybindings = [
+      {
+          key = "f6";
+          command = "workbench.action.tasks.runTask";
+          args = "rust: cargo run";
+      }
+      {
+          key = "f4";
+          command = "workbench.action.tasks.runTask";
+          args = "Debug kernel";
+      }
+    ];
   };
 
   myipxe = pkgs.ipxe.override {
-        # pixiecore with the flag --ipxe-ipxe delivers a custom
+        # pixiecore with the flag --ipxe-ipxe delivers an internal
         # ipxe payload, and the embedded ipxe script sucks. This
         # is my fix. 
         embedScript = pkgs.writeText "ipxe_script" ''

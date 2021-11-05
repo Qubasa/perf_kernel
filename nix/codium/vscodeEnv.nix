@@ -10,29 +10,22 @@
 ##User input
 { vscode                           ? vscodeDefault
 , nixExtensions                    ? []
-, vscodeExtsFolderName             ? ".vscode-exts"
-# will add to the command updateSettings (which will run on executing vscode) settings to override in settings.json file
+, vscodeBaseDir                    ? ".vscode"
 , settings                         ? {}
-, createSettingsIfDoesNotExists    ? true
 , launch                           ? {}
-, createLaunchIfDoesNotExists      ? true
-# will add to the command updateKeybindings(which will run on executing vscode) keybindings to override in keybinding.json file
 , keybindings                      ? {}
-, createKeybindingsIfDoesNotExists ? true
-, user-data-dir ? ''"''${TMP}/''${name}"/vscode-data-dir''
-
 }:
 let
+  user-data-dir = vscodeBaseDir + "/user-data-dir";
+  vscodeExtsFolderName = vscodeBaseDir + "/vscode-extensions";
+
+
   vscodeWithConfiguration = import ./vscodeWithConfiguration.nix {
     inherit lib writeShellScriptBin extensionsFromVscodeMarketplace writeScript;
     vscodeDefault = vscode;
-  }
-  {
-    inherit nixExtensions vscodeExtsFolderName user-data-dir;
-  };
+  }{ inherit nixExtensions vscodeExtsFolderName user-data-dir; };
 
   updateSettings = import ./updateSettings.nix { inherit lib writeShellScriptBin jq; };
-  userSettingsFolder = "${ user-data-dir }/User";
 
   updateSettingsCmd = updateSettings {
     settings = {
@@ -40,23 +33,20 @@ let
         "extensions.autoUpdate" = false;
         "update.mode" = "none";
     } // settings;
-    inherit userSettingsFolder;
-    createIfDoesNotExists = createSettingsIfDoesNotExists;
-    symlinkFromUserSetting = (user-data-dir != "");
+    vscodeBaseDir = user-data-dir;
+    vscodeSettingsFile = "settings.json";
   };
 
   updateLaunchCmd = updateSettings {
+    vscodeBaseDir = user-data-dir;
     settings = launch;
-    createIfDoesNotExists = createLaunchIfDoesNotExists;
-    vscodeSettingsFile = ".vscode/launch.json";
+    vscodeSettingsFile =  "launch.json";
   };
 
   updateKeybindingsCmd = updateSettings {
     settings = keybindings;
-    createIfDoesNotExists = createKeybindingsIfDoesNotExists;
-    vscodeSettingsFile = ".vscode/keybindings.json";
-    inherit userSettingsFolder;
-    symlinkFromUserSetting = (user-data-dir != "");
+    vscodeSettingsFile = "keybindings.json";
+    vscodeBaseDir = user-data-dir;
   };
 
   code = writeShellScriptBin "code" ''

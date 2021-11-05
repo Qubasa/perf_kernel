@@ -9,8 +9,8 @@
 { vscode ? vscodeDefault
 # extensions to be symlinked into the project's extensions folder
 , nixExtensions        ? []
-, vscodeExtsFolderName ? ".vscode-exts"
-, user-data-dir ? ''"''${TMP}/vscodeWithConfiguration/vscode-data-dir"''
+, vscodeExtsFolderName
+, user-data-dir
 }:
 let
   nixExtsDrvs = nixExtensions;

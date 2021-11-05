@@ -9,7 +9,7 @@
 		"lldb.verboseLogging": true,
 		"lldb.displayFormat": "hex",
 		"lldb.dereferencePointers": true,
-		"lldb.showDisassembly": "always",
+		"lldb.showDisassembly": "auto",
 		"rust-analyzer.trace.extension": true,
 		"rust-analyzer.trace.server": "verbose",
 		"rust-analyzer.diagnostics.enableExperimental": false
