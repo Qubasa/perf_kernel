@@ -9,10 +9,10 @@
 		"lldb.verboseLogging": true,
 		"lldb.displayFormat": "hex",
 		"lldb.dereferencePointers": true,
-		"lldb.showDisassembly": "auto",
 		"rust-analyzer.trace.extension": true,
 		"rust-analyzer.trace.server": "verbose",
-		"rust-analyzer.diagnostics.enableExperimental": false
+		"rust-analyzer.diagnostics.enableExperimental": false,
+		"lldb.showDisassembly": "always",
 	},
 	"tasks": {
 		"version": "2.0.0",
@@ -44,7 +44,7 @@
 				"type": "lldb",
 				"request": "custom",
 				"targetCreateCommands": ["target create ${workspaceFolder}/target/x86_64-os/debug/perf_kernel"],
-				"processCreateCommands": ["gdb-remote localhost:1234", "continue"]
+				"processCreateCommands": ["command alias b breakpoint set -H -n %1", "gdb-remote localhost:1234"]
 			}
 		]
 	}

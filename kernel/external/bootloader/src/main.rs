@@ -15,6 +15,7 @@ use log::LevelFilter;
 mod media_extensions;
 use core::ptr::{addr_of, read_unaligned};
 use multiboot2::MemoryAreaType;
+use raw_cpuid::CpuId;
 use smp::BOOT_INFO;
 
 global_asm!(include_str!("multiboot2_header.s"));
@@ -23,7 +24,7 @@ global_asm!(include_str!("smp_trampoline.s"));
 
 type StackT = [u16; 0x1000 * 15];
 #[no_mangle]
-pub static STACK_SIZE: usize =  core::mem::size_of::<StackT>();
+pub static STACK_SIZE: usize = core::mem::size_of::<StackT>();
 #[no_mangle]
 pub static mut STACK_ARRAY: StackT = [0; 0x1000 * 15];
 
@@ -79,6 +80,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     core::hint::black_box(_kernel_size);
 
     // Initialization
+
     {
         bootloader::serial::init();
         bootloader::vga::init();
@@ -96,12 +98,41 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
                 magic
             );
         }
+        let cpuid = CpuId::new();
+        // Normal checks
+        if let Some(vf) = cpuid.get_vendor_info() {
+            if !(vf.as_str() == "GenuineIntel" || vf.as_str() == "AuthenticAMD") {
+                panic!("Processor is neither from Intel nor from AMD. {:?}", vf);
+            }
+        }
+        let features = cpuid.get_feature_info().unwrap();
+        if !features.has_msr() {
+            panic!("Processor does not support MSR instructions");
+        }
+        if !features.has_pae() {
+            panic!("Processor does not support PAE");
+        }
+        if !features.has_apic() {
+            panic!("Processor does not support APIC interrupt controller");
+        }
+        if !features.has_pat() {
+            panic!("Processor does not support memory page attributes");
+        }
 
-        // Checks that this is a x64 processor
-        use core::arch::x86::__cpuid;
-        let res = __cpuid(0x8000_0001);
-        if res.edx & (1 << 29) == 0 {
+        log::info!(
+            "CPU Family: {:x}h, CPU Model: {:x}h",
+            features.family_id(),
+            features.model_id()
+        );
+        // Extended feature checks
+        let features = cpuid
+            .get_extended_processor_and_feature_identifiers()
+            .unwrap();
+        if !features.has_64bit_mode() {
             panic!("Processor does not support x86_64 instruction set");
+        }
+        if !features.has_execute_disable() {
+            panic!("Processor does not support NX bit");
         }
     }
 
@@ -527,7 +558,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     }
 
     // Enable all media extensions
-    //media_extensions::enable_all();
+    media_extensions::enable_all();
 
     // Enable mmu
     // and load cr3 register with addr of page table
@@ -545,7 +576,9 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     // We assume first apic id is 0. Get the stack for core 0
     let stack_addr: u32 = BOOT_INFO.cores[0]
         .get_stack_start()
-        .expect("Forgot to instantiate kernel stack");
+        .expect("Forgot to instantiate kernel stack") -8;
+
+    log::info!("BSP stack start: {:#x}", stack_addr);
 
     // Read kernel entry point from ELF header
     let entry_addr: u32 = kernel_header.e_entry;

@@ -28,6 +28,7 @@ dependencies = [
  "llvm-tools",
  "log",
  "multiboot2",
+ "raw-cpuid",
  "uart_16550",
  "x86",
 ]
@@ -112,6 +113,7 @@ dependencies = [
  "pc-keyboard",
  "pic8259_simple",
  "rangeset",
+ "raw-cpuid",
  "spin",
  "uart_16550",
  "x86_64",
@@ -145,6 +147,13 @@ dependencies = [
 [[package]]
 name = "rangeset"
 version = "0.1.0"
+
+[[package]]
+name = "raw-cpuid"
+version = "10.2.0"
+dependencies = [
+ "bitflags",
+]
 
 [[package]]
 name = "scopeguard"

@@ -49,6 +49,7 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     for i in 0..bootloader::TSS_STACKS_PER_CPU {
         let stack_start = core.tss.get_stack_start(i).unwrap();
 
+        //log::info!("{} TSS stack: {:#x} - {:#x}", i, stack_start, stack_start-4096 * 30);
         if i < 7 {
             tss.interrupt_stack_table[i] = VirtAddr::new(stack_start as u64);
         }

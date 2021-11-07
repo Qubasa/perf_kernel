@@ -15,9 +15,9 @@ set -e
 cd $CARGO_MANIFEST_DIR
 sh -c 'cargo run' &
 
-sleep 10
-pid=\$(pgrep perf_kernel)
-name=\$(date -d 'today' +'%H_%M_%S')
+#sleep 10
+#pid=\$(pgrep perf_kernel)
+#name=\$(date -d 'today' +'%H_%M_%S')
 
 echo \"Name: \$name Pid: \$pid\"
 #sudo vmsh/target/debug/kernel_inspector coredump \$pid target/\${name}.dump

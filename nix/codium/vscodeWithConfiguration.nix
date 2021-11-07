@@ -43,6 +43,6 @@ in
     fi
     ${vscode}/bin/${vscode.executableName} --extensions-dir "${vscodeExtsFolderName}" ${
       lib.optionalString (user-data-dir != "") "--user-data-dir ${user-data-dir}"
-      } "$@"
+      } "$@" &
   '';
   }

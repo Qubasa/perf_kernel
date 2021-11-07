@@ -60,4 +60,5 @@ reset_state:
     mov es, rax
     mov gs, rax
     mov ds, rax
+    cld
     jmp rsi

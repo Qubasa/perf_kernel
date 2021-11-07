@@ -1,7 +1,7 @@
 use x86_64::registers::control::Cr3;
 // use x86_64::structures::paging::mapper::MapToError;
 use core::ptr::addr_of;
-use core::ptr::read;
+use core::ptr::read_unaligned;
 use x86_64::structures::paging::mapper;
 use x86_64::structures::paging::mapper::MappedFrame;
 use x86_64::structures::paging::mapper::TranslateResult;
@@ -181,7 +181,7 @@ impl BootInfoFrameAllocator {
         let regions = self.memory_map.iter();
 
         let usable_regions = unsafe {
-            regions.filter(|r| read(addr_of!(r.region_type)) == MemoryRegionType::Usable)
+            regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable)
         };
 
         // Reduce frame range to fit into 2Mb pages

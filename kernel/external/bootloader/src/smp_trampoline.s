@@ -8,6 +8,7 @@
 _smp_trampoline:
   # clear the direction flag (e.g. go forward in memory when using
   # instructions like lodsb)
+  cld
   # disable interrupts
   cli
 

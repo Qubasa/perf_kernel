@@ -28,6 +28,7 @@ dependencies = [
  "llvm-tools",
  "log",
  "multiboot2",
+ "raw-cpuid",
  "uart_16550",
  "x86",
 ]
@@ -58,6 +59,13 @@ name = "multiboot2"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "004ef1d859a3efbd94f332855b0c4e3fbd7d5eb4828c99198b58086208005865"
+dependencies = [
+ "bitflags",
+]
+
+[[package]]
+name = "raw-cpuid"
+version = "10.2.0"
 dependencies = [
  "bitflags",
 ]

@@ -158,6 +158,10 @@ extern "x86-interrupt" fn page_fault_handler(
 pub extern "x86-interrupt" fn default_handler<const N: usize>(stack_frame: InterruptStackFrame) {
     log::error!("EXECPTION: Default Interrupt Handler");
     log::error!("This interrupt has not been initialized: {}", N);
+
+    let rsp: u64;
+    unsafe { asm!("mov {}, rsp", out(reg) rsp) };
+    log::info!("rsp: {:#x}", rsp);
     panic!("{:?}", stack_frame);
 }
 
@@ -165,6 +169,9 @@ extern "x86-interrupt" fn general_prot_handler(stack_frame: InterruptStackFrame,
     log::error!("EXCEPTION: General Protection Exception");
     log::error!("Error Code: {:?}", error_code);
     log::error!("{:#?}", stack_frame);
+    let rsp: u64;
+    unsafe { asm!("mov {}, rsp", out(reg) rsp) };
+    log::info!("rsp: {:#x}", rsp);
     hlt_loop();
 }
 

@@ -16,3 +16,6 @@
 [submodule "pxe/external/smoltcp"]
 	path = pxe/external/smoltcp
 	url = git@github.com:Luis-Hebendanz/smoltcp.git
+[submodule "kernel/external/rust-cpuid"]
+	path = kernel/external/rust-cpuid
+	url = git@github.com:Luis-Hebendanz/rust-cpuid.git

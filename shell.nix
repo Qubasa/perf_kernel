@@ -92,6 +92,7 @@
       glibc.dev
       netcat-gnu
       git-extras
+      cutter
       python3
     ] ++ (with pkgs.python39Packages; [
       pyelftools
