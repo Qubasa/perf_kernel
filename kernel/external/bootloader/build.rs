@@ -66,6 +66,7 @@ fn main() {
     {
         let mut cmd = Command::new(llvm_size);
         cmd.arg(&kernel);
+        println!("Executing:\n {:#?}", cmd);
         let output = cmd.output().expect("failed to run llvm-size");
         let output_str = String::from_utf8_lossy(&output.stdout);
         let second_line_opt = output_str.lines().skip(1).next();
@@ -89,6 +90,7 @@ fn main() {
         cmd.arg("--strip-debug");
         cmd.arg(&kernel);
         cmd.arg(&stripped_kernel);
+        println!("Executing:\n {:#?}", cmd);
         let exit_status = cmd
             .status()
             .expect("failed to run objcopy to strip debug symbols");
@@ -128,7 +130,7 @@ fn main() {
         cmd.current_dir(&out_dir);
         cmd.arg(&stripped_kernel_file_name);
         cmd.arg(&kernel_obj);
-
+        println!("Executing:\n {:#?}", cmd);
         let exit_status = cmd.status().expect("failed to run objcopy");
         if !exit_status.success() {
             eprintln!("Error: Running objcopy failed");
@@ -151,6 +153,7 @@ fn main() {
         cmd.arg("crs");
         cmd.arg(&kernel_archive);
         cmd.arg(&kernel_obj);
+        println!("Executing:\n {:#?}", cmd);
         let exit_status = cmd.status().expect("failed to run ar");
         if !exit_status.success() {
             eprintln!("Error: Running ar failed");
@@ -166,7 +169,7 @@ fn main() {
     );
 
     // Display tmp file directory as warning
-    println!("cargo:warning={}", out_dir.display());
+    println!("Artifacts dir: {}", out_dir.display());
     println!("cargo:rerun-if-env-changed=KERNEL");
     println!("cargo:rerun-if-changed={}", kernel.display());
     println!("cargo:rerun-if-changed=build.rs");
@@ -264,8 +267,9 @@ impl fmt::Display for Elf64_Phdr {
         unsafe {
             write!(
                 f,
-                "Virtual Address: {:#x}",
-                read_unaligned(addr_of!(self.p_vaddr))
+                "Virtual Address: {:#x} Offset: {:#x}",
+                read_unaligned(addr_of!(self.p_vaddr)),
+                read_unaligned(addr_of!(self.p_offset))
             )
         }
     }
@@ -276,8 +280,9 @@ impl fmt::Debug for Elf64_Phdr {
         unsafe {
             write!(
                 f,
-                "Virtual Address: {:#x}",
-                read_unaligned(addr_of!(self.p_vaddr))
+                "Virtual Address: {:#x} Offset: {:#x}",
+                read_unaligned(addr_of!(self.p_vaddr)),
+                read_unaligned(addr_of!(self.p_offset))
             )
         }
     }
@@ -487,6 +492,8 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + already_padded
             + 1;
 
+        eprintln!("Start padding at: {:#x} with {:#x} bytes", index, pad_size);
+
         let zero = std::iter::repeat(0).take(pad_size);
         buf.splice(index..index, zero);
 
@@ -503,7 +510,7 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
             + usize::try_from(last.p_filesz).unwrap()
             + already_padded;
 
-        eprintln!("Padding last load segment by: {:#x} bytes", pad_size);
+        eprintln!("Padding last load segment at {:#x} by: {:#x} bytes", index, pad_size);
 
         let zero = std::iter::repeat(0).take(pad_size);
         buf.splice(index..index, zero);
@@ -632,10 +639,9 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
     }
 
     println!(
-        "cargo:warning=Total padding: {} Kb",
+        "Total padding: {} Kb",
         already_padded_vec.iter().sum::<usize>() / 1024
     );
-    eprintln!("Writing to file");
     kernel_fd
         .seek(std::io::SeekFrom::Start(0))
         .expect("Seeking failed");
@@ -643,4 +649,6 @@ fn pad_kernel(kernel: &std::path::PathBuf) {
         .write_all(buf.as_slice())
         .expect("Failed to pad kernel executable");
     kernel_fd.sync_all().unwrap();
+
+  
 }

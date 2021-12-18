@@ -85,6 +85,7 @@ fn run(matches: &ArgMatches) {
     }
 
     let target_dir;
+    let is_verbose = matches.is_present("verbose");
     let is_release;
     let is_test;
     let kernel;
@@ -155,6 +156,7 @@ fn run(matches: &ArgMatches) {
             bootloader_crate,
             &config,
             is_release,
+            is_verbose,
             Some(&features),
             Some(&env_vars),
         );
@@ -256,6 +258,7 @@ fn cargo_build(
     target_crate: &Path,
     config: &config::Config,
     is_release: bool,
+    is_verbose: bool,
     features: Option<&[&str]>,
     env: Option<&[(&str, &str)]>,
 ) -> Vec<PathBuf> {
@@ -283,6 +286,11 @@ fn cargo_build(
     if is_release {
         cmd.arg("--release");
     }
+
+    if is_verbose {
+        cmd.arg("-vv");
+    }
+
     cmd.stdout(process::Stdio::inherit());
     cmd.stderr(process::Stdio::inherit());
     debug!("Running command: {:#?}", cmd);

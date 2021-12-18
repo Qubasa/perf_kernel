@@ -1,8 +1,7 @@
 use crate::println;
 use crate::time::{elapsed, rdtsc};
 use core::arch::x86_64::__cpuid;
-use raw_cpuid::{CpuId};
-
+use raw_cpuid::CpuId;
 
 #[repr(u32)]
 pub enum CpuidIndex {
@@ -46,6 +45,7 @@ pub fn overflow() {
     overflow();
 }
 
+
 pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
 
@@ -64,8 +64,14 @@ pub fn check_support() {
     let cache_info = cpuid.get_l1_cache_and_tlb_info().unwrap();
     log::info!("max num data 2Mib pages: {}", cache_info.dtlb_2m_4m_size());
     log::info!("max num data 4Kib pages: {}", cache_info.dtlb_4k_size());
-    log::info!("max num instruction 2Mib pages: {}", cache_info.itlb_2m_4m_size());
-    log::info!("max num instruction 4Kib pages: {}", cache_info.itlb_4k_size());
+    log::info!(
+        "max num instruction 2Mib pages: {}",
+        cache_info.itlb_2m_4m_size()
+    );
+    log::info!(
+        "max num instruction 4Kib pages: {}",
+        cache_info.itlb_4k_size()
+    );
 }
 
 // TODO: When threading is implemented add a counter where execution time is spent most of the time

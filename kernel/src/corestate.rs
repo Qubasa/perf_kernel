@@ -1,6 +1,6 @@
 use core::{convert::TryFrom, ops::BitAnd};
 use x86_64::addr::VirtAddr;
-use x86_64::instructions::tables::{sgdt, sidt, sldt};
+use x86_64::instructions::tables::{sgdt, sidt};
 use x86_64::registers::control::*;
 use x86_64::registers::model_specific::Efer;
 use x86_64::registers::model_specific::*;
@@ -44,10 +44,9 @@ pub struct CoreState {
     pub cr2: VirtAddr,
     pub cr3: (PhysFrame, Cr3Flags),
     pub cr4: Cr4Flags,
-    pub cr8: u8,
+    pub cr8: Cr8Flags,
     pub gdtr: VirtAddr,
     pub idtr: VirtAddr,
-    pub ldtr: VirtAddr,
     // TR
     pub efer: EferFlags,
     pub syscfg: SyscfgFlags,
@@ -115,7 +114,6 @@ impl CoreState {
             cr8: Cr8::read(),
             gdtr: sgdt().base,
             idtr: sidt().base,
-            ldtr: sldt().base,
             efer: Efer::read(),
             syscfg: Syscfg::read(),
             star: Star::read(),
@@ -429,9 +427,6 @@ impl CoreState {
         }
         if self.cr8 != s.cr8 {
             log::info!("cr8:\n {:#?} \n {:#?}", self.cr8, s.cr8);
-        }
-        if self.ldtr != s.ldtr {
-            log::info!("ldtr:\n {:#?} \n {:#?}", self.ldtr, s.ldtr);
         }
         if self.idtr != s.idtr {
             log::info!("idtr:\n {:#?} \n {:#?}", self.idtr, s.idtr);

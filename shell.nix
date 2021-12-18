@@ -12,12 +12,6 @@
    vscodeBaseDir = toString ./.vscode;
    nixExtensions =  pkgs.vscode-utils.extensionsFromVscodeMarketplace [
       {
-        name = "vscode-rusty-onedark";
-        publisher = "jeraldson";
-        version = "1.0.3";
-        sha256 = "sha256-BuARy+Va+BtF8UqceNDRWHhwaV/PtRePKmd0pJn1DZg=";
-      }
-      {
         name = "language-x86-64-assembly";
         publisher = "13xforever";
         version = "3.0.0";
@@ -40,7 +34,6 @@
       #ms-python.python # Broken on nixos unstable
     ]);
     settings = {
-      workbench.colorTheme = "Rusty One Dark";
       window.menuBarVisibility = "toggle";
       window.zoomLevel = 0;
       editor.fontSize = 16;
@@ -49,6 +42,11 @@
       breadcrumbs.enabled = false;
       files.associations."*.s" = "asm-intel-x86-generic";
       rust-analyzer.inlayHints.parameterHints = false;
+      workbench.colorCustomizations = {
+        statusBar.background = "#1A1A1A";
+        statusBar.noFolderBackground = "#212121";
+        statusBar.debuggingBackground = "#263238";
+      };
     };
 
     keybindings = [
@@ -85,6 +83,7 @@
       rustup
       xorriso
       pixiecore
+      dhcp
       myipxe
       grub2
       qemu

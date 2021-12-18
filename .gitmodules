@@ -19,3 +19,6 @@
 [submodule "kernel/external/rust-cpuid"]
 	path = kernel/external/rust-cpuid
 	url = git@github.com:Luis-Hebendanz/rust-cpuid.git
+[submodule "kernel/external/multiboot2"]
+	path = kernel/external/multiboot2
+	url = git@github.com:Luis-Hebendanz/multiboot2.git

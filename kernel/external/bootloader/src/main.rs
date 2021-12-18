@@ -86,7 +86,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         bootloader::vga::init();
 
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Info);
+        log::set_max_level(LevelFilter::Debug);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::init();
@@ -156,6 +156,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
     {
         let map_tag = parsed_multiboot_headers.memory_map_tag().unwrap();
         for i in map_tag.all_memory_areas() {
+            log::debug!("map tag: {:#x?}", i);
             existing_ram += i.size();
 
             let region = bootinfo::MemoryRegion {
