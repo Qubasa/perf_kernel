@@ -5,7 +5,6 @@ use std::{io, path::Path, process, time::Duration};
 use thiserror::Error;
 use wait_timeout::ChildExt;
 
-
 /// Run the given disk image in QEMU.
 ///
 /// Automatically takes into account the runner arguments and the run/test
@@ -39,15 +38,10 @@ pub fn run(
         run_command.extend(args);
     }
 
-    log::info!("Running: sh -c `{}`", run_command.join(" "));
+    log::info!("Running: `{}`", run_command.join(" "));
 
-    //TODO: Make this windows compatible
-    let mut command = process::Command::new("sh");
-    command.arg("-c");
-    command.args(&run_command[..]);
-
-    // Add current shell vars to command env
-    command.envs(std::env::vars());
+    let mut command = process::Command::new(&run_command[0]);
+    command.args(&run_command[1..]);
 
     let exit_code = if is_test {
         let mut child = command.spawn().map_err(|error| RunError::Io {
