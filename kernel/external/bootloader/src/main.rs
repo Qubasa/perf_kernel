@@ -144,6 +144,13 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         }
     };
 
+    log::info!("name: {}", parsed_multiboot_headers.boot_loader_name_tag().unwrap().name() );
+    log::info!("cmd: {}", parsed_multiboot_headers.command_line_tag().unwrap().command_line());
+
+   for i in parsed_multiboot_headers.module_tags() {
+       log::info!("boot module cmdline {}", i.cmdline());
+   }
+
     // Save smp trampoline addr to BOOT_INFO
     BOOT_INFO.smp_trampoline = &__smp_trampoline_start as *const usize as u32;
 

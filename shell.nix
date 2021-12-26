@@ -8,6 +8,8 @@
     vscodeDefault = pkgs.vscodium;
   };
 
+  ipxe = pkgs.callPackage ./nix/ipxe { };
+
   myvscode = vscodeEnv {
    vscodeBaseDir = toString ./.vscode;
    nixExtensions =  pkgs.vscode-utils.extensionsFromVscodeMarketplace [
@@ -63,17 +65,16 @@
     ];
   };
 
-  myipxe = pkgs.ipxe.override {
-        # pixiecore with the flag --ipxe-ipxe delivers an internal
-        # ipxe payload, and the embedded ipxe script sucks. This
-        # is my fix. 
+  myipxe = (ipxe.override {
+        # Script fixes race condition where router dns replies first
+        # and pxe boot server second
         embedScript = pkgs.writeText "ipxe_script" ''
           #!ipxe
           dhcp
           autoboot
           shell
         '';
-      };
+      });
   in 
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
