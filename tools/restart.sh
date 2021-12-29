@@ -11,20 +11,20 @@ fi
 
 
 find "$CARGO_MANIFEST_DIR" -iname "*.rs" | entr -r -n sh -c "
-set -e
+set -xep
 cd $CARGO_MANIFEST_DIR
 sh -c 'cargo run' &
 
-#sleep 10
-#pid=\$(pgrep perf_kernel)
-#name=\$(date -d 'today' +'%H_%M_%S')
+sleep 10
+pid=\$(pgrep perf_kernel)
+name=\$(date -d 'today' +'%H_%M_%S')
 
 echo \"Name: \$name Pid: \$pid\"
-#sudo vmsh/target/debug/kernel_inspector coredump \$pid target/\${name}.dump
-#python vmsh/tests/coredump_analyze.py target/\${name}.dump > target/dump.analysis &
-#sleep 5
-#rm target/\${name}.dump
-#echo Done
+sudo ../tools/vmsh/target/debug/kernel_inspector coredump \$pid target/\${name}.dump
+python ../tools/vmsh/tests/coredump_analyze.py target/\${name}.dump > target/dump.analysis &
+sleep 5
+rm target/\${name}.dump
+echo Done
 " 
 
 

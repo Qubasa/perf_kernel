@@ -125,7 +125,7 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
     if apic::is_bsp() {
         for lapic in acpi.apics.as_ref().unwrap().iter().skip(1) {
             apic::mp_init(lapic.id, boot_info.smp_trampoline);
-            time::sleep(1000);
+            //time::sleep(100);
         }
     }
 
@@ -176,7 +176,7 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     for test in tests {
         test.run();
     }
-    exit_qemu(QemuExitCode::Success);
+    //exit_qemu(QemuExitCode::Success);
 }
 
 // Prints panic error and quits qemu

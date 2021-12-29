@@ -12,7 +12,7 @@
 		"rust-analyzer.trace.extension": true,
 		"rust-analyzer.trace.server": "verbose",
 		"rust-analyzer.diagnostics.enableExperimental": false,
-		"lldb.showDisassembly": "always",
+		"lldb.showDisassembly": "auto",
 	},
 	"tasks": {
 		"version": "2.0.0",

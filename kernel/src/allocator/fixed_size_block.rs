@@ -5,6 +5,7 @@ use core::ptr;
 
 const ALLOC_STEPS: usize = 16;
 
+
 /* This allocator needs HEAP_SIZE / (ALLOC_STEPS / sizeof(typeof(arr))) of memory
  * as overhead but it uses a fixed size array
  * which is cache coherent
@@ -42,10 +43,34 @@ impl FixedSizeBlockAllocator {
             log::debug!("{}: {:#?}, ", i, self.arr[i]);
         }
     }
-    pub fn print_stats(&self) {
+    pub fn print_non_empty(&self) {
         log::debug!("==== FixedSizeBlockAllocator ====");
-        log::debug!("");
+        for (i, val) in self.arr.iter().enumerate() {
+            if let Some(val) = val {
+                log::debug!("{}: {:#?}, ", i, val);
+            }
+        }
     }
+    pub fn num_non_empty(&self) -> usize {
+        let mut count  = 0;
+        for (_i, val) in self.arr.iter().enumerate() {
+            if let Some(_val) = val {
+                count += 1;
+            }
+        }
+        count
+    }
+
+    pub fn num_bytes_allocated(&self) -> usize {
+        let mut count  = 0;
+        for (_i, val) in self.arr.iter().enumerate() {
+            if let Some(val) = val {
+                count += *val as usize;
+            }
+        }
+        count
+    }
+
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, _layout: &Layout) {
         let index = (ptr as usize - self.heap_start) / ALLOC_STEPS;
@@ -55,11 +80,11 @@ impl FixedSizeBlockAllocator {
                 panic!("dealloced invalid ptr! {:#?}, index: {}", ptr, index);
             }
             Some(_i) => {
-                // log::trace!(
-                //     "dealloced {:#x} bytes at addr: {:#?}",
-                //     _i as usize * ALLOC_STEPS,
-                //     ptr
-                // );
+                log::info!(
+                    "dealloced {:#x} bytes at addr: {:#?}",
+                    _i as usize * ALLOC_STEPS,
+                    ptr
+                );
                 self.arr[index] = None;
             }
         }
@@ -67,6 +92,7 @@ impl FixedSizeBlockAllocator {
 
     unsafe fn alloc(&mut self, layout: &Layout) -> *mut u8 {
         let needed_size = layout.align_to(ALLOC_STEPS).unwrap().pad_to_align().size();
+        log::info!("alloc needed_size {:#x}", needed_size);
         let mut accumulator = 0;
         let mut spot = 0;
 
@@ -95,12 +121,12 @@ impl FixedSizeBlockAllocator {
                         u16::try_from(needed_size / ALLOC_STEPS).expect("alloc size is too big");
                     self.arr[spot] = Some(arr_data);
                     let mem_ptr = spot * ALLOC_STEPS + self.heap_start;
-                    // log::trace!(
-                    //     "alloc_ptr: {:#x}, size: {:#x}, spot: {}",
-                    //     mem_ptr,
-                    //     accumulator,
-                    //     spot
-                    // );
+                    log::info!(
+                        "alloc_ptr: {:#x}, size: {:#x}, spot: {}",
+                        mem_ptr,
+                        accumulator,
+                        spot
+                    );
                     return mem_ptr as *mut u8;
                 }
             }
@@ -149,14 +175,14 @@ unsafe impl GlobalAlloc for Locked<FixedSizeBlockAllocator> {
         let new_size = new_layout.size();
         let old_size = layout.align_to(ALLOC_STEPS).unwrap().pad_to_align().size();
 
-        // log::trace!(
-        //     "realloc ptr: {:#?},
-        //     prev_size: {},
-        //     new_size: {}",
-        //     ptr,
-        //     old_size,
-        //     new_size,
-        // );
+        log::info!(
+            "realloc ptr: {:#?},
+            prev_size: {},
+            new_size: {}",
+            ptr,
+            old_size,
+            new_size,
+        );
 
         use core::cmp::Ordering;
         // Make buffer smaller

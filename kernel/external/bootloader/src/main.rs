@@ -86,7 +86,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         bootloader::vga::init();
 
         log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Debug);
+        log::set_max_level(LevelFilter::Info);
 
         // Load interrupt handlers for x86 mode
         bootloader::interrupts::init();

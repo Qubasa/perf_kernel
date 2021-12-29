@@ -11,9 +11,11 @@ use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use perf_kernel::{allocator::HEAP_START, bench::Bench, klog, print, println};
+use perf_kernel::{allocator::HEAP_START, allocator::ALLOCATOR, bench::Bench, klog, print, println};
 
 entry_point!(main);
+
+static mut TEST_LOCK: spin::Mutex<u8> = spin::Mutex::new(0);
 
 fn main(boot_info: &'static BootInfo) -> ! {
     klog::init();
@@ -53,32 +55,35 @@ use core::intrinsics::copy;
 
 #[test_case]
 fn simple_allocation() {
-    let mut bench = Bench::start();
+
     let heap_value_1 = Box::new(41);
     let heap_value_2 = Box::new(13);
     assert_eq!(*heap_value_1, 41);
     assert_eq!(*heap_value_2, 13);
-    bench.end();
+
     black_box(&heap_value_1);
     black_box(&heap_value_2);
 }
 
-#[test_case]
+//#[test_case]
 fn zero_alloc() {
     unsafe {
+        let lock = TEST_LOCK.lock();
         let layout = Layout::new::<u16>();
         let ptr = alloc_zeroed(layout);
 
         assert_eq!(*(ptr as *mut u16), 0);
 
         dealloc(ptr, layout);
+        black_box(lock);
     }
 }
 
-#[test_case]
+//#[test_case]
 fn realloc_grow_forward() {
     unsafe {
-        let mut bench = Bench::start();
+        let lock = TEST_LOCK.lock();
+
         let layout = Layout::from_size_align(32, 16).unwrap();
         let old_ptr = alloc(layout);
 
@@ -92,13 +97,15 @@ fn realloc_grow_forward() {
         assert_eq!(*(new_ptr as *mut u16).offset(1), 0xdead);
 
         dealloc(new_ptr, layout);
-        bench.end();
+
+        black_box(lock);
     }
 }
 
-#[test_case]
+//#[test_case]
 fn realloc_copy_grow() {
     unsafe {
+        let lock = TEST_LOCK.lock();
         let mut bench = Bench::start();
         let layout = Layout::from_size_align(32, 16).unwrap();
         let old_ptr = alloc(layout);
@@ -117,11 +124,13 @@ fn realloc_copy_grow() {
         dealloc(new_ptr, layout);
         dealloc(obstacle_ptr, layout);
         bench.end();
+        black_box(lock);
     }
 }
 
-#[test_case]
+//#[test_case]
 fn realloc_copy_shrink() {
+    let lock = unsafe {TEST_LOCK.lock() };
     unsafe {
         let mut bench = Bench::start();
         let layout = Layout::from_size_align(32, 16).unwrap();
@@ -141,27 +150,41 @@ fn realloc_copy_shrink() {
         dealloc(obstacle_ptr, layout);
         bench.end();
     }
+    black_box(lock);
 }
+
 
 #[test_case]
 fn heap_full_alloc() {
-    unsafe {
-        let mut bench = Bench::start();
-        let layout = Layout::array::<u8>(HEAP_SIZE - 512).unwrap();
-        let ptr = black_box(alloc(layout));
 
-        log::info!("ptr: {:x?}", ptr);
-        // let failed_layout = Layout::array::<u8>(1).unwrap();
-        // let failed_ptr = alloc(failed_layout);
-        // assert_eq!(failed_ptr, core::ptr::null_mut());
-        dealloc(ptr, layout);
-        bench.end();
-    }
+    let mut vec:Vec::<usize> = Vec::new();
+    let mut i = 0;
+    let len = vec.len();
+    let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
+    log::info!("Start resize...");
+    vec.resize_with(new_len, || { i+=1; i });
+    log::info!("Done resizing.");
+    let sum: usize = vec.iter().sum();
+
+    let n = new_len-len;
+    assert_eq!(sum, (n.pow(2)+n)/2);
+    
+    let mut vec2:Vec::<usize> = Vec::new();
+    let mut i = 0;
+    let len = vec2.len();
+    let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
+    log::info!("Start resize2...");
+    vec2.resize_with(new_len, || { i+=1; i });
+    log::info!("Done resizing2.");
+    let sum: usize = vec.iter().sum();
+
+    let n = new_len-len;
+    assert_eq!(sum, (n.pow(2)+n)/2);
+    black_box(vec);
 }
 
 #[test_case]
 fn mult_alloc() {
-    let mut bench = Bench::start();
     {
         let heap_value_1 = Box::new(41);
         let heap_value_2 = Box::new(13);
@@ -173,34 +196,29 @@ fn mult_alloc() {
     let heap_value_1 = Box::<u64>::new(0xdeadbeef);
     black_box(&heap_value_1);
     assert_eq!(*heap_value_1, 0xdeadbeef);
-    bench.end();
 }
 
 use alloc::vec::Vec;
 
 #[test_case]
 fn large_vec() {
-    let mut bench = Bench::start();
     let n = 1000;
     let mut vec = Vec::new();
     for i in 0..n {
         vec.push(i);
     }
     assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
-    bench.end();
 }
 
 use perf_kernel::allocator::HEAP_SIZE;
 
 #[test_case]
 fn many_boxes() {
-    let mut bench = Bench::start();
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         black_box(&x);
         assert_eq!(*x, i);
     }
-    bench.end();
 }
 
 #[allow(dead_code)]
@@ -235,7 +253,7 @@ struct Test2 {
 
 #[test_case]
 fn multiple_vecs() {
-    let mut bench = Bench::start();
+
     let mut vec0 = Vec::new();
     let mut vec1 = Vec::new();
     let mut vec2 = Vec::new();
@@ -272,5 +290,4 @@ fn multiple_vecs() {
     black_box(&vec2);
     black_box(&vec0);
 
-    bench.end();
 }

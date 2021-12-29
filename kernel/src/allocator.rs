@@ -32,6 +32,7 @@ pub fn init_heap(
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
 
+        log::info!("Heap start: {:#x} heap end: {:#x}", heap_start, heap_end+1u64);
         Page::range_inclusive(heap_start_page, heap_end_page)
     };
 
