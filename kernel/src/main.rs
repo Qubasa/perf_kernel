@@ -46,44 +46,43 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    let mut heap_addr = 0x5c00000 as *mut u8;
-    log::info!("write bytes to {:?}", heap_addr);
-    unsafe {
-        core::ptr::write_bytes(heap_addr, 0xAA, 0x200000);
-    };
+    // let mut heap_addr = 0x5c00000 as *mut u8;
+    // log::info!("write bytes to {:?}", heap_addr);
+    // unsafe {
+    //     core::ptr::write_bytes(heap_addr, 0xAA, 0x200000);
+    // };
 
-
-    {
-        use perf_kernel::{allocator::HEAP_START, allocator::HEAP_SIZE, allocator::ALLOCATOR, bench::Bench, klog, print, println};
-        use core::hint::black_box;
-        use alloc::boxed::Box;
-        use alloc::vec::Vec;
-        use core::intrinsics::copy;
-        let mut vec:Vec::<usize> = Vec::new();
-        let mut i = 0;
-        let len = vec.len();
-        let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
-        log::info!("Start resize... new_len: {:x}, sizeof(usize) {:#x}",new_len, core::mem::size_of::<usize>());
-        vec.resize_with(new_len, || { i+=1; i });
-        log::info!("Done resizing.");
-        let sum: usize = vec.iter().sum();
+    // {
+    //     use perf_kernel::{allocator::HEAP_START, allocator::HEAP_SIZE, allocator::ALLOCATOR, bench::Bench, klog, print, println};
+    //     use core::hint::black_box;
+    //     use alloc::boxed::Box;
+    //     use alloc::vec::Vec;
+    //     use core::intrinsics::copy;
+    //     let mut vec:Vec::<usize> = Vec::new();
+    //     let mut i = 0;
+    //     let len = vec.len();
+    //     let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
+    //     log::info!("Start resize... new_len: {:x}, sizeof(usize) {:#x}",new_len, core::mem::size_of::<usize>());
+    //     vec.resize_with(new_len, || { i+=1; i });
+    //     log::info!("Done resizing.");
+    //     let sum: usize = vec.iter().sum();
     
-        let n = new_len-len;
-        assert_eq!(sum, (n.pow(2)+n)/2);
+    //     let n = new_len-len;
+    //     assert_eq!(sum, (n.pow(2)+n)/2);
 
-        let mut vec2:Vec::<usize> = Vec::new();
-        let mut i = 0;
-        let len = vec2.len();
-        let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
-        log::info!("Start resize2...");
-        vec2.resize_with(new_len, || { i+=1; i });
-        log::info!("Done resizing2.");
-        let sum: usize = vec.iter().sum();
+    //     let mut vec2:Vec::<usize> = Vec::new();
+    //     let mut i = 0;
+    //     let len = vec2.len();
+    //     let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
+    //     log::info!("Start resize2...");
+    //     vec2.resize_with(new_len, || { i+=1; i });
+    //     log::info!("Done resizing2.");
+    //     let sum: usize = vec.iter().sum();
     
-        let n = new_len-len;
-        assert_eq!(sum, (n.pow(2)+n)/2);
-        black_box(vec);
-    }
+    //     let n = new_len-len;
+    //     assert_eq!(sum, (n.pow(2)+n)/2);
+    //     black_box(vec);
+    // }
 
     perf_kernel::hlt_loop();
 }

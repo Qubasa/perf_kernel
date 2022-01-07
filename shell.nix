@@ -20,6 +20,12 @@
         sha256 = "sha256-wIsY6Fuhs676EH8rSz4fTHemVhOe5Se9SY3Q9iAqr1M=";
       }
       {
+        name = "vscode-coverage-gutters";
+        publisher = "ryanluker";
+        version = "2.8.2";
+        sha256 = "sha256-gMzFI0Z9b7I7MH9v/UC7dXCqllmXcqHVJU7xMozmMJc=";
+      }
+      {
         name = "llvm";
         publisher = "rreverser";
         version = "0.1.1";
@@ -78,6 +84,8 @@
   in 
   pkgs.mkShell rec {
     buildInputs = with pkgs; [
+      evcxr # rust repl
+      cargo-tarpaulin # for code coverage
       myvscode
       rust-analyzer
       zlib.out
@@ -89,8 +97,10 @@
       grub2
       qemu
       entr
-      glibc.dev
+      #glibc.dev # Creates problems with tracy
+      #valgrind
       netcat-gnu
+      tracy
       git-extras
       cutter
       python3

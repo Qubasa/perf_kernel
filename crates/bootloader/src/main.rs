@@ -457,7 +457,7 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         panic!("Invalid value zero for MAX_CORES constant");
     }
 
-    // Allocate eight 132KiB stacks + 8 KiB Guard Page per core for TSS
+    // Allocate eight 120KiB stacks + 8 KiB Guard Page per core for TSS
     // NOTE: If you want to move this into a separate function don't do it...yet.
     // We would need a copy/clone of the memory map for the FrameAllocator and this oversteps the stack
     // we first need a proper stack guard to catch these kinds of bugs in the bootloader
@@ -466,8 +466,8 @@ unsafe extern "C" fn bootloader_main(magic: u32, mboot2_info_ptr: u32) {
         use pagetable::PageTable;
         use pagetable::PageTableFlags;
         let allocator = pagetable::BootInfoFrameAllocator::new(&BOOT_INFO.memory_map);
-        let stack_size = 4096 * 30; // 132 KiB
-        let guard_page = 4096 * 2; // 12 KiB
+        let stack_size = 4096 * 30; // 120 KiB
+        let guard_page = 4096 * 2; // 8 KiB
 
         // Create iterator that on every next() call returns a new mutable pde page table
         let mut p1_allocator =

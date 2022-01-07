@@ -184,7 +184,7 @@ impl BootInfoFrameAllocator {
             regions.filter(|r| read_unaligned(addr_of!(r.region_type)) == MemoryRegionType::Usable)
         };
 
-        // Reduce frame range to fit into 2Mb pages
+        // Reduce end of frame range to fit into T::SIZE
         let adjusted_regions = usable_regions.map(|r| {
             let diff = r.range.size() % T::SIZE;
             if diff != 0 {
@@ -213,7 +213,7 @@ impl BootInfoFrameAllocator {
             r
         });
 
-        // Filter out regions smaller then 2Mb
+        // Filter out regions smaller then T::SIZE
         let adjusted_regions = adjusted_regions.filter(move |r| r.range.size() >= T::SIZE);
 
         // map each region to its address range
@@ -222,8 +222,7 @@ impl BootInfoFrameAllocator {
         // transform to an iterator of frame start addresses
         let frame_addresses = addr_ranges.flat_map(move |r| r.step_by(T::SIZE as usize));
 
-        // panic!("Missing check if start addr is PageSize aligned");
-        // // create `PhysFrame` types from the start addresses
+        // create `PhysFrame` types from the start addresses
         frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
     }
 }
@@ -232,6 +231,7 @@ impl BootInfoFrameAllocator {
 unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let frame = self.usable_frames::<Size4KiB>().nth(self.next);
+        log::info!("Allocated frame {:#x?}", frame);
         self.next += 1;
         frame
     }
@@ -239,7 +239,9 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
 
 unsafe impl FrameAllocator<Size2MiB> for BootInfoFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size2MiB>> {
+
         let frame = self.usable_frames::<Size2MiB>().nth(self.next);
+        log::info!("Allocated frame {:#x?}", frame);
         self.next += (Size2MiB::SIZE / Size4KiB::SIZE) as usize;
         frame
     }

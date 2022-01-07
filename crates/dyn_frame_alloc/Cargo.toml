@@ -1,0 +1,14 @@
+[package]
+name = "dyn_frame_alloc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[dependencies]
+simple_logger = "=1.13.0"
+log = "=0.4.14"
+#tracing-tracy = {version="0.8", features = ["enable"] }
+#tracy-client = {version="0.12", features = [ "enable" ] }
+#tracy-client-sys = {version ="0.16", features = ["enable"]}

@@ -1,0 +1,8 @@
+[build]
+target = "i686-unknown-linux-gnu"
+
+
+[unstable]
+build-std-features = ["compiler-builtins-mem"]
+build-std = ["std", "core", "compiler_builtins", "alloc"]
+

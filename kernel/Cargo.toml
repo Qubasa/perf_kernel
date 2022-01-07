@@ -19,12 +19,12 @@ log = {version = "=0.4.11", features = ["release_max_level_trace"] }
 modular-bitfield = "=0.11.2"
 spin = "=0.9.2"
 
-pic8259_simple = { path="external/pic8259_simple"  }
-uart_16550 = { path = "external/uart_16550"  }
-rangeset = {path = "external/rangeset"}
-x86_64 = {path= "external/x86_64"}
-bootloader = { path="external/bootloader" }
-raw-cpuid = { path="external/rust-cpuid" }
+pic8259_simple = { path="../crates/pic8259_simple"  }
+uart_16550 = { path = "../crates/uart_16550"  }
+rangeset = {path = "../crates/rangeset"}
+x86_64 = {path= "../crates/x86_64"}
+bootloader = { path="../crates/bootloader" }
+raw-cpuid = { path="../crates/rust-cpuid" }
 
 # cargo run command options
 [package.metadata.glue_gun]

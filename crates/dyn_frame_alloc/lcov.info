@@ -1,0 +1,46 @@
+TN:
+SF:/home/lhebendanz/Projects/svm_kernel/crates/dyn_frame_alloc/src/lib.rs
+FN:28,new<4194304, 100>
+FN:50,alloc<4194304, 4096>
+FNF:2
+FNDA:4,new<4194304, 100>
+FNDA:4,alloc<4194304, 4096>
+DA:28,4
+DA:29,4
+DA:30,4
+DA:31,8
+DA:32,4
+DA:35,4
+DA:50,4
+DA:51,4
+DA:52,1
+DA:55,6
+DA:57,3
+DA:58,3
+DA:59,3
+DA:60,6
+DA:61,3
+DA:62,9
+DA:64,6
+DA:65,6
+DA:66,3
+DA:67,3
+DA:68,0
+DA:71,3
+DA:72,3
+DA:76,3
+DA:77,6
+DA:78,6
+DA:79,3
+DA:80,9
+DA:82,3
+DA:84,3
+DA:85,3
+DA:86,3
+DA:87,3
+DA:88,1
+DA:90,4
+DA:96,0
+LF:36
+LH:34
+end_of_record
