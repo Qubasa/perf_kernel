@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../../kernel"
+		},
+		{
+			"path": "../x86"
 		}
 	],
 	"settings": {
