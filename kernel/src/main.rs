@@ -23,7 +23,7 @@
  * family: 0x17h, model: 0x18h
  */
 
-use core::ptr::addr_of_mut;
+//use core::ptr::addr_of_mut;
 
 use bootloader::bootinfo;
 use bootloader::entry_point;

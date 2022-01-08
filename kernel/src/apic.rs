@@ -216,10 +216,17 @@ unsafe fn init_timer() {
     let timer = u32::from_le_bytes(timer.into_bytes());
     write_apic(Register::ApicTimer, timer);
 
-    // Calculate this on every cpu anew
-    // by measuring the time with a different clock
-    let one_ms = 423845;
-    write_apic(Register::TimerInitialCount, one_ms * 1000);
+    //TODO: Do this only once, not for every core
+    // Calculate apic tics per second by measuring elapsed ticks
+    // through the PIT timer
+    write_apic(Register::TimerInitialCount, u32::MAX);
+
+    // sleep 1s
+    crate::time::sleep(1000*1000);
+
+    let ticks_elapsed  = u32::MAX - read_apic(Register::TimerCurrentCount);
+
+    write_apic(Register::TimerInitialCount, ticks_elapsed);
 }
 
 fn apic_id_from_mem() -> u8 {

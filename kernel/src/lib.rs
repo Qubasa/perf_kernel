@@ -115,12 +115,19 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
         boot_info,
     );
 
+    {
+        let (core, core_index) = boot_info
+        .cores
+        .get_by_apic_id(crate::apic::apic_id())
+        .unwrap();
+
+        log::info!(
+            "Enabling interrupts for core index {} apic_id {}", core_index, core.get_apic_id().unwrap()
+        );
+    }
     // Enable interrupts
-    log::info!(
-        "Enabling interrupts for core {}",
-        read(addr_of!(boot_info.cores.num_booted_cores)) - 1
-    );
     x86_64::instructions::interrupts::enable();
+
 
     if apic::is_bsp() {
         for lapic in acpi.apics.as_ref().unwrap().iter().skip(1) {

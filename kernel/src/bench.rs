@@ -59,19 +59,6 @@ pub fn check_support() {
     if res.edx == 0 {
         panic!("Rdtscp instruction is not supported");
     }
-
-    let cpuid = CpuId::new();
-    let cache_info = cpuid.get_l1_cache_and_tlb_info().unwrap();
-    log::info!("max num data 2Mib pages: {}", cache_info.dtlb_2m_4m_size());
-    log::info!("max num data 4Kib pages: {}", cache_info.dtlb_4k_size());
-    log::info!(
-        "max num instruction 2Mib pages: {}",
-        cache_info.itlb_2m_4m_size()
-    );
-    log::info!(
-        "max num instruction 4Kib pages: {}",
-        cache_info.itlb_4k_size()
-    );
 }
 
 // TODO: When threading is implemented add a counter where execution time is spent most of the time
