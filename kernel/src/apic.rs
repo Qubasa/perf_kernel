@@ -45,16 +45,34 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
         panic!("Trampoline vector can't use 0xA0-0xBF. Reserved by spec.");
     }
 
-    // Send STARTUP ipi
+    // Create INIT IPI
+    let low = InterCmdRegLow::new()
+            .with_vec(0) // Needs to be 0 for INIT
+            .with_trigger_mode(0) // edge-triggered
+            .with_msg_type(0b101) // INIT type
+            .with_level(1) // 1 for everything else
+            ;
+
+    let high = InterCmdRegHigh::new().with_dest(apic_id);
+
+    // Send INIT IPI (SIPI)
+    send_ipi(&low, &high);
+
+    // Sleep 10 milliseconds
+    crate::time::sleep(10*1000);
+
+    // Create STARTUP IPI
     let low = InterCmdRegLow::new()
             .with_vec(to_vec) // Core execute code at 0x000VV000
-            .with_trigger_mode(0) // level-sensitive
+            .with_trigger_mode(0) // edge-triggered
             .with_msg_type(0b110) // STARTUP type
             .with_level(1) // 1 for everything else
             ;
-    //TODO: Read spec again and implement wait here
 
-    let high = InterCmdRegHigh::new().with_dest(apic_id);
+    // Send Startup IPI (SIPI)
+    send_ipi(&low, &high);
+
+    // Send Startup IPI (SIPI)
     send_ipi(&low, &high);
 }
 
@@ -76,6 +94,7 @@ unsafe fn send_ipi(low: &InterCmdRegLow, high: &InterCmdRegHigh) {
         u32::from_le_bytes(low.into_bytes()),
     );
 
+    crate::time::sleep(200);
     if ipi_pending() {
         panic!("APIC has not completed sending the IPI");
     }

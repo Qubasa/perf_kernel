@@ -12,7 +12,7 @@ fn main() {
     let mut f = FrameAllocator::<FOURMB, 1>::new(128);
 //    span!("some span");
     let mut addr = 0;
-    for _ in 0..FOURMB {
+    for _ in 0..TWOMB {
         
         addr = f.alloc(1).unwrap();
     }
