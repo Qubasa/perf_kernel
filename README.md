@@ -1,11 +1,8 @@
-## ==== WORK IN PROGRESS ====
+## Bachelor Thesis
 
-Working SMP/multicore support, there is still some work to be done.
+[Bachelor Thesis](https://git.tu-berlin.de/luishebendanz/bachelor_thesis)
 
 
-### End Goal
-Perf Kernel, is a new domain-specific x64 kernel that focuses solely on performance and provides researchers with an easy way to move from user space to kernel space.
-This means there are no Spectre or Meltdown patches or any kind of user/kernel separation. Only one process and at most two threads per core are allowed. A classic interrupt based scheduler that reduces performance is not required. A cooperative scheduler is provided by the kernel, i.e. 'async/wait' can be used. The allocator is cache-optimised and the MMU uses large pages to reduce memory access latency. The kernel itself is built with sse and avx optimizations. Performance registers are enabled and accessible via KVM. A Perf-like tool produces performance statistics for the kernel code.
 
 ## Setup & Debug Build
 Clone the repo with submodules:
@@ -121,7 +118,7 @@ You can find the file under `<project_root>/perf_kernel/external/bootloader/targ
 
 
 ## Debugging MMU with vmsh
-[vmsh](https://vmsh.org/) is a tool developed by Jörg Thalheim that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](tools/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
+[vmsh](https://vmsh.org/) is a tool that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](tools/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
 
 Excerpt:
 ```
