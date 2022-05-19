@@ -91,18 +91,14 @@
       zlib.out
       rustup
       xorriso
-      pixiecore
       dhcp
       myipxe
       grub2
       qemu
-      entr
+      entr # bash file change detector
       #glibc.dev # Creates problems with tracy
-      #valgrind
       netcat-gnu
-      tracy
       git-extras
-      cutter
       python3
     ] ++ (with pkgs.python39Packages; [
       pyelftools

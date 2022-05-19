@@ -15,14 +15,16 @@ const APIC_BASE: u64 = 0x0_0000_FEE0_0000;
 
 pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
     log::info!("Booting core {}", apic_id);
-    // Send INIT ipi
+    // Create INIT IPI
     let low = InterCmdRegLow::new()
             .with_vec(0) // INIT needs vec to be zero
-            .with_trigger_mode(0) // level-sensitive
+            .with_trigger_mode(0) // edge-triggered
             .with_msg_type(0b101) // INIT type
             .with_level(0) // 0 for INIT
             ;
     let high = InterCmdRegHigh::new().with_dest(apic_id);
+
+    // Sent INIT IPI
     send_ipi(&low, &high);
 
     // Convert func pointer to u64
@@ -45,20 +47,7 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
         panic!("Trampoline vector can't use 0xA0-0xBF. Reserved by spec.");
     }
 
-    // Create INIT IPI
-    let low = InterCmdRegLow::new()
-            .with_vec(0) // Needs to be 0 for INIT
-            .with_trigger_mode(0) // edge-triggered
-            .with_msg_type(0b101) // INIT type
-            .with_level(1) // 1 for everything else
-            ;
-
-    let high = InterCmdRegHigh::new().with_dest(apic_id);
-
-    // Send INIT IPI (SIPI)
-    send_ipi(&low, &high);
-
-    // Sleep 10 milliseconds
+    // Sleep 10 milliseconds as by spec
     crate::time::sleep(10*1000);
 
     // Create STARTUP IPI
@@ -69,10 +58,10 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
             .with_level(1) // 1 for everything else
             ;
 
-    // Send Startup IPI (SIPI)
+    // Sent Startup IPI (SIPI)
     send_ipi(&low, &high);
 
-    // Send Startup IPI (SIPI)
+    // Sent Startup IPI (SIPI)
     send_ipi(&low, &high);
 }
 
@@ -93,8 +82,10 @@ unsafe fn send_ipi(low: &InterCmdRegLow, high: &InterCmdRegHigh) {
         Register::InterCmdRegLow,
         u32::from_le_bytes(low.into_bytes()),
     );
-
+    // Sleep 200 microseconds as by spec
     crate::time::sleep(200);
+
+    // Check if ipi has been sent successfull
     if ipi_pending() {
         panic!("APIC has not completed sending the IPI");
     }

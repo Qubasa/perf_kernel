@@ -28,12 +28,12 @@ raw-cpuid = { path="../crates/rust-cpuid" }
 
 # cargo run command options
 [package.metadata.glue_gun]
-#run-command = ["qemu-system-x86_64","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=1", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
-#debug-run-command = ["qemu-system-x86_64", "-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=1", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
-run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8","-cdrom", "{}", "-display", "none" ,"-serial", "stdio", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
+run-command = ["qemu-system-x86_64","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
+debug-run-command = ["qemu-system-x86_64", "-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S"]
+#run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8","-cdrom", "{}", "-display", "none" ,"-serial", "stdio", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]
 
 # IPXE
 # run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8","-fda" ,"$IPXE/ipxe.dsk", "-display", "none" ,"-serial", "stdio", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel", "-net", "nic", "-net", "tap,ifname=kmania_tap0,script=no,downscript=no"]
-debug-run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8","-fda" ,"$IPXE/ipxe.dsk","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S", "-net", "nic", "-net", "tap,ifname=kmania_tap0,script=no,downscript=no"]
+#debug-run-command = ["qemu-kvm","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu", "host","-smp","cores=8","-fda" ,"$IPXE/ipxe.dsk","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G",  "-name", "perf_kernel,process=perf_kernel", "-s", "-S", "-net", "nic", "-net", "tap,ifname=kmania_tap0,script=no,downscript=no"]
 test-success-exit-code = 33         # (0x10 << 1) | 1
 test-timeout = 55          # (in seconds)

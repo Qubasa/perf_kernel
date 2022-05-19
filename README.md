@@ -39,17 +39,22 @@ $ cd <project_root>/kernel
 $ cargo run
 ```
 
-To build on filechange:
-```bash
-$ ./tools/restart.sh
-```
-
 ## Integrated code editor
 This projects ships with a customized & pinned vscodium (vscode without telemetry) with all the necessary addons. Included features are:
 - in editor kernel debugging with source code breakpoints and variables window
 - rust analyzer completion support of kernel code
 - clippy linting
 - rust optimized dark theme 
+
+
+Open kernel source
+```bash
+# Open kernel source code
+$ code kernel/kernel.code-workspace
+
+# Open bootloader source code
+$ code crates/bootloader/bootloader.code-workspace
+```
 
 ### Keyboard shortcuts
 - `F4` builds and runs the kernel in qemu awaiting a debugger
@@ -66,7 +71,7 @@ $ cd <project_root>/kernel
 $ r2 target/x86_64-os/debug/perf_kernel # View kernel asm
 ```
 
-Look into [kernel/external/bootloader/linker.ld](kernel/external/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
+Look into [crates/bootloader/linker.ld](crates/bootloader/linker.ld) to find the offset where the kernel gets mapped to.
 
 ## Debug with gdb
 
@@ -143,16 +148,9 @@ $ dd bs=5M if=target/x86_64-os/release/bootimage-perf_kernel.iso of=/dev/<YourUS
 ```
 
 ## PXE boot
-To PXE boot the kernel execute:
-```bash
-$ sudo pixiecore boot <project_root>/perf_kernel/target/x86_64-os/debug/isofiles/boot/kernel.elf --ipxe-bios $IPXE/undionly.kpxe --dhcp-no-bind
-```
-You may wonder where the environment variable `$IPXE` came from. Look into `shell.nix` in there we build a pinned version of ipxe with a custom ipxe script that fixes an issue in `pixiecore's` chain loading.
+Previously I tried to use `pixiecore` to setup PXE however there are a couple of incompatibilities because it always uses it's own IPXE build integrated into the tool.
+But IPXE does not currently support Multibootv2 booting, that's why shell.nix builds a custom version of IPXE that can be found under `$IPXE/undionly.kpxe`
 
-If you experience issues with PXE failing to get a DHCP offer then make sure that no iptables rule is in the way. A hacky way to check that is by executing:
-```bash
-$ iptables -F
-```
 
 ## LLVM assembly
 If you are interested in the LLVM assembly of your kernel then execute `cargo asm` this generates the LLVM asm in release mode under: `target/x86_64-os/release/deps/perf_kernel-*.s`
