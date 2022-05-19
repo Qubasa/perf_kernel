@@ -4,7 +4,8 @@ Working SMP/multicore support, there is still some work to be done.
 
 
 ### End Goal
-x86_64 rust multicore kernel optimized for extreme performance at any cost. This means no spectre or meltdown patches or any kind of user/kernel separation. There is only one process and at most two threads per core allowed. This means there is no need for a classical scheduler which reduces performance. A cooperative scheduler is provided by the kernel, this means `async/wait` can be used. The allocator is cache optimized and the MMU uses huge pages to reduce memory access latency. The kernel itself is build with sse and avx optimizations. Performance registers are enabled and exposed over KVM and a perf like tool plots performance statistics of the kernel code. 
+Perf Kernel, is a new domain-specific x64 kernel that focuses solely on performance and provides researchers with an easy way to move from user space to kernel space.
+This means there are no Spectre or Meltdown patches or any kind of user/kernel separation. Only one process and at most two threads per core are allowed. A classic interrupt based scheduler that reduces performance is not required. A cooperative scheduler is provided by the kernel, i.e. 'async/wait' can be used. The allocator is cache-optimised and the MMU uses large pages to reduce memory access latency. The kernel itself is built with sse and avx optimizations. Performance registers are enabled and accessible via KVM. A Perf-like tool produces performance statistics for the kernel code.
 
 ## Setup & Debug Build
 Clone the repo with submodules:
@@ -159,12 +160,12 @@ If you are interested in the LLVM assembly of your kernel then execute `cargo as
 The build system is highly custom but well integrated into cargo. The [glue_gun](tools/glue_gun/README.md) tool goes into more detail.
 
 Important configuration files for the build system are:
-* [.cargo/config](kernel/.cargo/config)
+* [.cargo/config.toml](kernel/.cargo/config.toml)
 * [Cargo.toml](kernel/Cargo.toml)
 * [x86_64-os.json](kernel/x86_64-os.json)
-* [i686-uknown-linux-gnu.json](kernel/external/bootloader/i686-unknown-linux-gnu.json)
-* [linker.ld](kernel/external/bootloader/linker.ld)
-* [build.rs](kernel/external/bootloader/build.rs)
+* [i686-uknown-linux-gnu.json](crates/bootloader/i686-unknown-linux-gnu.json)
+* [linker.ld](crates/bootloader/linker.ld)
+* [build.rs](crates/bootloader/build.rs)
 * [rust-toolchain](rust-toolchain)
 
 ## Run tests
