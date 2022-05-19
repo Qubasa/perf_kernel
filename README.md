@@ -1,6 +1,6 @@
 ## Bachelor Thesis
 
-[Bachelor Thesis](https://git.tu-berlin.de/luishebendanz/bachelor_thesis)
+[Bachelor Thesis Repository](https://git.tu-berlin.de/luishebendanz/bachelor_thesis)
 
 
 
