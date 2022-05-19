@@ -15,7 +15,7 @@ The installation script requires that you have `sudo` access to `root`.
 ```bash
 $ curl -L https://nixos.org/nix/install | sh
 ```
-You may ask yourself why I use this weird package manager. The answer is simple: A completely reproducable and pinned development environment that works across every Linux distribution the same. Also through nix installed packages are contained and have no side effects on your system. 
+Why the nix package manager? Because of a completely reproducable and pinned development environment that works across every Linux distribution the same. Also through nix installed packages are contained and have no side effects on your system. 
 
 
 To download all required pinned dependencies just execute:
@@ -180,18 +180,6 @@ $ cargo test --test heap_allocator
 * AMD Ryzen 5 3500U
 * EPYC-v1
 * AMD Family 17h Model 18h
-
-## Resources
-* https://os.phil-opp.com/
-* https://www.amd.com/system/files/TechDocs/24593.pdf
-* https://github.com/gamozolabs/chocolate_milk/
-* https://uefi.org/sites/default/files/resources/ACPI_6_3_final_Jan30.pdf
-* [Use 1Gib pages sparringly](https://forum.osdev.org/viewtopic.php?f=1&t=32699)
-* [Don't touch MTRRs](https://forum.osdev.org/viewtopic.php?t=29034&p=246311)
-* https://virtio-fs.gitlab.io/index.html#overview
-* https://gitlab.redox-os.org/redox-os/tfs
-* http://9p.cat-v.org/
-* https://www.linux-kvm.org/page/Tuning_Kernel
 
 
 
