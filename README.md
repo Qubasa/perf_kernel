@@ -121,7 +121,7 @@ You can find the file under `<project_root>/perf_kernel/external/bootloader/targ
 
 
 ## Debugging MMU with vmsh
-[vmsh](https://github.com/Luis-Hebendanz/vmsh/tree/kernel_inspector) is a tool that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](https://github.com/Luis-Hebendanz/perf_kernel/blob/master/perf_kernel/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
+[vmsh](https://vmsh.org/) is a tool developed by Jörg Thalheim that spawns a thread in a qemu process to extract the kvm filedescriptor. This enables us to read VM guest memory from the host. The [restart.sh](tools/restart.sh) does all of this automatically and then writes the MMU state as text into `target/dump.analysis`   
 
 Excerpt:
 ```

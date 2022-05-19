@@ -32,7 +32,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ perl cdrkit xz openssl gnu-efi mtools ] ++ lib.optional stdenv.hostPlatform.isx86 syslinux;
 
   src = fetchgit {
-    url = https://github.com/Luis-Hebendanz/ipxe;
+    url = https://git.tu-berlin.de/luishebendanz/ipxe;
     branchName = "multibootv2";
     rev = "b992d767355eff5db41735ffe1dcc475790fad52";
     sha256 = "sha256-VRxH69KUPGHFaGTtAQguJ+DiqwPaNfmxXzXxE1B5shQ=";
