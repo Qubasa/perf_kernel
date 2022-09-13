@@ -104,11 +104,11 @@
       in
       rec {
         packages.default = naersk-lib.buildPackage {
-          src = ./kernel;
+          src = ./.;
           buildInputs = buildDeps;
           root = ./kernel;
           #remapPathPrefix = false;
-          #singleStep = true;
+          singleStep = true;
         };
         defaultPackage = packages.default;
 
