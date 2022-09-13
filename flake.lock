@@ -137,6 +137,21 @@
     },
     "flake-utils_3": {
       "locked": {
+        "lastModified": 1659877975,
+        "narHash": "sha256-zllb8aq3YO3h8B/U0/J1WBgAL8EX5yWf5pMj3G0NAmc=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "c0e246b9b83f637f4681389ecabcb2681b4f3af0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "flake-utils_4": {
+      "locked": {
         "lastModified": 1656928814,
         "narHash": "sha256-RIFfgBuKz6Hp89yRr7+NR5tzIAbn52h8vT6vXkYjZoM=",
         "owner": "numtide",
@@ -150,7 +165,7 @@
         "type": "github"
       }
     },
-    "flake-utils_4": {
+    "flake-utils_5": {
       "locked": {
         "lastModified": 1642700792,
         "narHash": "sha256-XqHrk7hFb+zBvRg6Ghl+AZDq03ov6OshJLiSWOoX5es=",
@@ -275,6 +290,28 @@
         "type": "github"
       }
     },
+    "nix-ipxe": {
+      "inputs": {
+        "flake-utils": "flake-utils_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1663066730,
+        "narHash": "sha256-8MSdVzO5L9Hp6S+eN5/+02k/eaaGTdxzMyvsxG6fS54=",
+        "owner": "luis-hebendanz",
+        "repo": "ipxe",
+        "rev": "a4c64d5d14bcc70a57297738667054c42146d3b2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "luis-hebendanz",
+        "ref": "multibootv2",
+        "repo": "ipxe",
+        "type": "github"
+      }
+    },
     "nix-parse-gdt": {
       "inputs": {
         "naersk": "naersk_2",
@@ -299,7 +336,7 @@
     },
     "nixos-codium": {
       "inputs": {
-        "flake-utils": "flake-utils_2",
+        "flake-utils": "flake-utils_3",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -383,6 +420,7 @@
         "flake-utils": "flake-utils",
         "glue-gun": "glue-gun",
         "nci": "nci",
+        "nix-ipxe": "nix-ipxe",
         "nix-parse-gdt": "nix-parse-gdt",
         "nixos-codium": "nixos-codium",
         "nixpkgs": "nixpkgs_3",
@@ -409,7 +447,7 @@
     },
     "rust-overlay": {
       "inputs": {
-        "flake-utils": "flake-utils_3",
+        "flake-utils": "flake-utils_4",
         "nixpkgs": [
           "nixpkgs"
         ]
@@ -461,7 +499,7 @@
     "vmsh-flake": {
       "inputs": {
         "fenix": "fenix",
-        "flake-utils": "flake-utils_4",
+        "flake-utils": "flake-utils_5",
         "microvm": "microvm",
         "nixpkgs": [
           "nixpkgs"
