@@ -1,8 +1,8 @@
-{ pgks, vscode, ... }:
+{ pkgs, vscode, vscodeBaseDir }:
 
 
 vscode.override {
-  vscodeBaseDir = toString ./.vscode;
+  inherit vscodeBaseDir;
   nixExtensions = pkgs.vscode-utils.extensionsFromVscodeMarketplace [
     {
       name = "language-x86-64-assembly";

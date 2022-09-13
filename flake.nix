@@ -33,7 +33,11 @@
           extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
         };
 
-        mycodium = import ./vscode { vscode = nixos-codium.packages.${system}.default; inherit pkgs; };
+        mycodium = import ./vscode.nix {
+          vscode = nixos-codium.packages.${system}.default;
+          inherit pkgs;
+          vscodeBaseDir = "/tmp/nixos-codium-perfkernel";
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -62,19 +66,19 @@
             llvm
           ]);
 
-          LIBCLANG_PATH= pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
-        
-          BINDGEN_EXTRA_CLANG_ARGS = 
-          # Includes with normal include path
-          (builtins.map (a: ''-I"${a}/include"'') [
-            pkgs.glibc.dev 
-          ])
-          # Includes with special directory paths
-          ++ [
-            ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
-          ];
+          LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
 
-          HISTFILE=toString ./.history;
+          BINDGEN_EXTRA_CLANG_ARGS =
+            # Includes with normal include path
+            (builtins.map (a: ''-I"${a}/include"'') [
+              pkgs.glibc.dev
+            ])
+            # Includes with special directory paths
+            ++ [
+              ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
+            ];
+
+          HISTFILE = toString ./.history;
         };
 
       });
