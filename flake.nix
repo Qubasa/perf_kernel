@@ -7,8 +7,20 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    vmsh-flake = {
+      url = "github:mic92/vmsh";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixos-codium = {
       url = "github:luis-hebendanz/nixos-codium";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-parse-gdt = {
+      url = "github:luis-hebendanz/parse-gdt";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nix-ipxe = {
+      url = "github:luis-hebendanz/ipxe?ref=multibootv2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     glue-gun = {
@@ -26,7 +38,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nci, rust-overlay, glue-gun, flake-utils, nixos-codium, ... }:
+  outputs = { self, nixpkgs, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -36,8 +48,20 @@
         myrust = pkgs.rust-bin.nightly."2021-10-26".default.override {
           extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
         };
-
+        vmsh = vmsh-flake.packages.${system}.vmsh;
+        parse-gdt = nix-parse-gdt.packages.${system}.default;
         glue_gun = glue-gun.packages.${system}.default;
+
+        myipxe = nix-ipxe.packages.${system}.default.override {
+          # Script fixes race condition where router dns replies first
+          # and pxe boot server second
+          embedScript = pkgs.writeText "ipxe_script" ''
+            #!ipxe
+            dhcp
+            autoboot
+            shell
+          '';
+        };
         mycodium = import ./vscode.nix {
           vscode = nixos-codium.packages.${system}.default;
           inherit pkgs;
@@ -47,7 +71,10 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            myipxe
+            vmsh
             glue_gun
+            parse-gdt
             mycodium
             myrust
             evcxr # rust repl
@@ -71,6 +98,8 @@
             bintools
             llvm
           ]);
+          
+          IPXE = myipxe;
 
           LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
 

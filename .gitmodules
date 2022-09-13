@@ -1,3 +1,0 @@
-[submodule "vmsh"]
-	path = tools/vmsh
-	url = git@git.tu-berlin.de:luishebendanz/vmsh.git
