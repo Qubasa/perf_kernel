@@ -17,8 +17,8 @@
 		"lldb.dereferencePointers": true,
 		"rust-analyzer.trace.extension": true,
 		"rust-analyzer.trace.server": "verbose",
-		"rust-analyzer.diagnostics.enableExperimental": false,
 		"lldb.showDisassembly": "auto",
+		"rust-analyzer.diagnostics.experimental.enable": false,
 	},
 	"tasks": {
 		"version": "2.0.0",

@@ -2,7 +2,7 @@
 name = "perf_kernel"
 version = "0.1.0"
 authors = ["Luis Hebendanz <luis.nixos@gmail.com>"]
-edition = "2018"
+edition = "2018" 
 
 # TODO: cargo test --release does not work if enabled
 [profile.release]

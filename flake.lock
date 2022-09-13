@@ -69,11 +69,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1662507674,
-        "narHash": "sha256-vnXfje4pfTqDEqI837GCT+hNKqzfVwPen++gnLVO9F0=",
+        "lastModified": 1662979080,
+        "narHash": "sha256-igrkeZImFEhrekCyksKFuVEQGYQ71OlWgherP37zs/8=",
         "owner": "nix-community",
         "repo": "dream2nix",
-        "rev": "5ba9061857e3e265538c9785bb56bda2bb8f9bca",
+        "rev": "26083c3a2ea6f5cc0da6540b51b2affb8c38be49",
         "type": "github"
       },
       "original": {
@@ -189,11 +189,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1663030637,
-        "narHash": "sha256-rjucaYNXFkO4b4Bt6cW4amY2/5pdYCnY62/ooxbYwAY=",
+        "lastModified": 1663063017,
+        "narHash": "sha256-NwRWC/PHQsqFK02nnx0hP3WxXeWSWxw6/Ne0MUC6p8o=",
         "owner": "luis-hebendanz",
         "repo": "glue_gun",
-        "rev": "7fba533dcc93d9d64725811a68723438d0683017",
+        "rev": "0b5fd47fa27ec87eb486f1f6aa3d937bed4f5b06",
         "type": "github"
       },
       "original": {
@@ -248,6 +248,27 @@
     },
     "naersk_2": {
       "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1662220400,
+        "narHash": "sha256-9o2OGQqu4xyLZP9K6kNe1pTHnyPz0Wr3raGYnr9AIgY=",
+        "owner": "nix-community",
+        "repo": "naersk",
+        "rev": "6944160c19cb591eb85bbf9b2f2768a935623ed3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "master",
+        "repo": "naersk",
+        "type": "github"
+      }
+    },
+    "naersk_3": {
+      "inputs": {
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
@@ -277,11 +298,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1662965447,
-        "narHash": "sha256-1YHJczq/kiT6yJIPRSVhzhU09kJZd9bja3MnvuEmgjM=",
+        "lastModified": 1663051774,
+        "narHash": "sha256-VSCbHnpSJgPiRNzX7RW3PMJLZ78eOn8QcXMN7JkOTtk=",
         "owner": "yusdacra",
         "repo": "nix-cargo-integration",
-        "rev": "e600c2dac4ea52282f0804fdc12624919af063b0",
+        "rev": "7554bfe5a07b8a2ee973e95532a931b82b9302b3",
         "type": "github"
       },
       "original": {
@@ -298,11 +319,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1663066730,
-        "narHash": "sha256-8MSdVzO5L9Hp6S+eN5/+02k/eaaGTdxzMyvsxG6fS54=",
+        "lastModified": 1663081640,
+        "narHash": "sha256-3x76hgN4WIxFFAoEdporlrPddjs6ZCNRAd5KwrWvGVc=",
         "owner": "luis-hebendanz",
         "repo": "ipxe",
-        "rev": "a4c64d5d14bcc70a57297738667054c42146d3b2",
+        "rev": "328b698e99a55de5bc8bd4a7fb9650f034e131e0",
         "type": "github"
       },
       "original": {
@@ -314,7 +335,7 @@
     },
     "nix-parse-gdt": {
       "inputs": {
-        "naersk": "naersk_2",
+        "naersk": "naersk_3",
         "nixpkgs": [
           "nixpkgs"
         ],
@@ -419,6 +440,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "glue-gun": "glue-gun",
+        "naersk": "naersk_2",
         "nci": "nci",
         "nix-ipxe": "nix-ipxe",
         "nix-parse-gdt": "nix-parse-gdt",
@@ -453,11 +475,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1662951744,
-        "narHash": "sha256-Z3X4OKTvkbFLHMpLsNj84ps4auKse9QIXYBPq3XF9Ns=",
+        "lastModified": 1663038100,
+        "narHash": "sha256-DpqF/1FYpUo3Fm54oBaXzdqIG7BuRkHHFOgLM0uVVF0=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "d88cd53d7bc148b5979175b8f3e6e86b477fe715",
+        "rev": "dbd08f5b5469e1e24f00de45ddc73c26290a2bcb",
         "type": "github"
       },
       "original": {
