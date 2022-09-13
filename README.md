@@ -1,9 +1,3 @@
-## Bachelor Thesis
-
-[Bachelor Thesis Repository](https://git.tu-berlin.de/luishebendanz/bachelor_thesis)
-
-
-
 ## Setup & Debug Build
 Clone the repo with submodules:
 ```bash
