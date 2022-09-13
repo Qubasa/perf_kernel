@@ -11,6 +11,10 @@
       url = "github:luis-hebendanz/nixos-codium";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    glue-gun = {
+      url = "github:luis-hebendanz/glue_gun";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -22,7 +26,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, nci, rust-overlay, flake-utils, nixos-codium, ... }:
+  outputs = { self, nixpkgs, nci, rust-overlay, glue-gun, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -33,6 +37,7 @@
           extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
         };
 
+        glue_gun = glue-gun.packages.${system}.default;
         mycodium = import ./vscode.nix {
           vscode = nixos-codium.packages.${system}.default;
           inherit pkgs;
@@ -42,6 +47,7 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            glue_gun
             mycodium
             myrust
             evcxr # rust repl

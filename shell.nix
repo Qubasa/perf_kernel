@@ -2,7 +2,7 @@
   , pkgs ? import sources.nixpkgs {}
   }:
 
-  let 
+  let
   vscodeEnv = pkgs.callPackage ./nix/codium/vscodeEnv.nix {
     extensionsFromVscodeMarketplace = pkgs.vscode-utils.extensionsFromVscodeMarketplace;
     vscodeDefault = pkgs.vscodium;
