@@ -27,28 +27,33 @@
       url = "github:luis-hebendanz/glue_gun";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    fenix = {
+    nix-fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    dream2nix.url = "github:nix-community/dream2nix";
+
+    crane.url = "github:ipetkov/crane";
+    crane.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = {
-    self, nixpkgs,  fenix, dream2nix, glue-gun,
+    self, nixpkgs,  nix-fenix, glue-gun, crane,
     nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils,
     nixos-codium, ... } :
+    flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
-        system = "x86_64-linux";
-        overlays = [ (import fenix.overlay) ];
+        fenix = nix-fenix.packages.${system};
+        overlays = [ nix-fenix.overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
         toolchain = fenix.toolchainOf {
           channel = "nightly";
           date = "2021-10-26";
+          sha256 = "sha256-1hLbypXA+nuH7o3AHCokzSBZAvQxvef4x9+XxO3aBao=";
         };
         myrust = toolchain.withComponents [
+          "rustc"
           "rustfmt"
           "llvm-tools-preview"
           "rust-src"
@@ -76,6 +81,7 @@
         };
 
         buildDeps = with pkgs; [
+          cargo-tarpaulin
           myipxe
           vmsh
           glue_gun
@@ -83,15 +89,13 @@
           mycodium
           myrust
           evcxr # rust repl
-          cargo-tarpaulin # for code coverage
-          rust-analyzer
+          rust-analyzer-nightly
           zlib.out
           xorriso
           dhcp
           grub2
           qemu
           entr # bash file change detector
-          #glibc.dev # Creates problems with tracy
           netcat-gnu
           git-extras
           python3
@@ -104,35 +108,31 @@
           llvm
         ]);
       in
-      (dream2nix.lib.makeFlakeOutputs {
-        systems = [ system ];
-        config.projectRoot = ./kernel;
-        config.disableIfdWarning = true;
-        source = ./.;
-        settings = [
-          {
-            builder = "crane";
-            translator = "cargo-toml";
-          }
-        ];
-        packageOverrides = {
-          # override all packages and set a toolchain
-          "^.*" = {
-            set-toolchain.overrideRustToolchain = old: { cargo = toolchain; };
-            check-toolchain-version.overrideAttrs = old: {
-              buildPhase = ''
-                currentCargoVersion="$(cargo --version)"
-                customCargoVersion="$(${toolchain}/bin/cargo --version)"
-                if [[ "$currentCargoVersion" != "$customCargoVersion" ]]; then
-                  echo "cargo version is $currentCargoVersion but it needs to be $customCargoVersion"
-                  exit 1
-                fi
-                ${old.buildPhase or ""}
-              '';
-            };
-          };
+      rec {
+        packages.default = crane.lib.${system}.buildPackage {
+          src = ./.;
+          
         };
-      }) // {
-      checks.x86_64-linux.perf_kernel = self.packages.x86_64-linux.perf_kernel;
-    };
+
+        devShells.default = pkgs.mkShell {
+          buildInputs = buildDeps;
+
+          IPXE = myipxe;
+
+          LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
+
+          BINDGEN_EXTRA_CLANG_ARGS =
+            # Includes with normal include path
+            (builtins.map (a: ''-I"${a}/include"'') [
+              pkgs.glibc.dev
+            ])
+            # Includes with special directory paths
+            ++ [
+              ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
+            ];
+
+          HISTFILE = toString ./.history;
+        };
+
+      });
 }

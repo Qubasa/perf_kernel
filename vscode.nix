@@ -28,7 +28,7 @@ vscode.override {
     tamasfe.even-better-toml
     serayuzgur.crates
     jnoortheen.nix-ide
-    matklad.rust-analyzer
+    rust-lang.rust-analyzer-nightly
     vadimcn.vscode-lldb
     #ms-python.python # Broken on nixos unstable
   ]);
