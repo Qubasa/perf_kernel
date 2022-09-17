@@ -27,36 +27,34 @@
       url = "github:luis-hebendanz/glue_gun";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-luispkgs.url = "github:Luis-Hebendanz/nixpkgs/fix_buildRustPackage";
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
+    fenix = {
+      url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    naersk = {
-      url = "github:nix-community/naersk/master";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nci = {
-      url = "github:yusdacra/nix-cargo-integration";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-    };
+    dream2nix.url = "github:nix-community/dream2nix";
   };
 
-  outputs = { self, nixpkgs, naersk, nci, rust-overlay,  nix-luispkgs, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
-    flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
+  outputs = {
+    self, nixpkgs,  fenix, dream2nix, glue-gun,
+    nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils,
+    nixos-codium, ... } :
       let
-        naersk-lib = pkgs.callPackage naersk { };
-        overlays = [ (import rust-overlay) ];
-        luispkgs = import  nix-luispkgs {
-          inherit system overlays;
-        };
+        system = "x86_64-linux";
+        overlays = [ (import fenix.overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        myrust = pkgs.rust-bin.nightly."2021-10-26".default.override {
-          extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
+        toolchain = fenix.toolchainOf {
+          channel = "nightly";
+          date = "2021-10-26";
         };
+        myrust = toolchain.withComponents [
+          "rustfmt"
+          "llvm-tools-preview"
+          "rust-src"
+          "cargo"
+          "clippy"
+        ];
         vmsh = vmsh-flake.packages.${system}.vmsh;
         parse-gdt = nix-parse-gdt.packages.${system}.default;
         glue_gun = glue-gun.packages.${system}.default;
@@ -106,48 +104,35 @@
           llvm
         ]);
       in
-      rec {
-        packages.default = luispkgs.rustPlatform.buildRustPackage {
-          pname = "perfkernel";
-          version = "0.0.1";
-
-          src = ./.;
-          #sourceRoot = ./.;
-
-          cargoLock = {
-            lockFile = ./kernel/Cargo.lock;
-          };
-
-          #cargoVendorDir = ./kernel;
-
-          meta = with pkgs.lib; {
-            description = "x64 rust multicore kernel optimized for extreme performance at any cost.";
-            homepage = "https://github.com/Luis-Hebendanz/perf_kernel";
-            license = licenses.unlicense;
-            maintainers = [ maintainers.luis ];
+      (dream2nix.lib.makeFlakeOutputs {
+        systems = [ system ];
+        config.projectRoot = ./kernel;
+        config.disableIfdWarning = true;
+        source = ./.;
+        settings = [
+          {
+            builder = "crane";
+            translator = "cargo-toml";
+          }
+        ];
+        packageOverrides = {
+          # override all packages and set a toolchain
+          "^.*" = {
+            set-toolchain.overrideRustToolchain = old: { cargo = toolchain; };
+            check-toolchain-version.overrideAttrs = old: {
+              buildPhase = ''
+                currentCargoVersion="$(cargo --version)"
+                customCargoVersion="$(${toolchain}/bin/cargo --version)"
+                if [[ "$currentCargoVersion" != "$customCargoVersion" ]]; then
+                  echo "cargo version is $currentCargoVersion but it needs to be $customCargoVersion"
+                  exit 1
+                fi
+                ${old.buildPhase or ""}
+              '';
+            };
           };
         };
-        defaultPackage = packages.default;
-
-        devShells.default = pkgs.mkShell {
-          buildInputs = buildDeps;
-
-          IPXE = myipxe;
-
-          LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
-
-          BINDGEN_EXTRA_CLANG_ARGS =
-            # Includes with normal include path
-            (builtins.map (a: ''-I"${a}/include"'') [
-              pkgs.glibc.dev
-            ])
-            # Includes with special directory paths
-            ++ [
-              ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
-            ];
-
-          HISTFILE = toString ./.history;
-        };
-
-      });
+      }) // {
+      checks.x86_64-linux.perf_kernel = self.packages.x86_64-linux.perf_kernel;
+    };
 }
