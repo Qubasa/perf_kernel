@@ -27,6 +27,7 @@
       url = "github:luis-hebendanz/glue_gun";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-luispkgs.url = "github:Luis-Hebendanz/nixpkgs/luispkgs";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -42,11 +43,14 @@
     };
   };
 
-  outputs = { self, nixpkgs, naersk, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
+  outputs = { self, nixpkgs, naersk, nci, rust-overlay,  nix-luispkgs, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         naersk-lib = pkgs.callPackage naersk { };
         overlays = [ (import rust-overlay) ];
+        luispkgs = import  nix-luispkgs {
+          inherit system overlays;
+        };
         pkgs = import nixpkgs {
           inherit system overlays;
         };
@@ -103,12 +107,25 @@
         ]);
       in
       rec {
-        packages.default = naersk-lib.buildPackage {
+        packages.default = luispkgs.rustPlatform.buildRustPackage {
+          pname = "perfkernel";
+          version = "0.0.1";
+
           src = ./.;
-          buildInputs = buildDeps;
-          root = ./kernel;
-          #remapPathPrefix = false;
-          singleStep = true;
+          sourceRoot = ./.;
+
+         # cargoLock = {
+          ##  lockFile = ./kernel/Cargo.lock;
+          #};
+
+          cargoVendorDir = ./kernel;
+
+          meta = with pkgs.lib; {
+            description = "x64 rust multicore kernel optimized for extreme performance at any cost.";
+            homepage = "https://github.com/Luis-Hebendanz/perf_kernel";
+            license = licenses.unlicense;
+            maintainers = [ maintainers.luis ];
+          };
         };
         defaultPackage = packages.default;
 
