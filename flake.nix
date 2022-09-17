@@ -27,7 +27,7 @@
       url = "github:luis-hebendanz/glue_gun";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nix-luispkgs.url = "github:Luis-Hebendanz/nixpkgs/luispkgs";
+    nix-luispkgs.url = "github:Luis-Hebendanz/nixpkgs/fix_buildRustPackage";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -112,13 +112,13 @@
           version = "0.0.1";
 
           src = ./.;
-          sourceRoot = ./.;
+          #sourceRoot = ./.;
 
-         # cargoLock = {
-          ##  lockFile = ./kernel/Cargo.lock;
-          #};
+          cargoLock = {
+            lockFile = ./kernel/Cargo.lock;
+          };
 
-          cargoVendorDir = ./kernel;
+          #cargoVendorDir = ./kernel;
 
           meta = with pkgs.lib; {
             description = "x64 rust multicore kernel optimized for extreme performance at any cost.";
