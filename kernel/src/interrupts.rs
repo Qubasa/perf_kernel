@@ -1,6 +1,7 @@
 use crate::apic;
 use crate::print;
 use crate::tss;
+use core::arch::asm;
 
 use pic8259_simple::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};

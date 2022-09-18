@@ -2,6 +2,7 @@
 
 pub use super::model_specific::{Efer, EferFlags};
 use bitflags::bitflags;
+use core::arch::asm;
 
 /// System software can use the TPR register to temporarily block low-priority interrupts from
 /// interrupting a high-priority task. This is accomplished by loading TPR with a value corresponding to

@@ -1,4 +1,5 @@
 //! Functions to load GDT, IDT, and TSS structures.
+use core::arch::asm;
 
 use crate::structures::gdt::SegmentSelector;
 use crate::VirtAddr;

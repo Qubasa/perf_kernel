@@ -1,6 +1,7 @@
 //! Access to I/O ports
 
 use core::marker::PhantomData;
+use core::arch::asm;
 
 pub use crate::structures::port::{PortRead, PortWrite};
 

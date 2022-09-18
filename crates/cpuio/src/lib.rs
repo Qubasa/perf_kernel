@@ -3,8 +3,6 @@
 
 
 #![no_std]
-#![feature(asm)]
-#![feature(const_fn_trait_bound)]
 use core::marker::PhantomData;
 
 #[cfg(any(target_arch="x86", target_arch="x86_64"))]

@@ -45,12 +45,15 @@
   outputs = { self, nixpkgs, naersk, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
-        naersk-lib = pkgs.callPackage naersk { };
+        naersk-lib = pkgs.callPackage naersk {
+          cargo = myrust;
+          rustc = myrust;
+         };
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        myrust = pkgs.rust-bin.nightly."2021-10-26".default.override {
+        myrust = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
         };
         vmsh = vmsh-flake.packages.${system}.vmsh;
@@ -107,7 +110,7 @@
           src = ./.;
           buildInputs = buildDeps;
           root = ./kernel;
-          #remapPathPrefix = false;
+          preBuild = "cd kernel";
           singleStep = true;
         };
         defaultPackage = packages.default;

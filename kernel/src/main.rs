@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)] // https://github.com/rust-lang/rfcs/blob/master/text/2318-custom-test-frameworks.md
 #![test_runner(perf_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-#![feature(asm)]
 #![feature(test)]
 #![feature(bench_black_box)]
 #![allow(unreachable_code)]

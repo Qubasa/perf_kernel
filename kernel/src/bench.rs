@@ -1,6 +1,8 @@
 use crate::println;
 use crate::time::{elapsed, rdtsc};
 use core::arch::x86_64::__cpuid;
+use core::arch::asm;
+
 use raw_cpuid::CpuId;
 
 #[repr(u32)]

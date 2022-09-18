@@ -1,4 +1,5 @@
 //! Access to I/O ports
+use core::arch::asm;
 
 use core::fmt;
 use core::marker::PhantomData;

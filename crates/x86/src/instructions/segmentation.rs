@@ -1,6 +1,7 @@
 //! Provides functions to read and write segment registers.
 
 use crate::structures::gdt::SegmentSelector;
+use core::arch::asm;
 
 /// Reload code segment register.
 ///

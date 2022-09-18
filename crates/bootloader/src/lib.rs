@@ -6,8 +6,6 @@
 //! blog for an explanation.
 
 #![no_std]
-#![feature(global_asm)]
-#![feature(asm)]
 #![feature(abi_x86_interrupt)]
 #![feature(test)]
 #![feature(bench_black_box)]

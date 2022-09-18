@@ -1,4 +1,6 @@
 //! Functions to read and write model specific registers.
+use core::arch::asm;
+
 
 use bitflags::bitflags;
 // imports for intra doc links

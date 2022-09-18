@@ -1,4 +1,5 @@
 //! Processor state stored in the RFLAGS register.
+use core::arch::asm;
 
 #[cfg(feature = "instructions")]
 pub use self::x86_64::*;

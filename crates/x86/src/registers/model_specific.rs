@@ -1,6 +1,7 @@
 //! Functions to read and write model specific registers.
 
 use bitflags::bitflags;
+use core::arch::asm;
 
 /// A model specific register.
 #[derive(Debug)]

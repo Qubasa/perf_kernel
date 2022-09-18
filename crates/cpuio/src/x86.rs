@@ -1,4 +1,5 @@
 //! Rust wrappers around the x86-family I/O instructions.
+use core::arch::asm;
 
 /// Read a `u8`-sized value from `port`.
 pub unsafe fn inb(port: u16) -> u8 {

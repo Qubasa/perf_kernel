@@ -1,6 +1,7 @@
 #![cfg(feature = "instructions")]
 
 //! Special x86_64 instructions.
+use core::arch::asm;
 
 pub mod interrupts;
 pub mod port;

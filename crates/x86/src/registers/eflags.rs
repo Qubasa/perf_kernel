@@ -2,6 +2,7 @@
 
 #[cfg(feature = "instructions")]
 pub use self::x86_64::*;
+use core::arch::asm;
 
 use bitflags::bitflags;
 

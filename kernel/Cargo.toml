@@ -26,6 +26,7 @@ x86_64 = {path= "../crates/x86_64"}
 bootloader = { path="../crates/bootloader" }
 raw-cpuid = { path="../crates/rust-cpuid" }
 
+
 # cargo run command options
 [package.metadata.glue_gun]
 run-command = ["qemu-system-x86_64","-monitor", "tcp:localhost:8124,server,nowait", "-no-reboot","-cpu" ,"EPYC-v1" ,"-smp","cores=4", "-cdrom", "{}","-serial", "stdio", "-display", "none", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-m", "4G", "-name", "perf_kernel,process=perf_kernel"]

@@ -1,4 +1,5 @@
 //! Provides functions to read and write segment registers.
+use core::arch::asm;
 
 pub use crate::registers::segmentation::{Segment, Segment64, CS, DS, ES, FS, GS, SS};
 use crate::{

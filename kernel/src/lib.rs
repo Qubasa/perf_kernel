@@ -8,7 +8,7 @@
 #![feature(alloc_error_handler)]
 #![feature(bench_black_box)]
 #![feature(const_mut_refs)]
-#![feature(asm)]
+
 #![feature(test)]
 #![feature(maybe_uninit_uninit_array)]
 #![no_std]

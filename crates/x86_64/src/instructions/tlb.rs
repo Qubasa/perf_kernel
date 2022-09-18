@@ -1,4 +1,5 @@
 //! Functions to flush the translation lookaside buffer (TLB).
+use core::arch::asm;
 
 use crate::VirtAddr;
 

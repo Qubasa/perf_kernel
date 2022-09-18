@@ -3,9 +3,6 @@
 
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(feature = "const_fn", feature(const_mut_refs))] // GDT add_entry()
-#![cfg_attr(feature = "const_fn", feature(const_fn_fn_ptr_basics))] // IDT new()
-#![cfg_attr(feature = "const_fn", feature(const_fn_trait_bound))] // PageSize marker trait
-#![cfg_attr(feature = "inline_asm", feature(asm))]
 #![cfg_attr(feature = "abi_x86_interrupt", feature(abi_x86_interrupt))]
 #![cfg_attr(feature = "doc_cfg", feature(doc_cfg))]
 #![warn(missing_docs)]

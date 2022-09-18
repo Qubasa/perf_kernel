@@ -1,7 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(global_asm)]
-#![feature(asm)]
 #![feature(test)]
 #![feature(bench_black_box)]
 
@@ -11,6 +9,7 @@ use bootloader::{acpi, bootinfo};
 use bootloader::{klog::LOGGER, pagetable, smp};
 use core::convert::TryInto;
 use log::LevelFilter;
+use core::arch::global_asm;
 
 mod media_extensions;
 use core::ptr::{addr_of, read_unaligned};

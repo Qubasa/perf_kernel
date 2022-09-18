@@ -1,5 +1,6 @@
 //! Access to various extended system registers
 use bitflags::bitflags;
+use core::arch::asm;
 
 /// Extended feature enable mask register
 #[derive(Debug)]
