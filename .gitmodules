@@ -1,0 +1,6 @@
+[submodule "deps/perf_bootloader"]
+	path = deps/perf_bootloader
+	url = git@github.com:Luis-Hebendanz/perf_bootloader.git
+[submodule "deps/glue_gun"]
+	path = deps/glue_gun
+	url = git@github.com:Luis-Hebendanz/glue_gun.git
