@@ -4,3 +4,28 @@
 [submodule "deps/glue_gun"]
 	path = deps/glue_gun
 	url = git@github.com:Luis-Hebendanz/glue_gun.git
+[submodule "deps/uart_16550"]
+	path = deps/uart_16550
+	url = git@github.com:Luis-Hebendanz/uart_16550.git
+[submodule "deps/x86_64"]
+	path = deps/x86_64
+	url = git@github.com:Luis-Hebendanz/x86_64.git
+	branch = new_registers
+[submodule "deps/cpuio"]
+	path = deps/cpuio
+	url = git@github.com:Luis-Hebendanz/cpuio.git
+[submodule "deps/rust-cpuid"]
+	path = deps/rust-cpuid
+	url = git@github.com:Luis-Hebendanz/rust-cpuid.git
+[submodule "deps/dyn_frame_alloc"]
+	path = deps/dyn_frame_alloc
+	url = git@github.com:Luis-Hebendanz/dyn_frame_alloc.git
+[submodule "deps/rangeset"]
+	path = deps/rangeset
+	url = git@github.com:Luis-Hebendanz/rangeset.git
+[submodule "deps/pic8259_simple"]
+	path = deps/pic8259_simple
+	url = git@github.com:Luis-Hebendanz/pic8259_simple.git
+[submodule "deps/x86"]
+	path = deps/x86
+	url = git@github.com:Luis-Hebendanz/x86.git
