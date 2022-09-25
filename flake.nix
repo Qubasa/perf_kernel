@@ -134,22 +134,13 @@
         ]);
       in
       rec {
-        # packages.default = naersk-lib.buildPackage {
-        #   src = ./.;
-        #   buildInputs = buildDeps;
-        #   root = ./kernel;
-        #   preBuild = "cd kernel";
-        #   singleStep = true;
-        # };
-       
-      packages.default = craneLib.buildPackage {
-        src = craneLib.cleanCargoSource ./kernel;
-
-        # Add extra inputs here or any other derivation settings
-        doCheck = false;
-        buildInputs = buildDeps;
-        nativeBuildInputs = [];
-      };
+        packages.default = naersk-lib.buildPackage {
+          src = ./.;
+          buildInputs = buildDeps;
+          root = ./kernel;
+          preBuild = "cd kernel";
+          singleStep = true;
+        };
 
        defaultPackage = packages.default;
 
