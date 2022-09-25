@@ -60,7 +60,7 @@
         deterministic-git = nixpkgs.outPath + "/pkgs/build-support/fetchgit/deterministic-git";
         fenix = nix-fenix.packages.${system};
         
-        target = fenix.targets."x86_64-unknown-none".latest.withComponents [
+        target64 = fenix.targets."x86_64-unknown-none".latest.withComponents [
            "rust-std"
         ];
         myrust = with fenix; fenix.combine [
@@ -72,7 +72,7 @@
            "cargo"
            "clippy"
          ])
-         target
+         target64
         ];
         craneLib = crane.lib.${system}.overrideToolchain
             myrust;

@@ -11,6 +11,12 @@ vscode.override {
       sha256 = "sha256-wIsY6Fuhs676EH8rSz4fTHemVhOe5Se9SY3Q9iAqr1M=";
     }
     {
+      name = "linkerscript";
+      publisher = "zixuanwang";
+      version = "1.0.2";
+      sha256 = "sha256-J6j4tXJ+gQWGJnMiqoIqJT2kGs/m8Njjm9pX9NCvJWc=";
+    }
+    {
       name = "vscode-coverage-gutters";
       publisher = "ryanluker";
       version = "2.8.2";
