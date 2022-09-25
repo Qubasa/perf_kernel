@@ -29,6 +29,7 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 [[package]]
 name = "bootloader"
 version = "0.1.0"
+source = "git+https://github.com/Luis-Hebendanz/rs_bootloader.git#874619eae532e58cd5cd31a9732df6e97aa11eb5"
 dependencies = [
  "bitflags",
  "llvm-tools",
@@ -48,6 +49,7 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 [[package]]
 name = "cpuio"
 version = "0.3.0"
+source = "git+https://github.com/Luis-Hebendanz/cpuio#bcfb7999786b292bad32ab79579b4256cee29663"
 
 [[package]]
 name = "llvm-tools"
@@ -57,9 +59,9 @@ checksum = "955be5d0ca0465caf127165acb47964f911e2bc26073e865deb8be7189302faf"
 
 [[package]]
 name = "lock_api"
-version = "0.4.8"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f80bf5aacaf25cbfc8210d1cfb718f2bf3b11c4c54e5afe36c236853a8ec390"
+checksum = "435011366fe56583b16cf956f9df0095b405b82d76425bc8981c0e22e60ec4df"
 dependencies = [
  "autocfg",
  "scopeguard",
@@ -98,9 +100,9 @@ dependencies = [
 [[package]]
 name = "multiboot2"
 version = "0.12.2"
+source = "git+https://github.com/Luis-Hebendanz/multiboot2#50ee5dbc0eba7ad5c5f37a80faeae624b28f5b14"
 dependencies = [
  "bitflags",
- "log",
 ]
 
 [[package]]
@@ -128,15 +130,16 @@ dependencies = [
 [[package]]
 name = "pic8259_simple"
 version = "0.2.0"
+source = "git+https://github.com/Luis-Hebendanz/pic8259_simple.git#a2ff3d40e3417677dfd42fca3a08318854893153"
 dependencies = [
  "cpuio",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.43"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2ca2c61bc9f3d74d2886294ab7b9853abd9c1ad903a3ac7815c58989bb7bab"
+checksum = "7bd7356a8122b6c4a24a82b278680c73357984ca2fc79a0f9fa6dea7dced7c58"
 dependencies = [
  "unicode-ident",
 ]
@@ -153,13 +156,21 @@ dependencies = [
 [[package]]
 name = "rangeset"
 version = "0.1.0"
+source = "git+https://github.com/Luis-Hebendanz/rangeset.git#1a388fe9df405eb42653688eef18d4c736088b4e"
 
 [[package]]
 name = "raw-cpuid"
 version = "10.2.0"
+source = "git+https://github.com/Luis-Hebendanz/rust-cpuid.git#b3bcae9e4f32d5699d45f11ced776f87cf29a660"
 dependencies = [
  "bitflags",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97477e48b4cf8603ad5f7aaf897467cf42ab4218a38ef76fb14c2d6773a6d6a8"
 
 [[package]]
 name = "scopeguard"
@@ -195,10 +206,11 @@ dependencies = [
 
 [[package]]
 name = "uart_16550"
-version = "0.2.10"
+version = "0.2.18"
+source = "git+https://github.com/Luis-Hebendanz/uart_16550.git#c37050de0f2849067393dfccf3fe6491de65ebb5"
 dependencies = [
  "bitflags",
- "x86",
+ "rustversion",
  "x86_64",
 ]
 
@@ -217,6 +229,7 @@ checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
 [[package]]
 name = "x86"
 version = "0.13.1"
+source = "git+https://github.com/Luis-Hebendanz/x86#f966e16d850c88269703f6104eb2b3caf764f0de"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
@@ -224,9 +237,11 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.14.6"
+version = "0.14.10"
+source = "git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers#c0c929cdf61d898806401f6da4279d3773d5141c"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",
+ "rustversion",
  "volatile",
 ]

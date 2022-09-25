@@ -59,27 +59,27 @@
         tmpdir = "/tmp/perfkernel";
         deterministic-git = nixpkgs.outPath + "/pkgs/build-support/fetchgit/deterministic-git";
         fenix = nix-fenix.packages.${system};
-
+        
         target = fenix.targets."x86_64-unknown-none".latest.withComponents [
-          "rust-std"
+           "rust-std"
         ];
         myrust = with fenix; fenix.combine [
           (latest.withComponents [
-            "rust-src"
-            "rustc"
-            "rustfmt"
-            "llvm-tools-preview"
-            "cargo"
-            "clippy"
-          ])
-          target
+           "rust-src"
+           "rustc"
+           "rustfmt"
+           "llvm-tools-preview"
+           "cargo"
+           "clippy"
+         ])
+         target
         ];
         craneLib = crane.lib.${system}.overrideToolchain
-          myrust;
+            myrust;
         naersk-lib = pkgs.callPackage naersk {
           cargo = myrust;
           rustc = myrust;
-        };
+         };
         overlays = [ (import rust-overlay) nix-fenix.overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
@@ -121,7 +121,6 @@
           grub2
           qemu
           entr # bash file change detector
-          #glibc.dev # Creates problems with tracy
           netcat-gnu
           git-extras
           python3
@@ -135,36 +134,24 @@
         ]);
       in
       rec {
-        packages.default = naersk-lib.buildPackage {
-          src = ./.;
-          buildInputs = buildDeps;
-          root = ./kernel;
-          preBuild = "cd kernel";
-          singleStep = true;
-        };
-        #packages.default =  craneLib.buildPackage {
-        # src = ./.;
-        #};
-
-        # packages.default = pkgs.rustPlatform.buildRustPackage rec {
-        #   pname = "perf_kernel";
-        #   version = "12.1.1";
-        #   preBuild = "cd kernel";
-        #   postPatch = ''
-        #     cp ${cargoLock.lockFile} Cargo.lock
-        #   '';
-        #   doCheck = false;
-        #   nativeBuildInputs = [
-        #     myrust
-        #   ];
-        #   cargoLock = {
-        #     lockFile = ./kernel/Cargo.lock;
-        #   };
+        # packages.default = naersk-lib.buildPackage {
         #   src = ./.;
+        #   buildInputs = buildDeps;
+        #   root = ./kernel;
+        #   preBuild = "cd kernel";
+        #   singleStep = true;
         # };
+       
+      packages.default = craneLib.buildPackage {
+        src = craneLib.cleanCargoSource ./kernel;
 
+        # Add extra inputs here or any other derivation settings
+        doCheck = false;
+        buildInputs = buildDeps;
+        nativeBuildInputs = [];
+      };
 
-        defaultPackage = packages.default;
+       defaultPackage = packages.default;
 
         devShells.default = pkgs.mkShell {
           buildInputs = buildDeps;
