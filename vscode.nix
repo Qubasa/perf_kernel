@@ -28,25 +28,28 @@ vscode.override {
     tamasfe.even-better-toml
     serayuzgur.crates
     jnoortheen.nix-ide
-    matklad.rust-analyzer
+    rust-lang.rust-analyzer-nightly
     vadimcn.vscode-lldb
+    github.github-vscode-theme
     #ms-python.python # Broken on nixos unstable
   ]);
   settings = {
-    window.menuBarVisibility = "toggle";
-    window.zoomLevel = 0;
-    editor.fontSize = 16;
-    terminal.integrated.fontSize = 16;
-    lldb.displayFormat = "hex";
-    breadcrumbs.enabled = false;
-    files.associations."*.s" = "asm-intel-x86-generic";
-    rust-analyzer.inlayHints.parameterHints = false;
-    workbench.colorCustomizations = {
-      statusBar.background = "#1A1A1A";
-      statusBar.noFolderBackground = "#212121";
-      statusBar.debuggingBackground = "#263238";
+    "window.menuBarVisibility" = "toggle";
+    "window.zoomLevel" = 0;
+    "editor.fontSize" = 16;
+    "terminal.integrated.fontSize" = 16;
+    "lldb.displayFormat" = "hex";
+    "breadcrumbs.enabled" = false;
+    "files.associations" = {
+      "*.s" = "asm-intel-x86-generic";
     };
+    "rust-analyzer.inlayHints.parameterHints.enable" = false;
+    "editor.minimap.autohide" = true;
+
+    "workbench.preferredDarkColorTheme" = "GitHub Dark";
+    "workbench.preferredLightColorTheme" = "GitHub Light";
   };
+  
 
   keybindings = [
     {

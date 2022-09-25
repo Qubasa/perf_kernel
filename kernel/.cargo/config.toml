@@ -1,21 +1,8 @@
 # https://doc.rust-lang.org/nightly/nightly-rustc/rustc_target/spec/index.html#structs
 [build]
-target = "x86_64-os.json"
+target = "x86_64-unknown-none"
 #rustflags = [ "-C", "target-cpu=native" ]
-
-# Use inbuilt memcpy & memset
-[unstable]
-build-std-features = ["compiler-builtins-mem"]
-build-std = ["core", "compiler_builtins", "alloc"]
 
 # Make cargo run automatically start qemu
 [target.'cfg(target_os = "none")']
 runner = "glue_gun run"
-
-[alias]
-# llvm-arg list: https://llvm.org/docs/CommandGuide/llc.html
-# release asm
-asm = ["rustc","--bin","perf_kernel", "--release","--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]
-
-# debug asm
-# asm = ["rustc","--bin","svm_kernel", "--", "--emit", "asm","-C", "llvm-args=-x86-asm-syntax=intel"]

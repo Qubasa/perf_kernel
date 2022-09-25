@@ -35,27 +35,56 @@
       url = "github:nix-community/naersk/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nci = {
       url = "github:yusdacra/nix-cargo-integration";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.rust-overlay.follows = "rust-overlay";
     };
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs = {
+        flake-utils.follows = "flake-utils";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
-  outputs = { self, nixpkgs, naersk, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
+  outputs = { self, nix-fenix, crane, nixpkgs, naersk, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
+        tmpdir = "/tmp/perfkernel";
+        deterministic-git = nixpkgs.outPath + "/pkgs/build-support/fetchgit/deterministic-git";
+        fenix = nix-fenix.packages.${system};
+
+        target = fenix.targets."x86_64-unknown-none".latest.withComponents [
+          "rust-std"
+        ];
+        myrust = with fenix; fenix.combine [
+          (latest.withComponents [
+            "rust-src"
+            "rustc"
+            "rustfmt"
+            "llvm-tools-preview"
+            "cargo"
+            "clippy"
+          ])
+          target
+        ];
+        craneLib = crane.lib.${system}.overrideToolchain
+          myrust;
         naersk-lib = pkgs.callPackage naersk {
           cargo = myrust;
           rustc = myrust;
-         };
-        overlays = [ (import rust-overlay) ];
+        };
+        overlays = [ (import rust-overlay) nix-fenix.overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        myrust = pkgs.rust-bin.nightly.latest.default.override {
-          extensions = [ "rustfmt" "llvm-tools-preview" "rust-src" ];
-        };
+
         vmsh = vmsh-flake.packages.${system}.vmsh;
         parse-gdt = nix-parse-gdt.packages.${system}.default;
         glue_gun = glue-gun.packages.${system}.default;
@@ -73,7 +102,7 @@
         mycodium = import ./vscode.nix {
           vscode = nixos-codium.packages.${system}.default;
           inherit pkgs;
-          vscodeBaseDir = "/tmp/nixos-codium-perfkernel";
+          vscodeBaseDir = tmpdir + "/codium";
         };
 
         buildDeps = with pkgs; [
@@ -85,7 +114,7 @@
           myrust
           evcxr # rust repl
           cargo-tarpaulin # for code coverage
-          rust-analyzer
+          rust-analyzer-nightly
           zlib.out
           xorriso
           dhcp
@@ -113,6 +142,28 @@
           preBuild = "cd kernel";
           singleStep = true;
         };
+        #packages.default =  craneLib.buildPackage {
+        # src = ./.;
+        #};
+
+        # packages.default = pkgs.rustPlatform.buildRustPackage rec {
+        #   pname = "perf_kernel";
+        #   version = "12.1.1";
+        #   preBuild = "cd kernel";
+        #   postPatch = ''
+        #     cp ${cargoLock.lockFile} Cargo.lock
+        #   '';
+        #   doCheck = false;
+        #   nativeBuildInputs = [
+        #     myrust
+        #   ];
+        #   cargoLock = {
+        #     lockFile = ./kernel/Cargo.lock;
+        #   };
+        #   src = ./.;
+        # };
+
+
         defaultPackage = packages.default;
 
         devShells.default = pkgs.mkShell {
@@ -132,7 +183,13 @@
               ''-I"${pkgs.llvmPackages_latest.libclang.lib}/lib/clang/${pkgs.llvmPackages_latest.libclang.version}/include"''
             ];
 
-          HISTFILE = toString ./.history;
+          shellHook = ''
+            TMP=${tmpdir}
+            mkdir -p $TMP
+            export HISTFILE=$TMP/.history
+            export CARGO_HOME=$TMP/cargo
+            export PATH=$PATH:$TMP/cargo/bin
+          '';
         };
 
       });
