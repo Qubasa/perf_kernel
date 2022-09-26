@@ -29,7 +29,7 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 [[package]]
 name = "bootloader"
 version = "0.1.0"
-source = "git+https://github.com/Luis-Hebendanz/perf_bootloader#874619eae532e58cd5cd31a9732df6e97aa11eb5"
+source = "git+https://github.com/Luis-Hebendanz/perf_bootloader#2e5da2a9457aaea900a12286d1da7fd637cbb12e"
 dependencies = [
  "bitflags",
  "llvm-tools",
@@ -207,10 +207,11 @@ dependencies = [
 [[package]]
 name = "uart_16550"
 version = "0.2.18"
-source = "git+https://github.com/Luis-Hebendanz/uart_16550.git#c37050de0f2849067393dfccf3fe6491de65ebb5"
+source = "git+https://github.com/Luis-Hebendanz/uart_16550.git#88fd8b6e148658d2676c422a03360e109ef0479a"
 dependencies = [
  "bitflags",
  "rustversion",
+ "x86",
  "x86_64",
 ]
 
@@ -229,7 +230,7 @@ checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
 [[package]]
 name = "x86"
 version = "0.13.1"
-source = "git+https://github.com/Luis-Hebendanz/x86#f966e16d850c88269703f6104eb2b3caf764f0de"
+source = "git+https://github.com/Luis-Hebendanz/x86#c9e1083c5740568c832399d0ecf20990fa6ed870"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",

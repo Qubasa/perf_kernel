@@ -3,7 +3,7 @@ use crate::time::{elapsed, rdtsc};
 use core::arch::x86_64::__cpuid;
 use core::arch::asm;
 
-use raw_cpuid::CpuId;
+
 
 #[repr(u32)]
 pub enum CpuidIndex {
@@ -36,6 +36,7 @@ impl Bench {
     }
 }
 
+#[allow(unconditional_recursion)]
 pub fn overflow() {
     let a: [u8; 0x1000] = [0; 0x1000];
     let mut x: u64;

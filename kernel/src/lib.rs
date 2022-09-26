@@ -33,7 +33,7 @@ pub mod time;
 pub mod tss;
 pub mod vga;
 
-use core::ptr::*;
+
 extern crate alloc;
 
 /*
