@@ -3,7 +3,7 @@ use crate::print;
 use crate::tss;
 use core::arch::asm;
 
-use pic8259_simple::ChainedPics;
+use pic8259::ChainedPics;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 // Offset the PICs to avoid index collision with

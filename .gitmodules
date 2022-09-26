@@ -11,9 +11,6 @@
 	path = deps/x86_64
 	url = git@github.com:Luis-Hebendanz/x86_64.git
 	branch = new_registers
-[submodule "deps/cpuio"]
-	path = deps/cpuio
-	url = git@github.com:Luis-Hebendanz/cpuio.git
 [submodule "deps/rust-cpuid"]
 	path = deps/rust-cpuid
 	url = git@github.com:Luis-Hebendanz/rust-cpuid.git
@@ -23,9 +20,9 @@
 [submodule "deps/rangeset"]
 	path = deps/rangeset
 	url = git@github.com:Luis-Hebendanz/rangeset.git
-[submodule "deps/pic8259_simple"]
-	path = deps/pic8259_simple
-	url = git@github.com:Luis-Hebendanz/pic8259_simple.git
 [submodule "deps/x86"]
 	path = deps/x86
 	url = git@github.com:Luis-Hebendanz/x86.git
+[submodule "deps/pic8259"]
+	path = deps/pic8259
+	url = git@github.com:Luis-Hebendanz/pic8259.git
