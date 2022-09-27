@@ -27,10 +27,6 @@
       url = "github:luis-hebendanz/glue_gun";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     naersk = {
       url = "github:nix-community/naersk/master";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -39,21 +35,13 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nci = {
-      url = "github:yusdacra/nix-cargo-integration";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-    };
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs = {
-        flake-utils.follows = "flake-utils";
-        nixpkgs.follows = "nixpkgs";
-      };
+    rust-git  = {
+      url = "github:rust-lang/rust";
+      flake = false;
     };
   };
 
-  outputs = { self, nix-fenix, crane, nixpkgs, naersk, nci, rust-overlay, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
+  outputs = { self, rust-git, nix-fenix, nixpkgs, naersk, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         tmpdir = "/tmp/perfkernel";
@@ -74,13 +62,11 @@
          ])
          target64
         ];
-        craneLib = crane.lib.${system}.overrideToolchain
-            myrust;
         naersk-lib = pkgs.callPackage naersk {
           cargo = myrust;
           rustc = myrust;
          };
-        overlays = [ (import rust-overlay) nix-fenix.overlay ];
+        overlays = [ nix-fenix.overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
@@ -140,6 +126,13 @@
           root = ./kernel;
           preBuild = "cd kernel";
           singleStep = true;
+        };
+
+        packages.i686-unknown-none = naersk-lib.buildPackage {
+          src = rust-git + "/library/core";
+          buildInputs = [
+            myrust
+          ];
         };
 
        defaultPackage = packages.default;

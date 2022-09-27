@@ -188,9 +188,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "syn"
-version = "1.0.100"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52205623b1b0f064a4e71182c3b18ae902267282930c6d5462c91b859668426e"
+checksum = "e90cde112c4b9690b8cbe810cba9ddd8bc1d7472e2cae317b69e9438c1cba7d2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -222,7 +222,7 @@ checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
 [[package]]
 name = "x86"
 version = "0.13.1"
-source = "git+https://github.com/Luis-Hebendanz/x86#c9e1083c5740568c832399d0ecf20990fa6ed870"
+source = "git+https://github.com/Luis-Hebendanz/x86#5f50af88bf11d4e32a3192c82e72f147aae024c2"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",

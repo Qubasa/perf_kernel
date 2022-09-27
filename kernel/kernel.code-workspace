@@ -12,6 +12,7 @@
 		"lldb.verboseLogging": true,
 		"lldb.displayFormat": "hex",
 		"lldb.dereferencePointers": true,
+		"rust-analyzer.checkOnSave.allTargets": false,
 		"rust-analyzer.trace.extension": true,
 		"rust-analyzer.trace.server": "verbose",
 		"lldb.showDisassembly": "auto",
