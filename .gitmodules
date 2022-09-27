@@ -26,3 +26,6 @@
 [submodule "deps/pic8259"]
 	path = deps/pic8259
 	url = git@github.com:Luis-Hebendanz/pic8259.git
+[submodule "deps/multiboot2"]
+	path = deps/multiboot2
+	url = git@github.com:Luis-Hebendanz/multiboot2.git

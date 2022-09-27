@@ -23,7 +23,7 @@ pic8259 = { git="https://github.com/Luis-Hebendanz/pic8259.git"  }
 uart_16550 = { git = "https://github.com/Luis-Hebendanz/uart_16550.git"  }
 rangeset = { git = "https://github.com/Luis-Hebendanz/rangeset.git" }
 x86_64 = { git= "https://github.com/Luis-Hebendanz/x86_64.git", branch = "new_registers" }
-bootloader = { git="https://github.com/Luis-Hebendanz/perf_bootloader" }
+bootloader = { git="https://github.com/Luis-Hebendanz/perf_bootloader.git" }
 raw-cpuid = { git="https://github.com/Luis-Hebendanz/rust-cpuid.git" }
 
 [patch."https://github.com/Luis-Hebendanz/pic8259.git"]

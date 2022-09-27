@@ -345,7 +345,6 @@
         "nix-parse-gdt": "nix-parse-gdt",
         "nixos-codium": "nixos-codium",
         "nixpkgs": "nixpkgs_3",
-        "rust-git": "rust-git",
         "vmsh-flake": "vmsh-flake"
       }
     },
@@ -380,22 +379,6 @@
         "owner": "rust-analyzer",
         "ref": "nightly",
         "repo": "rust-analyzer",
-        "type": "github"
-      }
-    },
-    "rust-git": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1664222271,
-        "narHash": "sha256-xixBhNAl8F9Xof5nSHEXUmu41HwbUM/foDDS5RPdQjY=",
-        "owner": "rust-lang",
-        "repo": "rust",
-        "rev": "8b705839cd656d202e920efa8769cbe43a5ee269",
-        "type": "github"
-      },
-      "original": {
-        "owner": "rust-lang",
-        "repo": "rust",
         "type": "github"
       }
     },

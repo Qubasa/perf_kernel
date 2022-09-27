@@ -35,37 +35,33 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    rust-git  = {
-      url = "github:rust-lang/rust";
-      flake = false;
-    };
   };
 
-  outputs = { self, rust-git, nix-fenix, nixpkgs, naersk, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
+  outputs = { self,nix-fenix, nixpkgs, naersk, glue-gun, nix-ipxe, nix-parse-gdt, vmsh-flake, flake-utils, nixos-codium, ... }:
     flake-utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         tmpdir = "/tmp/perfkernel";
         deterministic-git = nixpkgs.outPath + "/pkgs/build-support/fetchgit/deterministic-git";
         fenix = nix-fenix.packages.${system};
-        
+       
         target64 = fenix.targets."x86_64-unknown-none".latest.withComponents [
-           "rust-std"
+          "rust-std"
         ];
         myrust = with fenix; fenix.combine [
           (latest.withComponents [
-           "rust-src"
-           "rustc"
-           "rustfmt"
-           "llvm-tools-preview"
-           "cargo"
-           "clippy"
-         ])
-         target64
+            "rust-src"
+            "rustc"
+            "rustfmt"
+            "llvm-tools-preview"
+            "cargo"
+            "clippy"
+          ])
+          target64
         ];
         naersk-lib = pkgs.callPackage naersk {
           cargo = myrust;
           rustc = myrust;
-         };
+        };
         overlays = [ nix-fenix.overlay ];
         pkgs = import nixpkgs {
           inherit system overlays;
@@ -128,14 +124,15 @@
           singleStep = true;
         };
 
-        packages.i686-unknown-none = naersk-lib.buildPackage {
-          src = rust-git + "/library/core";
-          buildInputs = [
-            myrust
-          ];
+        packages.i686-unknown-none =  naersk-lib.buildPackage {
+          src = ./.;
+          buildInputs = buildDeps;
+          root = ./deps/perf_bootloader;
+          preBuild = "cd deps/perf_bootloader";
+          singleStep = true;
         };
 
-       defaultPackage = packages.default;
+        defaultPackage = packages.default;
 
         devShells.default = pkgs.mkShell {
           buildInputs = buildDeps;
