@@ -36,7 +36,7 @@ dependencies = [
  "multiboot2",
  "raw-cpuid",
  "uart_16550",
- "x86",
+ "x86 0.13.1",
 ]
 
 [[package]]
@@ -94,7 +94,6 @@ dependencies = [
 [[package]]
 name = "multiboot2"
 version = "0.12.2"
-source = "git+https://github.com/Luis-Hebendanz/multiboot2#50ee5dbc0eba7ad5c5f37a80faeae624b28f5b14"
 dependencies = [
  "bitflags",
 ]
@@ -118,7 +117,7 @@ dependencies = [
  "raw-cpuid",
  "spin",
  "uart_16550",
- "x86_64",
+ "x86_64 0.14.10",
 ]
 
 [[package]]
@@ -126,8 +125,8 @@ name = "pic8259"
 version = "0.10.2"
 dependencies = [
  "bit_field 0.10.1",
- "x86",
- "x86_64",
+ "x86 0.13.1 (git+https://github.com/Luis-Hebendanz/x86)",
+ "x86_64 0.14.10 (git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers)",
 ]
 
 [[package]]
@@ -203,8 +202,8 @@ version = "0.2.18"
 dependencies = [
  "bitflags",
  "rustversion",
- "x86",
- "x86_64",
+ "x86 0.13.1 (git+https://github.com/Luis-Hebendanz/x86)",
+ "x86_64 0.14.10 (git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers)",
 ]
 
 [[package]]
@@ -222,6 +221,14 @@ checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
 [[package]]
 name = "x86"
 version = "0.13.1"
+dependencies = [
+ "bit_field 0.9.0",
+ "bitflags",
+]
+
+[[package]]
+name = "x86"
+version = "0.13.1"
 source = "git+https://github.com/Luis-Hebendanz/x86#5f50af88bf11d4e32a3192c82e72f147aae024c2"
 dependencies = [
  "bit_field 0.9.0",
@@ -231,6 +238,17 @@ dependencies = [
 [[package]]
 name = "x86_64"
 version = "0.14.10"
+dependencies = [
+ "bit_field 0.10.1",
+ "bitflags",
+ "rustversion",
+ "volatile",
+]
+
+[[package]]
+name = "x86_64"
+version = "0.14.10"
+source = "git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers#b9c8e2a3a6e8b09339b5f935ed21b1a7ac59d9c4"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",

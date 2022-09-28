@@ -19,29 +19,12 @@ log = {version = "=0.4.11",  features = ["release_max_level_trace"] }
 modular-bitfield = "=0.11.2"
 spin = "=0.9.2"
 
-pic8259 = { git="https://github.com/Luis-Hebendanz/pic8259.git"  }
-uart_16550 = { git = "https://github.com/Luis-Hebendanz/uart_16550.git"  }
-rangeset = { git = "https://github.com/Luis-Hebendanz/rangeset.git" }
-x86_64 = { git= "https://github.com/Luis-Hebendanz/x86_64.git", branch = "new_registers" }
-bootloader = { git="https://github.com/Luis-Hebendanz/perf_bootloader.git" }
-raw-cpuid = { git="https://github.com/Luis-Hebendanz/rust-cpuid.git" }
 
-[patch."https://github.com/Luis-Hebendanz/pic8259.git"]
 pic8259 = { path = "../deps/pic8259" }
-
-[patch."https://github.com/Luis-Hebendanz/uart_16550.git"]
 uart_16550 = { path = "../deps/uart_16550" }
-
-[patch."https://github.com/Luis-Hebendanz/rangeset.git"]
 rangeset = { path = "../deps/rangeset" }
-
-[patch."https://github.com/Luis-Hebendanz/x86_64.git"]
 x86_64 = { path = "../deps/x86_64" }
-
-[patch."https://github.com/Luis-Hebendanz/perf_bootloader.git"]
 bootloader = { path = "../deps/perf_bootloader" }
-
-[patch."https://github.com/Luis-Hebendanz/rust-cpuid.git"]
 raw-cpuid = { path = "../deps/rust-cpuid" }
 
 

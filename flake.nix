@@ -87,55 +87,64 @@
           vscodeBaseDir = tmpdir + "/codium";
         };
 
-        buildDeps = with pkgs; [
+        runtimeDeps = with pkgs; [
           myipxe
           vmsh
-          glue_gun
           parse-gdt
           mycodium
-          myrust
           evcxr # rust repl
           cargo-tarpaulin # for code coverage
           rust-analyzer-nightly
-          zlib.out
-          xorriso
           dhcp
-          grub2
           qemu
           entr # bash file change detector
           netcat-gnu
-          git-extras
+          git-extras   
           python3
+          bochs
+          llvmPackages_latest.bintools
         ] ++ (with pkgs.python39Packages; [
           pyelftools
           intervaltree
-        ]) ++ (with pkgs.llvmPackages_latest; [
+        ]);
+
+        buildDeps = with pkgs; [
+          glue_gun
+          myrust
+          zlib.out
+          xorriso
+          grub2
+        ]  ++ (with pkgs.llvmPackages_latest; [
           lld
-          bintools
           llvm
         ]);
       in
       rec {
+
+        # Needs to be build with: nix build '.?submodules=1'
+        # For specific package: nix build '.?submodules=1'#mypackage
+        # Issue: https://github.com/NixOS/nix/pull/5284
         packages.default = naersk-lib.buildPackage {
-          src = ./.;
+          src = self;
           buildInputs = buildDeps;
           root = ./kernel;
           preBuild = "cd kernel";
           singleStep = true;
         };
 
-        packages.i686-unknown-none =  naersk-lib.buildPackage {
-          src = ./.;
-          buildInputs = buildDeps;
-          root = ./deps/perf_bootloader;
-          preBuild = "cd deps/perf_bootloader";
-          singleStep = true;
-        };
+        # packages.i686-unknown-none =  naersk-lib.buildPackage {
+        #   src = ./.;
+        #   buildInputs = buildDeps;
+        #   root = ./deps/perf_bootloader;
+        #   preBuild = "cd deps/perf_bootloader";
+
+        #   singleStep = true;
+        # };
 
         defaultPackage = packages.default;
 
         devShells.default = pkgs.mkShell {
-          buildInputs = buildDeps;
+          packages = buildDeps ++ runtimeDeps;
 
           IPXE = myipxe;
 
@@ -157,6 +166,7 @@
             export HISTFILE=$TMP/.history
             export CARGO_HOME=$TMP/cargo
             export PATH=$PATH:$TMP/cargo/bin
+            echo "Build"
           '';
         };
 
