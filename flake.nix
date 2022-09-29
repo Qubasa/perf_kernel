@@ -99,7 +99,7 @@
           qemu
           entr # bash file change detector
           netcat-gnu
-          git-extras   
+          git-extras
           python3
           bochs
           llvmPackages_latest.bintools
@@ -166,7 +166,6 @@
             export HISTFILE=$TMP/.history
             export CARGO_HOME=$TMP/cargo
             export PATH=$PATH:$TMP/cargo/bin
-            echo "Build"
           '';
         };
 

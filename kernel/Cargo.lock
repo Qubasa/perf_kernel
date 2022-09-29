@@ -36,7 +36,7 @@ dependencies = [
  "multiboot2",
  "raw-cpuid",
  "uart_16550",
- "x86 0.13.1",
+ "x86",
 ]
 
 [[package]]
@@ -117,7 +117,7 @@ dependencies = [
  "raw-cpuid",
  "spin",
  "uart_16550",
- "x86_64 0.14.10",
+ "x86_64",
 ]
 
 [[package]]
@@ -125,15 +125,15 @@ name = "pic8259"
 version = "0.10.2"
 dependencies = [
  "bit_field 0.10.1",
- "x86 0.13.1 (git+https://github.com/Luis-Hebendanz/x86)",
- "x86_64 0.14.10 (git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers)",
+ "x86",
+ "x86_64",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.44"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bd7356a8122b6c4a24a82b278680c73357984ca2fc79a0f9fa6dea7dced7c58"
+checksum = "94e2ef8dbfc347b10c094890f778ee2e36ca9bb4262e86dc99cd217e35f3470b"
 dependencies = [
  "unicode-ident",
 ]
@@ -202,8 +202,8 @@ version = "0.2.18"
 dependencies = [
  "bitflags",
  "rustversion",
- "x86 0.13.1 (git+https://github.com/Luis-Hebendanz/x86)",
- "x86_64 0.14.10 (git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers)",
+ "x86",
+ "x86_64",
 ]
 
 [[package]]
@@ -227,28 +227,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "x86"
-version = "0.13.1"
-source = "git+https://github.com/Luis-Hebendanz/x86#5f50af88bf11d4e32a3192c82e72f147aae024c2"
-dependencies = [
- "bit_field 0.9.0",
- "bitflags",
-]
-
-[[package]]
 name = "x86_64"
 version = "0.14.10"
-dependencies = [
- "bit_field 0.10.1",
- "bitflags",
- "rustversion",
- "volatile",
-]
-
-[[package]]
-name = "x86_64"
-version = "0.14.10"
-source = "git+https://github.com/Luis-Hebendanz/x86_64.git?branch=new_registers#b9c8e2a3a6e8b09339b5f935ed21b1a7ac59d9c4"
 dependencies = [
  "bit_field 0.10.1",
  "bitflags",

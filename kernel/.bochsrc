@@ -2,41 +2,23 @@
 plugin_ctrl: iodebug=true, ne2k=false, busmouse=false, e1000=false, sb16=false, speaker=true, usb_uhci=false, es1370=false, pcipnic=false, usb_ehci=false, gameport=true, serial=true, usb_xhci=false, biosdev=true, usb_ohci=false, parallel=true, extfpuirq=true, unmapped=true, voodoo=false
 config_interface: textconfig
 display_library: term
+#display_library: x, options="gui_debug"
 memory: host=512, guest=2048
-romimage: file="/nix/store/brsqdaf15ql6s4alqrw7hq25pvpd9ldx-bochs-2.7/share/bochs/BIOS-bochs-latest", address=0x00000000, options=none
-vgaromimage: file="/nix/store/brsqdaf15ql6s4alqrw7hq25pvpd9ldx-bochs-2.7/share/bochs/VGABIOS-lgpl-latest"
 boot: cdrom
-floppy_bootsig_check: disabled=0
-floppya: type=1_44
-# no floppyb
 ata0: enabled=true, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
-ata0-master: type=cdrom, path="target/x86_64-unknown-none/debug/bootimage-perf_kernel.iso", status=inserted, model="Generic 1234", biosdetect=auto
-ata0-slave: type=cdrom, path="target/x86_64-unknown-none/debug/bootimage-perf_kernel.iso", status=inserted, model="Generic 1234", biosdetect=auto
-ata1: enabled=true, ioaddr1=0x170, ioaddr2=0x370, irq=15
-ata1-master: type=none
-ata1-slave: type=none
-ata2: enabled=false
-ata3: enabled=false
-optromimage1: file=none
-optromimage2: file=none
-optromimage3: file=none
-optromimage4: file=none
-optramimage1: file=none
-optramimage2: file=none
-optramimage3: file=none
-optramimage4: file=none
+ata0-master: type=cdrom, path="target/x86_64-unknown-none/debug/perf_kernel.iso", status=inserted, model="Generic 1234", biosdetect=auto
+#debug_symbols: file="target/x86_64-unknown-none/debug/perf_kernel.sym"
+debugger_log: "target/bochs_debugger.log"
+log: "target/bochs.log"
 pci: enabled=1, chipset=i440fx, slot1=none, slot2=none, slot3=none, slot4=none, slot5=none
 vga: extension=vbe, update_freq=5, realtime=1, ddc=builtin
 cpu: count=1:1:1, ips=4000000, quantum=16, model=ryzen, reset_on_triple_fault=1, cpuid_limit_winnt=0, ignore_bad_msrs=1
 print_timestamps: enabled=0
-debugger_log: -
-magic_break: enabled=0
-port_e9_hack: enabled=0
+logprefix: %t%e%d
+magic_break: enabled=1
+port_e9_hack: enabled=1
 private_colormap: enabled=0
 clock: sync=realtime, time0=local, rtc_sync=0
-# no cmosimage
-log: -
-logprefix: %t%e%d
 debug: action=ignore
 info: action=report
 error: action=report
@@ -45,9 +27,5 @@ keyboard: type=mf, serial_delay=250, paste_delay=100000, user_shortcut=none
 mouse: type=ps2, enabled=false, toggle=ctrl+mbutton
 sound: waveoutdrv=dummy, waveout=none, waveindrv=dummy, wavein=none, midioutdrv=dummy, midiout=none
 speaker: enabled=false
-com1: enabled=true, mode=file,  dev="/dev/stdout"
-com2: enabled=false
-com3: enabled=false
-com4: enabled=false
+com1: enabled=true, mode=file, dev="/dev/stdout"
 parport1: enabled=true, file="target/parallel01.log"
-parport2: enabled=false

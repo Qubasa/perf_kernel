@@ -92,11 +92,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1663637985,
-        "narHash": "sha256-zRrs8ZlpBkgQzhvwTEtUBqKev7Dz+4Hq8XW/wrtj0/c=",
+        "lastModified": 1664479819,
+        "narHash": "sha256-iBMc6NpAX9soz6GbTI2+B6hFubLYFdzg0HdAiKAbxZg=",
         "owner": "luis-hebendanz",
         "repo": "glue_gun",
-        "rev": "9dfc085113c18555a76481e2f854b0c24ab15ebf",
+        "rev": "6910266b65730b49d8c61471bd45f35fd9664c46",
         "type": "github"
       },
       "original": {

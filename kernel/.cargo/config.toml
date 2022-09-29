@@ -2,7 +2,6 @@
 [build]
 target = "x86_64-unknown-none"
 #rustflags = [ "-C", "target-cpu=native" ]
-rustflags = [ "-C", "link-args=--image-base=0x200000" ]
 
 # Make cargo run automatically start qemu
 [target.'cfg(target_os = "none")']

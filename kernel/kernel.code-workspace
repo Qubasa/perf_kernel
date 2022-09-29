@@ -4,9 +4,6 @@
 			"path": "."
 		},
 		{
-			"path": "../deps"
-		},
-		{
 			"path": ".."
 		}
 	],
@@ -50,7 +47,7 @@
 				"name": "Remote attach",
 				"type": "lldb",
 				"request": "custom",
-				"targetCreateCommands": ["target create ${workspaceFolder:kernel}/target/x86_64-os/debug/perf_kernel"],
+				"targetCreateCommands": ["target create ${workspaceFolder:kernel}/target/x86_64-unknown-none/debug/perf_kernel"],
 				"processCreateCommands": ["command alias b breakpoint set -H -n %1", "gdb-remote localhost:1234"]
 			}
 		]
