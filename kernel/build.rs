@@ -29,8 +29,8 @@ fn main() {
     };
 
     println!(
-        "glue_gun:out_root={:?}",
-        out_root.expect("Couldn't find OUT_ROOT")
+        "cargo:rustc-link-arg=--Map={}",
+        out_root.expect("Couldn't find OUT_ROOT").join("linker.map").display()
     );
     println!("cargo:rustc-link-arg=--image-base=0x200000");
 }
