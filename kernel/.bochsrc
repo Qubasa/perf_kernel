@@ -7,7 +7,7 @@ memory: host=512, guest=2048
 boot: cdrom
 ata0: enabled=true, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 ata0-master: type=cdrom, path="target/x86_64-unknown-none/debug/perf_kernel.iso", status=inserted, model="Generic 1234", biosdetect=auto
-#debug_symbols: file="target/x86_64-unknown-none/debug/perf_kernel.sym"
+#debug_symbols: file="target/x86_64-unknown-none/debug/perf_kernel.sym.bochs"
 debugger_log: "target/bochs_debugger.log"
 log: "target/bochs.log"
 pci: enabled=1, chipset=i440fx, slot1=none, slot2=none, slot3=none, slot4=none, slot5=none

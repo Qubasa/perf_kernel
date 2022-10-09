@@ -1,9 +1,15 @@
 {
 	"folders": [
 		{
+			"name": "kernel",
 			"path": "."
 		},
 		{
+			"name": "perf_bootloader",
+			"path": "../deps/perf_bootloader"
+		},
+		{
+			"name": "svm_kernel",
 			"path": ".."
 		}
 	],

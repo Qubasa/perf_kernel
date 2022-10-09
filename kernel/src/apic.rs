@@ -48,7 +48,7 @@ pub unsafe fn mp_init(apic_id: u8, trampoline: u32) {
     }
 
     // Sleep 10 milliseconds as by spec
-    crate::time::sleep(10*1000);
+    crate::time::sleep(10 * 1000);
 
     // Create STARTUP IPI
     let low = InterCmdRegLow::new()
@@ -232,9 +232,9 @@ unsafe fn init_timer() {
     write_apic(Register::TimerInitialCount, u32::MAX);
 
     // sleep 1s
-    crate::time::sleep(1000*1000);
+    crate::time::sleep(1000 * 1000);
 
-    let ticks_elapsed  = u32::MAX - read_apic(Register::TimerCurrentCount);
+    let ticks_elapsed = u32::MAX - read_apic(Register::TimerCurrentCount);
 
     write_apic(Register::TimerInitialCount, ticks_elapsed);
 }

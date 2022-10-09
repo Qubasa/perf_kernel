@@ -5,7 +5,6 @@ use core::ptr;
 
 const ALLOC_STEPS: usize = 16;
 
-
 /* This allocator needs HEAP_SIZE / (ALLOC_STEPS / sizeof(typeof(arr))) of memory
  * as overhead but it uses a fixed size array
  * which is cache coherent
@@ -52,7 +51,7 @@ impl FixedSizeBlockAllocator {
         }
     }
     pub fn num_non_empty(&self) -> usize {
-        let mut count  = 0;
+        let mut count = 0;
         for (_i, val) in self.arr.iter().enumerate() {
             if let Some(_val) = val {
                 count += 1;
@@ -62,7 +61,7 @@ impl FixedSizeBlockAllocator {
     }
 
     pub fn num_bytes_allocated(&self) -> usize {
-        let mut count  = 0;
+        let mut count = 0;
         for (_i, val) in self.arr.iter().enumerate() {
             if let Some(val) = val {
                 count += *val as usize;
@@ -70,7 +69,6 @@ impl FixedSizeBlockAllocator {
         }
         count
     }
-
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, _layout: &Layout) {
         let index = (ptr as usize - self.heap_start) / ALLOC_STEPS;

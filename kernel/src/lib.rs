@@ -8,7 +8,6 @@
 #![feature(alloc_error_handler)]
 #![feature(bench_black_box)]
 #![feature(const_mut_refs)]
-
 #![feature(test)]
 #![feature(maybe_uninit_uninit_array)]
 #![no_std]
@@ -32,7 +31,6 @@ pub mod smp;
 pub mod time;
 pub mod tss;
 pub mod vga;
-
 
 extern crate alloc;
 
@@ -117,17 +115,18 @@ pub unsafe fn init(boot_info: &'static bootloader::bootinfo::BootInfo) {
 
     {
         let (core, core_index) = boot_info
-        .cores
-        .get_by_apic_id(crate::apic::apic_id())
-        .unwrap();
+            .cores
+            .get_by_apic_id(crate::apic::apic_id())
+            .unwrap();
 
         log::info!(
-            "Enabling interrupts for core index {} apic_id {}", core_index, core.get_apic_id().unwrap()
+            "Enabling interrupts for core index {} apic_id {}",
+            core_index,
+            core.get_apic_id().unwrap()
         );
     }
     // Enable interrupts
     x86_64::instructions::interrupts::enable();
-
 
     if apic::is_bsp() {
         for lapic in acpi.apics.as_ref().unwrap().iter().skip(1) {

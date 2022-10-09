@@ -65,7 +65,7 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     //     vec.resize_with(new_len, || { i+=1; i });
     //     log::info!("Done resizing.");
     //     let sum: usize = vec.iter().sum();
-    
+
     //     let n = new_len-len;
     //     assert_eq!(sum, (n.pow(2)+n)/2);
 
@@ -77,7 +77,7 @@ fn kernel_main(_boot_info: &'static bootinfo::BootInfo) -> ! {
     //     vec2.resize_with(new_len, || { i+=1; i });
     //     log::info!("Done resizing2.");
     //     let sum: usize = vec.iter().sum();
-    
+
     //     let n = new_len-len;
     //     assert_eq!(sum, (n.pow(2)+n)/2);
     //     black_box(vec);

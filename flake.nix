@@ -92,6 +92,7 @@
           vmsh
           parse-gdt
           mycodium
+          radare2
           evcxr # rust repl
           cargo-tarpaulin # for code coverage
           rust-analyzer-nightly

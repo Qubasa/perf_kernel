@@ -13,7 +13,9 @@ use bootloader::bootinfo::BootInfo;
 use bootloader::entry_point;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use perf_kernel::{allocator::HEAP_START, allocator::ALLOCATOR, bench::Bench, klog, print, println};
+use perf_kernel::{
+    allocator::ALLOCATOR, allocator::HEAP_START, bench::Bench, klog, print, println,
+};
 
 entry_point!(main);
 
@@ -55,10 +57,8 @@ use alloc::alloc::{alloc, alloc_zeroed, dealloc, realloc, Layout};
 use alloc::boxed::Box;
 use core::intrinsics::copy;
 
-
 #[test_case]
 fn simple_allocation() {
-
     let heap_value_1 = Box::new(41);
     let heap_value_2 = Box::new(13);
     assert_eq!(*heap_value_1, 41);
@@ -133,7 +133,7 @@ fn realloc_copy_grow() {
 
 //#[test_case]
 fn realloc_copy_shrink() {
-    let lock = unsafe {TEST_LOCK.lock() };
+    let lock = unsafe { TEST_LOCK.lock() };
     unsafe {
         let mut bench = Bench::start();
         let layout = Layout::from_size_align(32, 16).unwrap();
@@ -156,33 +156,37 @@ fn realloc_copy_shrink() {
     black_box(lock);
 }
 
-
 #[test_case]
 fn heap_full_alloc() {
-
-    let mut vec:Vec::<usize> = Vec::new();
+    let mut vec: Vec<usize> = Vec::new();
     let mut i = 0;
     let len = vec.len();
     let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
     log::info!("Start resize...");
-    vec.resize_with(new_len, || { i+=1; i });
+    vec.resize_with(new_len, || {
+        i += 1;
+        i
+    });
     log::info!("Done resizing.");
     let sum: usize = vec.iter().sum();
 
-    let n = new_len-len;
-    assert_eq!(sum, (n.pow(2)+n)/2);
-    
-    let mut vec2:Vec::<usize> = Vec::new();
+    let n = new_len - len;
+    assert_eq!(sum, (n.pow(2) + n) / 2);
+
+    let mut vec2: Vec<usize> = Vec::new();
     let mut i = 0;
     let len = vec2.len();
     let new_len = (HEAP_SIZE - 512) / core::mem::size_of::<usize>();
     log::info!("Start resize2...");
-    vec2.resize_with(new_len, || { i+=1; i });
+    vec2.resize_with(new_len, || {
+        i += 1;
+        i
+    });
     log::info!("Done resizing2.");
     let sum: usize = vec.iter().sum();
 
-    let n = new_len-len;
-    assert_eq!(sum, (n.pow(2)+n)/2);
+    let n = new_len - len;
+    assert_eq!(sum, (n.pow(2) + n) / 2);
     black_box(vec);
 }
 
@@ -256,7 +260,6 @@ struct Test2 {
 
 #[test_case]
 fn multiple_vecs() {
-
     let mut vec0 = Vec::new();
     let mut vec1 = Vec::new();
     let mut vec2 = Vec::new();
@@ -292,5 +295,4 @@ fn multiple_vecs() {
     black_box(&vec1);
     black_box(&vec2);
     black_box(&vec0);
-
 }

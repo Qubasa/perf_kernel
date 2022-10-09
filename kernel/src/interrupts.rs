@@ -234,7 +234,11 @@ extern "x86-interrupt" fn invalid_op_handler(stack_frame: InterruptStackFrame) {
 extern "x86-interrupt" fn serial_handler(_stack_frame: InterruptStackFrame) {
     // Disable interrupts because we lock the SERIAL_WRITER here
     x86_64::instructions::interrupts::without_interrupts(|| unsafe {
-        let data = [crate::serial::SERIAL_WRITER.as_ref().unwrap().lock().receive(); 1];
+        let data = [crate::serial::SERIAL_WRITER
+            .as_ref()
+            .unwrap()
+            .lock()
+            .receive(); 1];
         print!("{}", alloc::str::from_utf8(&data).unwrap());
     });
 

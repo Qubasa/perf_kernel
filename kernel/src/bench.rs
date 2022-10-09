@@ -1,9 +1,7 @@
 use crate::println;
 use crate::time::{elapsed, rdtsc};
-use core::arch::x86_64::__cpuid;
 use core::arch::asm;
-
-
+use core::arch::x86_64::__cpuid;
 
 #[repr(u32)]
 pub enum CpuidIndex {
@@ -47,7 +45,6 @@ pub fn overflow() {
     core::hint::black_box(a);
     overflow();
 }
-
 
 pub fn check_support() {
     let res = unsafe { __cpuid(CpuidIndex::TscInvariant.as_u32()) };
