@@ -3,7 +3,6 @@
 #![feature(custom_test_frameworks)]
 #![test_runner(perf_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-#![feature(bench_black_box)]
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
