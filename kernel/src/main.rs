@@ -4,7 +4,7 @@
 #![test_runner(perf_kernel::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![feature(test)]
-#![feature(bench_black_box)]
+
 #![allow(unreachable_code)]
 /*
  * Followed the tutorial here: https://os.phil-opp.com
