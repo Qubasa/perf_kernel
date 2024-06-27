@@ -1,11 +1,6 @@
-## ==== WORK IN PROGRESS ====
+# Perf Kernel
 
-Working SMP/multicore support, there is still some work to be done.
-
-
-### End Goal
-Perf Kernel, is a new domain-specific x64 kernel that focuses solely on performance and provides researchers with an easy way to move from user space to kernel space.
-This means there are no Spectre or Meltdown patches or any kind of user/kernel separation. Only one process and at most two threads per core are allowed. A classic interrupt based scheduler that reduces performance is not required. A cooperative scheduler is provided by the kernel, i.e. 'async/wait' can be used. The allocator is cache-optimised and the MMU uses large pages to reduce memory access latency. The kernel itself is built with sse and avx optimizations. Performance registers are enabled and accessible via KVM. A Perf-like tool produces performance statistics for the kernel code.
+This is a research multicore x86_64 kernel that supports AVX and SSE with a focus on introspection and debugging capabilities.  
 
 ## Setup & Debug Build
 Clone the repo with submodules:
